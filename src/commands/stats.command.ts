@@ -1,5 +1,5 @@
 import { commandManager } from "./command-manager";
-import { StatsManager } from "../stats";
+import { StatsManager } from "../data/statistics";
 
 // /stats
 commandManager.register({

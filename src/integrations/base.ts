@@ -1,4 +1,4 @@
-import type { User } from "../users";
+import type { User } from "../data/users";
 import { secrets } from "../secrets";
 import type { ToolDefinition, ToolHandler } from "../tools/tools";
 

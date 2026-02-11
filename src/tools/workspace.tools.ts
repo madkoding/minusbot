@@ -1,6 +1,6 @@
 import { toolManager } from "./tools";
 import { commandManager } from "../commands";
-import { WorkspaceManager } from "../workspaces";
+import { WorkspaceManager } from "../data/workspaces";
 
 // Commands
 commandManager.register({

@@ -2,7 +2,7 @@ import express from "express";
 import fs from "node:fs/promises";
 import path from "node:path";
 
-import { getUserDir } from "@/config";
+import { getUserDir } from "@/data/storage";
 import { secrets } from "@/secrets";
 
 import { IntegrationManager } from "@/integrations/integration-manager";

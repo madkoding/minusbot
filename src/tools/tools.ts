@@ -1,4 +1,4 @@
-import type { Chat } from "../storage";
+import type { Chat } from "../data/storage";
 import { ToolLogger } from "../logger";
 
 export interface ToolDefinition {

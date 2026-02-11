@@ -1,5 +1,5 @@
 import { toolManager } from "./tools";
-import { SkillManager } from "../skills";
+import { SkillManager } from "../data/skills";
 
 // Register Core Skills Tools
 toolManager.registerTool(

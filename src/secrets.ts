@@ -1,10 +1,9 @@
 import path from "node:path";
 import fs from "node:fs/promises";
-import { SHARED_SECRETS_DIR, getUserDir } from "./config";
+import { SHARED_SECRETS_DIR, getUserDir } from "./data/storage";
 
 export const VAULT_DEFAULTS: Record<string, string[]> = {
-    "agent": ["API_KEY"],
-    "integration-telegram": ["BOT_TOKEN"]
+    "agent": ["API_KEY"]
 };
 
 export class Vault {

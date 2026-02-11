@@ -1,6 +1,6 @@
 import fs from "node:fs/promises";
 
-import { CONFIG_DIR } from "./config";
+import { CONFIG_DIR } from "./data/storage";
 
 export class ToolLogger {
     static async log(chatId: string, toolName: string, args: any, result: string) {

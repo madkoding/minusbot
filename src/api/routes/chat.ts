@@ -1,14 +1,9 @@
 import express from "express";
 
-import { Storage } from "../../storage";
+import { Storage } from "@/data/storage";
 import { authenticate, adminOnly } from "../middleware/auth";
 
 const router = express.Router();
-
-router.get("/admin/chat", authenticate, adminOnly, async (req, res) => {
-    // To-do: Add admin chat endpoint.
-    res.json([]);
-});
 
 router.get("/user/chat", authenticate, async (req: any, res) => {
     const chats = await Storage.listChats(req.user.id);

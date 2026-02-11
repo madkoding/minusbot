@@ -1,6 +1,6 @@
 import { commandManager } from "./command-manager";
 import { IntegrationManager } from "../integrations/integration-manager";
-import { getUserIntegrationConfigFile } from "../config";
+import { getUserIntegrationConfigFile } from "../data/storage";
 import { secrets } from "../secrets";
 import fs from "node:fs/promises";
 import path from "node:path";

@@ -1,7 +1,7 @@
 import express from "express";
 import fs from "node:fs/promises";
 
-import { SHARED_SECRETS_DIR } from "@/config";
+import { SHARED_SECRETS_DIR } from "@/data/storage";
 import { secrets } from "@/secrets";
 
 import { IntegrationManager } from "@/integrations/integration-manager";

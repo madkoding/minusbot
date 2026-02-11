@@ -1,17 +1,16 @@
 import fs from "node:fs/promises";
-import { UserManager } from "../users";
-import type { User } from "../users";
+
+import { UserManager } from "../data/users";
+import type { User } from "../data/users";
 import { Integration } from "./base";
-import { TelegramIntegration } from "./telegram";
 import { SerpApiIntegration } from "./serpapi";
-import { getUserIntegrationConfigFile, getUserIntegrationsDir } from "../config";
+import { getUserIntegrationConfigFile, getUserIntegrationsDir, getGlobalIntegrationConfigFile } from "../data/storage";
 import { Logger } from "../cli/colors";
 
 export class IntegrationManager {
     private static userInstances: Map<string, Integration[]> = new Map();
 
     static readonly AVAILABLE_INTEGRATIONS = [
-        TelegramIntegration,
         SerpApiIntegration
     ];
 
@@ -38,18 +37,30 @@ export class IntegrationManager {
         for (const IntegrationClass of this.AVAILABLE_INTEGRATIONS) {
             // Use static ID from class
             const integrationId = (IntegrationClass as any).ID || "unknown";
-            const configPath = getUserIntegrationConfigFile(user.id, integrationId);
+            const userConfigPath = getUserIntegrationConfigFile(user.id, integrationId);
+            const globalConfigPath = getGlobalIntegrationConfigFile(integrationId);
 
-            let config = {};
+            let globalConfig = {};
             try {
-                const content = await fs.readFile(configPath, "utf-8");
-                config = JSON.parse(content);
-            } catch {
+                const content = await fs.readFile(globalConfigPath, "utf-8");
+                globalConfig = JSON.parse(content);
+            } catch { }
+
+            let userConfig = null;
+            try {
+                const content = await fs.readFile(userConfigPath, "utf-8");
+                userConfig = JSON.parse(content);
+            } catch { }
+
+            // If neither exists, skip
+            if (!userConfig && Object.keys(globalConfig).length === 0) {
                 continue;
             }
 
+            const mergedConfig = { ...globalConfig, ...(userConfig || {}) };
+
             try {
-                const instance = new IntegrationClass(user, config);
+                const instance = new IntegrationClass(user, mergedConfig);
                 await instance.start();
                 userIntegrations.push(instance);
             } catch (e: any) {

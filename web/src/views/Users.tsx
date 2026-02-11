@@ -1,42 +1,31 @@
 import React, { useState, useEffect } from "react";
-import { Card, Input, Button, Icon } from "../components/UI.tsx";
-import { api } from "../api.ts";
+import { Button, Input } from "../components/ui";
+import { Icon } from "../components/icons";
+import { Card } from "../components/cards";
+import { useUsers } from "../hooks/useUsers";
 
 export default function UsersView() {
-    const [users, setUsers] = useState<any[]>([]);
+    const { users, fetchUsers, createUser, deleteUser, isLoading, error } = useUsers();
     const [isAdding, setIsAdding] = useState(false);
-
-    const load = async () => {
-        try {
-            const res = await api.get('/admin/users');
-            setUsers(Array.isArray(res.data) ? res.data : []);
-        } catch (e) {
-            console.error("Failed to load users", e);
-        }
-    };
 
     useEffect(() => { load(); }, []);
 
-    const deleteUser = async (id: string) => {
+    const load = () => fetchUsers();
+
+    const handleDeleteUser = async (id: string) => {
         if (id === 'root') return alert("Cannot delete root");
         if (!confirm("Delete user?")) return;
-        await api.delete(`/admin/users/${id}`);
-        load();
+        await deleteUser(id);
     };
 
-    const addUser = async (e: any) => {
+    const handleAddUser = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        const data = {
-            username: e.target.username.value,
-            password: e.target.password.value,
-            role: e.target.role.value
-        };
-        try {
-            await api.post('/admin/users', data);
+        const formData = new FormData(e.currentTarget);
+        const data = Object.fromEntries(formData.entries());
+
+        const success = await createUser(data);
+        if (success) {
             setIsAdding(false);
-            load();
-        } catch (e: any) {
-            alert(e.response?.data || "Failed to create user");
         }
     };
 
@@ -54,7 +43,7 @@ export default function UsersView() {
 
             {isAdding && (
                 <Card title="Register User" className="border-dashed border-zinc-700">
-                    <form onSubmit={addUser} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                    <form onSubmit={handleAddUser} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
                         <Input label="Username" name="username" placeholder="alex_dev" required />
                         <Input label="Password" name="password" type="password" placeholder="••••••••" required />
                         <div className="flex flex-col gap-2">
@@ -64,8 +53,9 @@ export default function UsersView() {
                                 <option value="admin">Admin</option>
                             </select>
                         </div>
-                        <Button className="h-11 rounded-xl">Register User</Button>
+                        <Button type="submit" className="h-11 rounded-xl" loading={isLoading}>Register User</Button>
                     </form>
+                    {error && <p className="text-xs text-red-500 mt-2">{error}</p>}
                 </Card>
             )}
 
@@ -94,7 +84,7 @@ export default function UsersView() {
                                 <td className="py-4 px-6 text-right">
                                     {u?.id !== 'root' && (
                                         <button
-                                            onClick={() => deleteUser(u.id)}
+                                            onClick={() => handleDeleteUser(u.id)}
                                             className="p-2 text-zinc-700 hover:text-red-500 transition-colors"
                                         >
                                             <Icon name="trash" size={16} />
@@ -105,6 +95,11 @@ export default function UsersView() {
                         ))}
                     </tbody>
                 </table>
+                {users.length === 0 && !isLoading && (
+                    <div className="py-20 text-center">
+                        <p className="text-xs font-bold text-zinc-700 uppercase tracking-widest">No users found.</p>
+                    </div>
+                )}
             </Card>
         </div>
     );

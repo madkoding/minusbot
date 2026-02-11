@@ -2,9 +2,9 @@ import express from "express";
 import os from "node:os";
 import fs from "node:fs/promises";
 
-import { UserManager } from "@/users";
-import { SkillManager } from "@/skills";
-import { StatsManager } from "@/stats";
+import { UserManager } from "@/data/users";
+import { SkillManager } from "@/data/skills";
+import { StatsManager } from "@/data/statistics";
 
 const router = express.Router();
 

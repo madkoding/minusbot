@@ -2,8 +2,8 @@ import { getJson } from "serpapi";
 
 import { Integration } from "../base";
 import type { IntegrationSchema } from "../base";
-import type { ToolDefinition, ToolHandler } from "../../tools/tools";
-import { Logger } from "../../cli/colors";
+import type { ToolDefinition, ToolHandler } from "@/tools/tools";
+import { Logger } from "@/cli/colors";
 
 export class SerpApiIntegration extends Integration {
     static readonly ID = "serpapi";

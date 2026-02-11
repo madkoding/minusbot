@@ -1,7 +1,7 @@
 import jwt from "jsonwebtoken";
 
-import { UserManager } from "@/users";
-import { getJWTSecret } from "@/config";
+import { UserManager } from "@/data/users";
+import { getJWTSecret } from "@/data/storage";
 
 export const authenticate = async (req: any, res: any, next: any) => {
     const token = req.headers.authorization?.split(" ")[1];

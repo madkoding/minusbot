@@ -1,5 +1,5 @@
 import { commandManager } from "./command-manager";
-import { UserManager, type Role } from "../users";
+import { UserManager, type Role } from "../data/users";
 import bcrypt from "bcrypt";
 
 // /users

@@ -2,8 +2,8 @@ import express from "express";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 
-import { UserManager } from "@/users";
-import { getJWTSecret } from "@/config";
+import { UserManager } from "@/data/users";
+import { getJWTSecret } from "@/data/storage";
 import { authenticate } from "../middleware/auth";
 
 const router = express.Router();

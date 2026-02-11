@@ -1,52 +1,45 @@
-import React, { useState, useEffect } from "react";
-import { Button, Icon } from "../components/UI.tsx";
-import { api } from "../api.ts";
+import React, { useEffect } from "react";
+import { Icon } from "../components/icons";
+import { useVault } from "../hooks/useVault";
 
 export default function VaultView({ apiPath = '/user/vault' }: { apiPath?: string }) {
-    const [vaults, setVaults] = useState<string[]>([]);
-    const [selected, setSelected] = useState<string | null>(null);
-    const [keys, setKeys] = useState<Record<string, boolean>>({});
+    const {
+        vaults,
+        selectedVault,
+        keys,
+        fetchVaults,
+        fetchKeys,
+        updateVaultKey,
+        deleteVaultKey,
+        isLoading
+    } = useVault(apiPath);
+
     const isGlobal = apiPath.includes('admin');
 
-    const load = async () => {
-        try {
-            const res = await api.get(apiPath);
-            setVaults(res.data);
-            if (res.data.length > 0 && !selected) {
-                loadKeys(res.data[0]);
+    useEffect(() => {
+        const load = async () => {
+            const list = await fetchVaults();
+            if (list.length > 0 && !selectedVault) {
+                fetchKeys(list[0]);
             }
-        } catch {
-            setVaults([]);
-        }
-    };
+        };
+        load();
+    }, [apiPath, fetchVaults, fetchKeys, selectedVault]);
 
-    const loadKeys = async (id: string) => {
-        const res = await api.get(`${apiPath}/${id}`);
-        setKeys(res.data);
-        setSelected(id);
-    };
-
-    useEffect(() => { load(); }, [apiPath]);
-
-    const updateKey = async (key: string) => {
+    const handleUpdateKey = async (key: string) => {
         const val = prompt(`Enter new value for ${key}:`);
         if (val === null) return;
-        try {
-            await api.put(`${apiPath}/${selected}`, { key, value: val });
-            loadKeys(selected!);
-        } catch {
-            alert("Update failed");
-        }
+        await updateVaultKey(selectedVault!, key, val);
     };
 
-    const removeKey = async (key: string) => {
+    const handleRemoveKey = async (key: string) => {
         if (!confirm(`Wipe value for ${key}?`)) return;
-        try {
-            await api.delete(`${apiPath}/${selected}/${key}`);
-            loadKeys(selected!);
-        } catch {
-            alert("Action failed");
-        }
+        await deleteVaultKey(selectedVault!, key);
+    };
+
+    const handleRegisterItem = async () => {
+        const k = prompt("Register Key Name:");
+        if (k) handleUpdateKey(k);
     };
 
     return (
@@ -69,8 +62,8 @@ export default function VaultView({ apiPath = '/user/vault' }: { apiPath?: strin
                         {vaults.map(v => (
                             <button
                                 key={v}
-                                onClick={() => loadKeys(v)}
-                                className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-2xl transition-all duration-150 ${selected === v
+                                onClick={() => fetchKeys(v)}
+                                className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-2xl transition-all duration-150 ${selectedVault === v
                                     ? 'bg-zinc-100 text-zinc-950 font-bold shadow-lg'
                                     : 'text-zinc-500 hover:text-zinc-200 hover:bg-zinc-900/40 font-medium'
                                     }`}
@@ -84,18 +77,15 @@ export default function VaultView({ apiPath = '/user/vault' }: { apiPath?: strin
 
                 {/* Content Table */}
                 <main className="flex-1 flex flex-col min-w-0 bg-black/20">
-                    {selected ? (
+                    {selectedVault ? (
                         <>
                             <div className="p-5 border-b border-zinc-900 flex justify-between items-center bg-zinc-900/5">
                                 <div>
-                                    <h3 className="text-sm font-bold text-zinc-200">{selected}.vault</h3>
+                                    <h3 className="text-sm font-bold text-zinc-200">{selectedVault}.vault</h3>
                                     <p className="text-[10px] text-zinc-600 uppercase font-black tracking-widest">Decrypted key index</p>
                                 </div>
                                 <button
-                                    onClick={() => {
-                                        const k = prompt("Register Key Name:");
-                                        if (k) updateKey(k);
-                                    }}
+                                    onClick={handleRegisterItem}
                                     className="px-4 py-2 bg-zinc-100 hover:bg-white text-zinc-950 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all shadow-md active:scale-95 flex items-center gap-2"
                                 >
                                     <Icon name="plus" size={12} />
@@ -132,14 +122,14 @@ export default function VaultView({ apiPath = '/user/vault' }: { apiPath?: strin
                                                 <td className="px-8 py-5 text-right">
                                                     <div className="flex items-center justify-end gap-1 opacity-10 group-hover:opacity-100 transition-opacity">
                                                         <button
-                                                            onClick={() => updateKey(k)}
+                                                            onClick={() => handleUpdateKey(k)}
                                                             className="p-2 text-zinc-600 hover:text-zinc-100 rounded-lg hover:bg-zinc-800 transition-all"
                                                             title="Overwrite"
                                                         >
                                                             <Icon name="settings" size={14} />
                                                         </button>
                                                         <button
-                                                            onClick={() => removeKey(k)}
+                                                            onClick={() => handleRemoveKey(k)}
                                                             className="p-2 text-zinc-600 hover:text-red-500 rounded-lg hover:bg-red-500/10 transition-all"
                                                             title="Wipe"
                                                         >
@@ -149,7 +139,7 @@ export default function VaultView({ apiPath = '/user/vault' }: { apiPath?: strin
                                                 </td>
                                             </tr>
                                         ))}
-                                        {Object.keys(keys).length === 0 && (
+                                        {Object.keys(keys).length === 0 && !isLoading && (
                                             <tr>
                                                 <td colSpan={3} className="py-20 text-center italic text-zinc-800 text-[10px] font-black uppercase tracking-widest">
                                                     Empty Registry

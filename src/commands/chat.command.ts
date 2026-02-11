@@ -1,8 +1,8 @@
 import { commandManager } from "./command-manager";
-import { Storage } from "../storage";
-import { getUserSettings, getUserIntegrationConfigFile } from "../config";
+import { Storage } from "../data/storage";
+import { getUserSettings, getUserIntegrationConfigFile } from "../data/storage";
 import { secrets } from "../secrets";
-import { UserManager } from "../users";
+import { UserManager } from "../data/users";
 import fs from "node:fs/promises";
 
 // /clear

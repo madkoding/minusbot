@@ -1,5 +1,5 @@
 import { commandManager } from "./command-manager";
-import { MemoManager } from "../memo";
+import { KnowledgeManager } from "../data/memory";
 
 // /memo
 commandManager.register({
@@ -13,7 +13,7 @@ commandManager.register({
             if (args[1] && args[2]) {
                 const key = args[1];
                 const value = args.slice(2).join(" ");
-                await MemoManager.put(user.id, key, value, false);
+                await KnowledgeManager.put(user.id, key, value, false);
                 return `Memory stored: '${key}' = '${value}'`;
             }
             return "Usage: /memo set <key> <value>";
@@ -23,14 +23,14 @@ commandManager.register({
             if (args[1] && args[2]) {
                 const key = args[1];
                 const value = args.slice(2).join(" ");
-                await MemoManager.put(user.id, key, value, true);
+                await KnowledgeManager.put(user.id, key, value, true);
                 return `Important memory stored: '${key}' = '${value}'`;
             }
             return "Usage: /memo setimp <key> <value>";
         }
 
         if (sub === "clear") {
-            await MemoManager.clear(user.id);
+            await KnowledgeManager.clear(user.id);
             return "All memories cleared.";
         }
 
@@ -38,7 +38,7 @@ commandManager.register({
             const terms = args.slice(1);
             // query returns Record<string, string> values now, we need to load manually if we want to show 'important' status in list
             // Or just use loadMemos directly here for better debugging output
-            const allMemos = await MemoManager.loadMemos(user.id);
+            const allMemos = await KnowledgeManager.loadMemos(user.id);
             let filteredKeys = Object.keys(allMemos);
 
             if (terms.length > 0) {

@@ -2,7 +2,7 @@ import express from "express";
 import fs from "node:fs/promises";
 import path from "node:path";
 
-import { getUserSettings, getUserSettingsFile } from "@/config";
+import { getUserSettings, getUserSettingsFile } from "@/data/storage";
 
 const router = express.Router();
 

@@ -6,7 +6,7 @@ import {
     GLOBAL_SETTINGS_FILE,
     getSystemSettings,
     SYSTEM_SETTINGS_FILE
-} from "../config";
+} from "../data/storage";
 import fs from "node:fs/promises";
 import path from "node:path";
 

@@ -2,7 +2,7 @@ import express from "express";
 import path from "node:path";
 import fs from "node:fs/promises";
 
-import { SkillManager } from "@/skills";
+import { SkillManager } from "@/data/skills";
 
 import { secrets } from "@/secrets";
 import { IntegrationManager } from "@/integrations/integration-manager";

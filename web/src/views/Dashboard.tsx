@@ -1,52 +1,19 @@
-import React, { useState, useEffect } from "react";
-import { Card } from "../components/UI.tsx";
-import { api } from "../api.ts";
-
-const formatBytes = (bytes: number) => {
-    if (bytes === 0) return '0 B';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-};
-
-const formatUptime = (seconds: number) => {
-    const d = Math.floor(seconds / (3600 * 24));
-    const h = Math.floor(seconds % (3600 * 24) / 3600);
-    const m = Math.floor(seconds % 3600 / 60);
-    const s = Math.floor(seconds % 60);
-    return `${d}d ${h}h ${m}m ${s}s`;
-};
+import React, { useEffect } from "react";
+import { Card } from "../components/cards";
+import { Icon } from "../components/icons";
+import { useStats } from "../hooks/useStats";
 
 export default function DashboardView() {
-    const [stats, setStats] = useState<any>(null);
-    const [localUptime, setLocalUptime] = useState(0);
-
-    const load = async () => {
-        try {
-            const res = await api.get('/user/stats'); // New endpoint
-            const data = res.data;
-            setStats(data);
-            // setLocalUptime(data.uptime); // User doesn't need uptime
-        } catch (e) {
-            console.error("Telemetry failure", e);
-        }
-    };
+    const { userStats, fetchUserStats, isLoading } = useStats();
 
     useEffect(() => {
-        load();
-        const pollInterval = setInterval(load, 5000);
+        fetchUserStats();
+        const pollInterval = setInterval(fetchUserStats, 5000);
         return () => clearInterval(pollInterval);
-    }, []);
+    }, [fetchUserStats]);
 
-    useEffect(() => {
-        const tickInterval = setInterval(() => {
-            setLocalUptime(prev => prev + 1);
-        }, 1000);
-        return () => clearInterval(tickInterval);
-    }, []);
-
-    if (!stats) return <div className="animate-pulse text-zinc-500 font-bold uppercase tracking-widest">Synchronizing...</div>;
+    if (isLoading && !userStats) return <div className="animate-pulse text-zinc-500 font-bold uppercase tracking-widest">Synchronizing...</div>;
+    if (!userStats) return <div className="text-zinc-500 font-bold uppercase tracking-widest">No telemetry available.</div>;
 
     return (
         <div className="space-y-12 max-w-6xl mx-auto">
@@ -60,19 +27,31 @@ export default function DashboardView() {
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 <Card title="Activity" description="Conversations">
-                    <div className="text-2xl font-black text-zinc-100 tracking-tight font-mono">{stats.chats_created?.toLocaleString() ?? 0}</div>
+                    <div className="flex items-center justify-between mb-2">
+                        <div className="text-2xl font-black text-zinc-100 tracking-tight font-mono">{userStats.chats_created?.toLocaleString() ?? 0}</div>
+                        <Icon name="chat_alt" className="text-zinc-700" size={20} />
+                    </div>
                     <div className="text-[10px] text-zinc-600 font-bold uppercase mt-1">Total Threads</div>
                 </Card>
                 <Card title="Exchange" description="Messages">
-                    <div className="text-2xl font-black text-zinc-100 tracking-tight font-mono">{stats.messages_sent?.toLocaleString() ?? 0}</div>
+                    <div className="flex items-center justify-between mb-2">
+                        <div className="text-2xl font-black text-zinc-100 tracking-tight font-mono">{userStats.messages_sent?.toLocaleString() ?? 0}</div>
+                        <Icon name="send" className="text-emerald-700/50" size={20} />
+                    </div>
                     <div className="text-[10px] text-zinc-600 font-bold uppercase mt-1">Interactions</div>
                 </Card>
                 <Card title="Input" description="Tokens Received">
-                    <div className="text-2xl font-black text-zinc-100 tracking-tight font-mono">{stats.tokens_input?.toLocaleString() ?? 0}</div>
+                    <div className="flex items-center justify-between mb-2">
+                        <div className="text-2xl font-black text-zinc-100 tracking-tight font-mono">{userStats.tokens_input?.toLocaleString() ?? 0}</div>
+                        <Icon name="terminal" className="text-amber-700/50" size={20} />
+                    </div>
                     <div className="text-[10px] text-zinc-600 font-bold uppercase mt-1">Processed</div>
                 </Card>
                 <Card title="Output" description="Tokens Generated">
-                    <div className="text-2xl font-black text-zinc-100 tracking-tight font-mono">{stats.tokens_output?.toLocaleString() ?? 0}</div>
+                    <div className="flex items-center justify-between mb-2">
+                        <div className="text-2xl font-black text-zinc-100 tracking-tight font-mono">{userStats.tokens_output?.toLocaleString() ?? 0}</div>
+                        <Icon name="vault" className="text-purple-700/50" size={20} />
+                    </div>
                     <div className="text-[10px] text-zinc-600 font-bold uppercase mt-1">Generated</div>
                 </Card>
             </div>
@@ -80,8 +59,8 @@ export default function DashboardView() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <Card title="Efficiency" description="Token Ratio">
                     <div className="h-4 bg-zinc-900 rounded-full overflow-hidden flex mt-2">
-                        <div className="bg-amber-500/80 h-full transition-all duration-1000" style={{ width: `${((stats.tokens_input || 0) / ((stats.tokens_input || 0) + (stats.tokens_output || 0) || 1)) * 100}%` }}></div>
-                        <div className="bg-purple-500/80 h-full transition-all duration-1000" style={{ width: `${((stats.tokens_output || 0) / ((stats.tokens_input || 0) + (stats.tokens_output || 0) || 1)) * 100}%` }}></div>
+                        <div className="bg-amber-500/80 h-full transition-all duration-1000" style={{ width: `${((userStats.tokens_input || 0) / ((userStats.tokens_input || 0) + (userStats.tokens_output || 0) || 1)) * 100}%` }}></div>
+                        <div className="bg-purple-500/80 h-full transition-all duration-1000" style={{ width: `${((userStats.tokens_output || 0) / ((userStats.tokens_input || 0) + (userStats.tokens_output || 0) || 1)) * 100}%` }}></div>
                     </div>
                     <div className="flex justify-between mt-2">
                         <div className="flex items-center gap-2">

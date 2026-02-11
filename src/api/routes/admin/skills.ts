@@ -2,8 +2,8 @@ import express from "express";
 import path from "node:path";
 import fs from "node:fs/promises";
 
-import { SHARED_SKILLS_DIR } from "@/config";
-import { SkillManager } from "@/skills";
+import { SHARED_SKILLS_DIR } from "@/data/storage";
+import { SkillManager } from "@/data/skills";
 
 import { secrets } from "@/secrets";
 

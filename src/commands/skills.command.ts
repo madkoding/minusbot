@@ -1,6 +1,6 @@
 import { commandManager } from "./command-manager";
-import { getUserSettings, getUserSettingsFile } from "../config";
-import { SkillManager } from "../skills";
+import { getUserSettings, getUserSettingsFile } from "../data/storage";
+import { SkillManager } from "../data/skills";
 import fs from "node:fs/promises";
 import path from "node:path";
 

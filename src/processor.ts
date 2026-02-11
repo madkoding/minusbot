@@ -1,7 +1,7 @@
 import { commandManager } from "./commands";
 import { Agent } from "./agent";
-import { UserManager } from "./users";
-import { Storage } from "./storage";
+import { UserManager } from "./data/users";
+import { Storage } from "./data/storage";
 import { PubSub } from "./pubsub";
 
 export class InputProcessor {

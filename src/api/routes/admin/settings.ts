@@ -6,7 +6,7 @@ import {
     getGlobalSettings,
     SYSTEM_SETTINGS_FILE,
     getSystemSettings
-} from "@/config";
+} from "@/data/storage";
 
 const router = express.Router();
 

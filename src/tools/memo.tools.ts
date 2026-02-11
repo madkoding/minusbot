@@ -1,5 +1,5 @@
 import { toolManager } from "./tools";
-import { MemoManager } from "../memo";
+import { KnowledgeManager } from "../data/memory";
 
 toolManager.registerTool({
     type: "function",
@@ -19,7 +19,7 @@ toolManager.registerTool({
     }
 }, async ({ terms }: { terms?: string[] }, { chat }) => {
     const userId = chat.meta.owner;
-    const memos = await MemoManager.query(userId, terms);
+    const memos = await KnowledgeManager.query(userId, terms);
     return JSON.stringify(memos, null, 2);
 });
 
@@ -40,6 +40,6 @@ toolManager.registerTool({
     }
 }, async ({ key, value, important }: { key: string, value: string, important?: boolean }, { chat }) => {
     const userId = chat.meta.owner;
-    await MemoManager.put(userId, key, value, important || false);
+    await KnowledgeManager.put(userId, key, value, important || false);
     return `Memory stored: '${key}' (Important: ${important || false})`;
 });

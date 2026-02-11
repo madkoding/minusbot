@@ -1,7 +1,7 @@
 import { toolManager } from "./tools";
-import { ShellManager } from "../shell";
+import { ShellManager } from "../sandbox/shell";
 import { commandManager } from "../commands";
-import { UserManager } from "../users";
+import { UserManager } from "../data/users";
 
 // Commands
 

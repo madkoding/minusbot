@@ -1,44 +1,23 @@
 import React, { useState, useEffect } from "react";
-import { Icon, Modal, Button } from "../components/UI.tsx";
-import { api } from "../api.ts";
+import { Button } from "../components/ui";
+import { Icon } from "../components/icons";
+import { Modal } from "../components/modals";
+import { useTools } from "../hooks/useTools";
 
 export default function ToolsView({ apiPath = '/user/settings' }: { apiPath?: string }) {
-    const [tools, setTools] = useState<any[]>([]);
-    const [disabledTools, setDisabledTools] = useState<string[]>([]);
+    const { allTools, disabledTools, fetchTools, toggleTool } = useTools(apiPath);
     const [activeGroup, setActiveGroup] = useState<string>("All");
     const [descModal, setDescModal] = useState<any>(null);
 
-    const load = async () => {
-        try {
-            const [toolsRes, settingsRes] = await Promise.all([
-                api.get('/admin/tools'),
-                api.get(apiPath)
-            ]);
-            setTools(toolsRes.data);
-            setDisabledTools(settingsRes.data.disabled_tools || []);
-        } catch (e) {
-            console.error("Failed to load tools", e);
-        }
-    };
+    useEffect(() => { fetchTools(); }, [apiPath, fetchTools]);
 
-    useEffect(() => { load(); }, [apiPath]);
-
-    const toggleTool = async (name: string) => {
-        try {
-            if (apiPath.includes('admin')) {
-                await api.post('/admin/settings/toggle-global-tool', { name });
-            } else {
-                await api.post('/user/settings/toggle-tool', { name });
-            }
-            load();
-        } catch (e) {
-            alert("Failed to toggle tool");
-        }
+    const handleToggle = async (name: string) => {
+        await toggleTool(name);
     };
 
     // Grouping logic
-    const groups = ["All", ...new Set(tools.map(t => t.function.name.includes('_') ? t.function.name.split('_')[0] : "Others"))];
-    const filteredTools = tools.filter(t => {
+    const groups = ["All", ...new Set(allTools.map(t => t.function.name.includes('_') ? t.function.name.split('_')[0] : "Others"))];
+    const filteredTools = allTools.filter(t => {
         if (activeGroup === "All") return true;
         const g = t.function.name.includes('_') ? t.function.name.split('_')[0] : "Others";
         return g === activeGroup;
@@ -97,7 +76,7 @@ export default function ToolsView({ apiPath = '/user/settings' }: { apiPath?: st
                                     </td>
                                     <td className="px-8 py-5 text-right">
                                         <button
-                                            onClick={() => toggleTool(tool.function.name)}
+                                            onClick={() => handleToggle(tool.function.name)}
                                             className={`inline-block w-12 h-6 rounded-full transition-all relative p-1 ${isDisabled ? 'bg-zinc-800' : 'bg-emerald-500'
                                                 }`}
                                         >
@@ -134,4 +113,3 @@ export default function ToolsView({ apiPath = '/user/settings' }: { apiPath?: st
         </div>
     );
 }
-

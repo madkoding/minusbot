@@ -1,53 +1,21 @@
-import React, { useState, useEffect, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { Button, Icon } from "../components/UI.tsx";
-import { api, getWSUrl } from "../api.ts";
+import React, { useState, useRef, useEffect } from "react";
+import { useParams } from "react-router-dom";
+import { Icon } from "../components/icons";
+import { useChat } from "../hooks/useChat";
 
 export default function ChatView() {
     const { id } = useParams();
-    const navigate = useNavigate();
-    const [ws, setWs] = useState<WebSocket | null>(null);
-    const [messages, setMessages] = useState<any[]>([]);
+    const { messages, sendMessage } = useChat(id);
     const [inputText, setInputText] = useState('');
     const chatEndRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        const socket = new WebSocket(getWSUrl());
+        chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [messages]);
 
-        socket.onopen = () => {
-            const token = localStorage.getItem('token');
-            socket.send(JSON.stringify({ type: 'auth', token }));
-
-            // If we have an ID, join it immediately after auth
-            if (id) {
-                socket.send(JSON.stringify({ type: 'init_chat', chatId: id }));
-            } else {
-                // For /chat without ID, we can either stay empty or auto-create
-                // Let's stay empty until user interacts
-            }
-        };
-
-        socket.onmessage = (e) => {
-            const msg = JSON.parse(e.data);
-            if (msg.type === 'chat_ready') {
-                setMessages(msg.messages || []);
-                if (!id && msg.chatId) {
-                    navigate(`/chat/${msg.chatId}`, { replace: true });
-                }
-            } else if (msg.type === 'message') {
-                setMessages(prev => [...prev, msg.message]);
-            }
-        };
-
-        setWs(socket);
-        return () => socket.close();
-    }, [id]);
-
-    useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
-
-    const send = () => {
+    const handleSend = () => {
         if (!inputText.trim()) return;
-        ws?.send(JSON.stringify({ type: 'message', content: inputText }));
+        sendMessage(inputText);
         setInputText('');
     };
 
@@ -84,10 +52,10 @@ export default function ChatView() {
                         placeholder="Speak with Minus..."
                         value={inputText}
                         onChange={e => setInputText(e.target.value)}
-                        onKeyDown={e => e.key === 'Enter' && send()}
+                        onKeyDown={e => e.key === 'Enter' && handleSend()}
                     />
                     <button
-                        onClick={send}
+                        onClick={handleSend}
                         className="absolute right-3 p-3 bg-zinc-100 text-zinc-950 rounded-xl hover:bg-white transition-all active:scale-95 shadow-xl"
                     >
                         <Icon name="send" size={20} />

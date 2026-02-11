@@ -5,10 +5,10 @@ import http from "node:http";
 import path from "node:path";
 import jwt from "jsonwebtoken";
 
-import { getSystemSettings, getJWTSecret } from "../config";
+import { getSystemSettings, getJWTSecret } from "../data/storage";
 import { Logger } from "../cli/colors";
-import { UserManager } from "../users";
-import { Storage } from "../storage";
+import { UserManager } from "../data/users";
+import { Storage } from "../data/storage";
 import { Agent } from "../agent";
 import { PubSub } from "../pubsub";
 
@@ -22,12 +22,15 @@ import skillsAdminRoutes from "./routes/admin/skills";
 import vaultAdminRoutes from "./routes/admin/vault";
 import settingsAdminRoutes from "./routes/admin/settings";
 import toolsAdminRoutes from "./routes/admin/tools";
+import channelsAdminRoutes from "./routes/admin/channels";
+import integrationsAdminRoutes from "./routes/admin/integrations";
 
 import userSkillsRoutes from "./routes/user/skills";
 import userSettingsRoutes from "./routes/user/settings";
 import userVaultRoutes from "./routes/user/vault";
 import userStatsRoutes from "./routes/user/stats";
 import userIntegrationsRoutes from "./routes/user/integrations";
+import userChannelsRoutes from "./routes/user/channels";
 
 // Middleware
 import { authenticate, adminOnly } from "./middleware/auth";
@@ -60,6 +63,7 @@ export async function startServer() {
     user.use("/vault", userVaultRoutes);
     user.use("/stats", userStatsRoutes);
     user.use("/integrations", userIntegrationsRoutes);
+    user.use("/channels", userChannelsRoutes);
     api.use("/user", user);
 
     // Admin Routes
@@ -71,6 +75,8 @@ export async function startServer() {
     admin.use("/vault", vaultAdminRoutes);
     admin.use("/settings", settingsAdminRoutes); // includes /global and /system
     admin.use("/tools", toolsAdminRoutes);
+    admin.use("/channels", channelsAdminRoutes);
+    admin.use("/integrations", integrationsAdminRoutes);
     api.use("/admin", admin);
 
     app.use("/api", api);
@@ -92,31 +98,42 @@ export async function startServer() {
 
         ws.on("close", close);
 
+        let authPromise: Promise<void> | null = null;
+
         ws.on("message", async (data) => {
             try {
                 const msg = JSON.parse(data.toString());
 
                 if (msg.type === "auth") {
-                    try {
-                        const secret = await getJWTSecret();
-                        const decoded = jwt.verify(msg.token, secret) as any;
-                        const session = UserManager.getSession(decoded.sessionId);
-                        if (session && session.userId === decoded.userId) {
-                            authenticated = true;
-                            userId = decoded.userId;
-                            ws.send(JSON.stringify({ type: "auth_success" }));
-                        } else {
-                            ws.send(JSON.stringify({ type: "error", message: "Session expired" }));
+                    authPromise = (async () => {
+                        try {
+                            const secret = await getJWTSecret();
+                            const decoded = jwt.verify(msg.token, secret) as any;
+                            const session = UserManager.getSession(decoded.sessionId);
+                            if (session && session.userId === decoded.userId) {
+                                authenticated = true;
+                                userId = decoded.userId;
+                                ws.send(JSON.stringify({ type: "auth_success" }));
+                            } else {
+                                ws.send(JSON.stringify({ type: "error", message: "Session expired" }));
+                                close();
+                            }
+                        } catch {
+                            ws.send(JSON.stringify({ type: "error", message: "Authentication failed" }));
                             close();
                         }
-                    } catch {
-                        ws.send(JSON.stringify({ type: "error", message: "Authentication failed" }));
-                        close();
-                    }
+                    })();
                     return;
                 }
 
-                if (!authenticated) return close();
+                // Wait for authentication to finish if it's in progress
+                if (authPromise) {
+                    await authPromise;
+                }
+
+                if (!authenticated) {
+                    return ws.send(JSON.stringify({ type: "error", message: "Not authenticated" }));
+                }
 
                 if (msg.type === "init_chat") {
                     // Unsubscribe previous

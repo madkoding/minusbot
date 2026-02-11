@@ -1,28 +1,23 @@
-import React, { useState, useEffect } from "react";
-import { Card, Icon } from "../components/UI.tsx";
-import { api } from "../api.ts";
+import React, { useEffect } from "react";
+import { Icon } from "../components/icons";
+import { Card } from "../components/cards";
+import { useStats } from "../hooks/useStats";
 
-export default function StatsView({ apiPath = '/admin/stats' }: { apiPath?: string }) {
-    const [stats, setStats] = useState<any>(null);
+export default function StatsView({ apiPath }: { apiPath?: string }) {
+    const { adminStats, fetchAdminStats, isLoading } = useStats();
 
-    const load = async () => {
-        try {
-            const res = await api.get(apiPath);
-            setStats(res.data);
-        } catch (e) {
-            console.error("Failed to load stats", e);
-        }
-    };
+    useEffect(() => {
+        fetchAdminStats();
+    }, [fetchAdminStats]);
 
-    useEffect(() => { load(); }, [apiPath]);
-
-    if (!stats) return <div className="text-zinc-500 font-bold uppercase tracking-widest text-center py-20">Analyzing Telemetry...</div>;
+    if (!adminStats && isLoading) return <div className="text-zinc-500 font-bold uppercase tracking-widest text-center py-20">Analyzing Telemetry...</div>;
+    if (!adminStats) return <div className="text-zinc-500 font-bold uppercase tracking-widest text-center py-20">No data.</div>;
 
     const items = [
-        { label: "Chats Initiated", value: stats.chats_created, icon: "chat", color: "text-blue-500" },
-        { label: "Messages Exchanged", value: stats.messages_sent, icon: "send", color: "text-emerald-500" },
-        { label: "Neural Input Tokens", value: stats.tokens_input, icon: "dashboard", color: "text-amber-500" },
-        { label: "Neural Output Tokens", value: stats.tokens_output, icon: "vault", color: "text-purple-500" },
+        { label: "Chats Initiated", value: adminStats.chats_created, icon: "chat", color: "text-blue-500" },
+        { label: "Messages Exchanged", value: adminStats.messages_sent, icon: "send", color: "text-emerald-500" },
+        { label: "Neural Input Tokens", value: adminStats.tokens_input, icon: "dashboard", color: "text-amber-500" },
+        { label: "Neural Output Tokens", value: adminStats.tokens_output, icon: "vault", color: "text-purple-500" },
     ];
 
     return (
@@ -60,8 +55,8 @@ export default function StatsView({ apiPath = '/admin/stats' }: { apiPath?: stri
                     </div>
                 </div>
                 <div className="h-4 bg-zinc-900 rounded-full overflow-hidden flex">
-                    <div className="bg-amber-500/80 h-full transition-all duration-1000" style={{ width: `${((stats.tokens_input || 0) / ((stats.tokens_input || 0) + (stats.tokens_output || 0) || 1)) * 100}%` }}></div>
-                    <div className="bg-purple-500/80 h-full transition-all duration-1000" style={{ width: `${((stats.tokens_output || 0) / ((stats.tokens_input || 0) + (stats.tokens_output || 0) || 1)) * 100}%` }}></div>
+                    <div className="bg-amber-500/80 h-full transition-all duration-1000" style={{ width: `${((adminStats.tokens_input || 0) / ((adminStats.tokens_input || 0) + (adminStats.tokens_output || 0) || 1)) * 100}%` }}></div>
+                    <div className="bg-purple-500/80 h-full transition-all duration-1000" style={{ width: `${((adminStats.tokens_output || 0) / ((adminStats.tokens_input || 0) + (adminStats.tokens_output || 0) || 1)) * 100}%` }}></div>
                 </div>
                 <div className="flex justify-between mt-4">
                     <div className="flex items-center gap-2">

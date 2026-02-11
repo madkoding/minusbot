@@ -1,12 +1,12 @@
-import { getUserSettings } from "./config";
+import { getUserSettings } from "./data/storage";
 import { secrets } from "./secrets";
-import type { Message, Chat } from "./storage";
-import { Storage } from "./storage";
+import type { Message, Chat } from "./data/storage";
+import { Storage } from "./data/storage";
 import { toolManager } from "./tools/index";
-import { StatsManager } from "./stats";
+import { StatsManager } from "./data/statistics";
 import { Logger } from "./cli/colors";
 import { PubSub } from "./pubsub";
-import { IntegrationManager } from "./integrations/integration-manager";
+import { ChannelManager } from "./channels";
 
 export class Agent {
     constructor(private chat: Chat) { }
@@ -37,8 +37,8 @@ Always mission-focused: Make the user's life easier, one helpful response at a t
 
         // Inject Important Memories
         try {
-            const { MemoManager } = await import("./memo");
-            const importantMemos = await MemoManager.getImportantMemos(userId);
+            const { KnowledgeManager } = await import("./data/memory");
+            const importantMemos = await KnowledgeManager.getImportantMemos(userId);
             if (Object.keys(importantMemos).length > 0) {
                 SYSTEM_PROMPT += `\n\n# User Context (Always Available):\n${Object.entries(importantMemos).map(([k, v]) => `- ${k}: ${v}`).join("\n")}`;
             }
@@ -93,8 +93,8 @@ Always mission-focused: Make the user's life easier, one helpful response at a t
 
         while (true) {
             const staticTools = toolManager.getDefinitions(settings.disabled_tools || []);
-            const integrationTools = await IntegrationManager.getToolsForUser(userId);
-            const dynamicToolDefinitions = integrationTools.map(t => t.definition);
+            const channelTools = await ChannelManager.getToolsForUser(userId);
+            const dynamicToolDefinitions = channelTools.map((t: any) => t.definition);
 
             const tools = [...staticTools, ...dynamicToolDefinitions];
 
@@ -150,12 +150,12 @@ Always mission-focused: Make the user's life easier, one helpful response at a t
                     result = `Error: Tool ${name} is disabled.`;
                 } else {
                     // Check dynamic tools first
-                    const dynamicTool = integrationTools.find(t => t.definition.function.name === name);
+                    const dynamicTool = channelTools.find((t: any) => t.definition.function.name === name);
                     if (dynamicTool) {
                         try {
                             result = await dynamicTool.handler(args, { chat: this.chat });
                         } catch (e: any) {
-                            result = `Error executing integration tool ${name}: ${e.message}`;
+                            result = `Error executing channel tool ${name}: ${e.message}`;
                         }
                     } else {
                         result = await toolManager.execute(name, args, this.chat);

@@ -1,7 +1,7 @@
 import { Logger } from "./cli/colors";
-import { UserManager } from "./users";
-import { IntegrationManager } from "./integrations/integration-manager";
-import { ensureDirs } from "./config";
+import { UserManager } from "./data/users";
+import { ChannelManager } from "./channels";
+import { ensureDirs } from "./data/storage";
 import { startServer } from "./api/index";
 import { runCLI } from "./cli/repl"; // This handles the CLI loop and cron jobs for now
 
@@ -16,8 +16,8 @@ async function main() {
 
     await startServer();
 
-    await Logger.info("Booting integrations...");
-    await IntegrationManager.init();
+    await Logger.info("Booting channels...");
+    await ChannelManager.init();
 
     const args = process.argv.slice(2);
     let chatId = args.find(a => !a.startsWith("--"));

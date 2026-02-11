@@ -1,7 +1,7 @@
 import express from "express";
 import fs from "node:fs/promises";
 import { IntegrationManager } from "@/integrations/integration-manager";
-import { getUserIntegrationConfigFile } from "@/config";
+import { getUserIntegrationConfigFile } from "@/data/storage";
 
 const router = express.Router();
 
@@ -22,7 +22,7 @@ router.get("/", async (req: any, res) => {
         }
     }
 
-    res.json({ available, configs });
+    res.json({ data: { available, configs } });
 });
 
 router.post("/:id", async (req: any, res) => {

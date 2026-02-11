@@ -1,42 +1,36 @@
-import React, { useState, useEffect } from "react";
-import { Card, Input, Button } from "../components/UI.tsx";
-import { api } from "../api.ts";
+import React, { useEffect } from "react";
+import { Button, Input } from "../components/ui";
+import { Card } from "../components/cards";
+import { useSettings } from "../hooks/useSettings";
 
 export default function SettingsView({ apiPath = '/user/settings' }: { apiPath?: string }) {
-    const [settings, setSettings] = useState<any>({});
+    const { settings, fetchSettings, saveSettings, isLoading } = useSettings(apiPath);
+
     const isSystem = apiPath.includes('system');
     const isGlobal = apiPath.includes('global');
-    const isUser = !isSystem && !isGlobal;
 
-    const load = async () => {
-        try {
-            const res = await api.get(apiPath);
-            setSettings(res.data);
-        } catch (e) {
-            console.error("Settings load failure", e);
-        }
-    };
+    useEffect(() => { fetchSettings(); }, [apiPath, fetchSettings]);
 
-    useEffect(() => { load(); }, [apiPath]);
-
-    const update = async (e: any) => {
+    const handleUpdate = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
+        const formData = new FormData(e.currentTarget);
         const data: any = {};
+
         if (isSystem) {
-            data.web_port = parseInt(e.target.web_port.value);
+            data.web_port = parseInt(formData.get('web_port') as string);
         } else {
-            data.model_id = e.target.model_id?.value;
-            data.ai_endpoint = e.target.ai_endpoint?.value;
+            data.model_id = formData.get('model_id');
+            data.ai_endpoint = formData.get('ai_endpoint');
             data.colors = true;
         }
 
-        try {
-            await api.put(apiPath, data);
+        const success = await saveSettings(data);
+        if (success) {
             alert("Configuration updated.");
-        } catch {
-            alert("Update failed");
         }
     };
+
+    if (!settings && isLoading) return <div className="text-zinc-500 font-bold uppercase tracking-widest text-center py-20">Accessing Core...</div>;
 
     const title = isSystem ? "System" : isGlobal ? "Global" : "Personal";
     const subtitle = isSystem ? "Low-level server configuration." : isGlobal ? "Default fallback settings for all users." : "Your personal agent environment.";
@@ -52,17 +46,17 @@ export default function SettingsView({ apiPath = '/user/settings' }: { apiPath?:
             </header>
 
             <Card className="p-8">
-                <form onSubmit={update} className="space-y-8">
+                <form onSubmit={handleUpdate} className="space-y-8">
                     {isSystem ? (
                         <div className="grid grid-cols-1 gap-6">
-                            <Input label="Web Interface Port" name="web_port" type="number" defaultValue={settings.web_port} />
+                            <Input label="Web Interface Port" name="web_port" type="number" defaultValue={settings?.web_port} />
                         </div>
                     ) : (
                         <>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <Input label="Neural Model ID" name="model_id" defaultValue={settings.model_id} placeholder="e.g. gpt-4o" />
+                                <Input label="Neural Model ID" name="model_id" defaultValue={settings?.model_id} placeholder="e.g. gpt-4o" icon="terminal" />
                             </div>
-                            <Input label="Gateway Endpoint" name="ai_endpoint" defaultValue={settings.ai_endpoint} placeholder="https://api..." />
+                            <Input label="Gateway Endpoint" name="ai_endpoint" defaultValue={settings?.ai_endpoint} placeholder="https://api..." icon="globe" />
                         </>
                     )}
 
@@ -70,7 +64,7 @@ export default function SettingsView({ apiPath = '/user/settings' }: { apiPath?:
                         <p className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest">
                             {isSystem ? "Requires server restart" : "Changes take effect immediately"}
                         </p>
-                        <Button className="rounded-xl px-8">Save Configuration</Button>
+                        <Button type="submit" className="rounded-xl px-8" loading={isLoading}>Save Configuration</Button>
                     </div>
                 </form>
             </Card>

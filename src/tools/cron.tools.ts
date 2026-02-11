@@ -1,5 +1,5 @@
 import { toolManager } from "../tools";
-import { CronManager } from "../cron";
+import { TaskManager } from "../data/tasks";
 
 // Register Cron Tools
 toolManager.registerTool(
@@ -11,7 +11,7 @@ toolManager.registerTool(
         },
     },
     async (args, { chat }) => {
-        return JSON.stringify(await CronManager.list(chat.meta.owner));
+        return JSON.stringify(await TaskManager.list(chat.meta.owner));
     }
 );
 
@@ -35,7 +35,7 @@ toolManager.registerTool(
     },
     async (args, { chat }) => {
         const id = Math.random().toString(36).substring(7);
-        await CronManager.add({
+        await TaskManager.add({
             id,
             chatId: chat.meta.id,
             userId: chat.meta.owner,
@@ -65,7 +65,7 @@ toolManager.registerTool(
         },
     },
     async (args, { chat }) => {
-        await CronManager.cancel(chat.meta.owner, args.id);
+        await TaskManager.cancel(chat.meta.owner, args.id);
         return `Cronjob ${args.id} cancelled`;
     }
 );
@@ -88,7 +88,7 @@ toolManager.registerTool(
     },
     async (args, { chat }) => {
         const joinId = Math.random().toString(36).substring(7);
-        await CronManager.add({
+        await TaskManager.add({
             id: joinId,
             chatId: chat.meta.id,
             userId: chat.meta.owner,

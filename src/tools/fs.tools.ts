@@ -1,6 +1,6 @@
 import { commandManager } from "../commands";
 import { toolManager } from "./tools";
-import { FileSystem } from "../fs/index";
+import { FileSystem } from "../sandbox/filesystem";
 
 // Commands
 commandManager.register({

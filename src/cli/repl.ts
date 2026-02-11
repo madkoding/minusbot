@@ -2,13 +2,13 @@ import readline from "node:readline";
 
 import { Logger } from "./colors";
 import { InputProcessor } from "../processor";
-import { Storage } from "../storage";
-import { StatsManager } from "../stats";
-import { UserManager } from "../users";
+import { Storage } from "../data/storage";
+import { StatsManager } from "../data/statistics";
+import { UserManager } from "../data/users";
 import { Agent } from "../agent";
-import { CronManager } from "../cron";
+import { TaskManager } from "../data/tasks";
 import { PubSub } from "../pubsub";
-import type { Chat } from "../storage";
+import type { Chat } from "../data/storage";
 
 export async function runCLI(chatId: string | null, userId: string, isPermanent: boolean) {
     // CLI always acts as 'root' user if not specified
@@ -47,7 +47,7 @@ export async function runCLI(chatId: string | null, userId: string, isPermanent:
 
     // Setup Cron Listener affecting CLI
     const processCronJobs = async () => {
-        const dueJobs = await CronManager.getAllDueJobs();
+        const dueJobs = await TaskManager.getAllDueJobs();
         for (const job of dueJobs) {
             const isCurrentChat = job.chatId === currentChat.meta.id && job.userId === userId;
             const jobChat = isCurrentChat ? currentChat : await Storage.getChat(job.userId, job.chatId);

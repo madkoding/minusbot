@@ -1,5 +1,5 @@
-import { type User, type Role } from "../users";
-import { type Chat } from "../storage";
+import { type User, type Role } from "../data/users";
+import { type Chat } from "../data/storage";
 
 export interface CommandInfo {
     name: string;

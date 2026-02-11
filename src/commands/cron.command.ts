@@ -1,5 +1,5 @@
 import { commandManager } from "./command-manager";
-import { CronManager } from "../cron";
+import { TaskManager } from "../data/tasks";
 
 // /cron
 commandManager.register({
@@ -9,7 +9,7 @@ commandManager.register({
     handler: async (args, { user }) => {
         const sub = args[0]?.toLowerCase();
         if (sub === "list") {
-            const jobs = await CronManager.list(user.id);
+            const jobs = await TaskManager.list(user.id);
             if (jobs.length === 0) return "No personal cronjobs.";
 
             const lines = jobs.map(j => {
@@ -22,7 +22,7 @@ commandManager.register({
             return `Your Cronjobs:\n${lines.join("\n")}`;
         }
         if (sub === "cancel" && args[1]) {
-            await CronManager.cancel(user.id, args[1]);
+            await TaskManager.cancel(user.id, args[1]);
             return `Cancelled your cronjob '${args[1]}'.`;
         }
         return "Usage: /cron list | /cron cancel <id>";

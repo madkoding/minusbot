@@ -1,81 +1,61 @@
 import React, { useState, useEffect } from "react";
-import { Card, Button, Icon, Input, Modal } from "../components/UI.tsx";
-import { api } from "../api.ts";
+import { Button } from "../components/ui";
+import { Icon } from "../components/icons";
+import { Modal } from "../components/modals";
+import { useSkills } from "../hooks/useSkills";
 
 export default function SkillsView({ apiPath = '/user/skills' }: { apiPath?: string }) {
-    const [skills, setSkills] = useState<any[]>([]);
-    const [selected, setSelected] = useState<any>(null);
+    const {
+        skills,
+        selectedSkill,
+        skillVault,
+        isLoading,
+        fetchSkills,
+        fetchSkillDetail,
+        saveSkill,
+        toggleSkillStatus,
+        deleteSkill,
+        updateSkillVault,
+        setSelectedSkill
+    } = useSkills(apiPath);
+
     const [isEditing, setIsEditing] = useState(false);
     const [editData, setEditData] = useState<any>({ skillJson: {}, scriptPy: "" });
-    const [vault, setVault] = useState<Record<string, boolean>>({});
     const [editTab, setEditTab] = useState<'code' | 'vault'>('code');
     const [activeGroup, setActiveGroup] = useState<string>("All");
     const [descModal, setDescModal] = useState<any>(null);
 
-    const load = async () => {
-        try {
-            const res = await api.get(apiPath);
-            setSkills(res.data);
-        } catch (e) {
-            console.error("Failed to load skills", e);
-        }
+    useEffect(() => { fetchSkills(); }, [apiPath, fetchSkills]);
+
+    const handleLoadDetail = async (id: string) => {
+        await fetchSkillDetail(id);
+        setIsEditing(true);
+        setEditTab('code');
     };
 
-    const loadDetail = async (id: string) => {
-        try {
-            const res = await api.get(`${apiPath}/${id}`);
-            const data = res.data;
-            setSelected(data);
-            setEditData({ skillJson: data.skillJson, scriptPy: data.scriptPy });
-            const vres = await api.get(`${apiPath}/${id}/vault`);
-            setVault(vres.data);
-            setIsEditing(true);
-            setEditTab('code');
-        } catch (e) {
-            console.error("Failed to load skill details", e);
+    useEffect(() => {
+        if (selectedSkill) {
+            setEditData({ skillJson: selectedSkill.skillJson, scriptPy: selectedSkill.scriptPy });
         }
-    };
+    }, [selectedSkill]);
 
-    useEffect(() => { load(); }, [apiPath]);
-
-    const save = async () => {
-        const id = selected?.id || prompt("Skill ID (folder name):");
+    const handleSave = async () => {
+        const id = selectedSkill?.id || prompt("Skill ID (folder name):");
         if (!id) return;
-        try {
-            await api.post(apiPath, { id, ...editData });
+        const success = await saveSkill(id, editData);
+        if (success) {
             setIsEditing(false);
-            setSelected(null);
-            load();
-        } catch (e) {
-            alert("Save failed");
+            setSelectedSkill(null);
         }
     };
 
-    const toggleStatus = async (skill: any) => {
-        try {
-            if (apiPath.includes('admin')) {
-                await api.post(`/admin/skills/${skill.id}/toggle`);
-            } else if (skill.isGlobal) {
-                await api.post('/user/settings/toggle-skill', { id: skill.id });
-            } else {
-                const newStatus = !skill.enabled;
-                const updatedJson = { ...(skill.definition || skill.skillJson), enabled: newStatus };
-                await api.post(apiPath, { id: skill.id, skillJson: updatedJson });
-            }
-            load();
-        } catch (e) {
-            alert("Status update failed");
-        }
+    const handleToggleStatus = async (skill: any) => {
+        await toggleSkillStatus(skill);
     };
 
-    const remove = async (id: string) => {
+    const handleDelete = async (id: string) => {
         if (!confirm("Permanently delete this module?")) return;
-        try {
-            await api.delete(`${apiPath}/${id}`);
-            load();
-        } catch (e) {
-            console.error("Deletion failed");
-        }
+        await deleteSkill(id);
     };
 
     // Grouping logic
@@ -94,11 +74,11 @@ export default function SkillsView({ apiPath = '/user/skills' }: { apiPath?: str
                         <button onClick={() => setIsEditing(false)} className="p-2 text-zinc-500 hover:text-zinc-100 transition-colors">
                             <Icon name="logout" size={20} className="rotate-180" />
                         </button>
-                        <h2 className="text-2xl font-bold text-zinc-100">{selected?.id || "Neural Manifest"}</h2>
+                        <h2 className="text-2xl font-bold text-zinc-100">{selectedSkill?.id || "Neural Manifest"}</h2>
                     </div>
                     <div className="flex gap-3">
                         <Button variant="secondary" onClick={() => setIsEditing(false)}>Cancel</Button>
-                        <Button onClick={save}>Publish Changes</Button>
+                        <Button onClick={handleSave} loading={isLoading}>Publish Changes</Button>
                     </div>
                 </div>
 
@@ -128,7 +108,7 @@ export default function SkillsView({ apiPath = '/user/skills' }: { apiPath?: str
                         </>
                     ) : (
                         <div className="bg-zinc-950 border border-zinc-900 rounded-3xl p-8 divide-y divide-zinc-900">
-                            {Object.entries(vault).map(([k, hasValue]: [string, any]) => (
+                            {Object.entries(skillVault).map(([k, hasValue]: [string, any]) => (
                                 <div key={k} className="py-6 first:pt-0 last:pb-0 flex items-center justify-between group">
                                     <div className="flex-1 mr-10">
                                         <div className="flex items-center gap-2 mb-1">
@@ -147,8 +127,7 @@ export default function SkillsView({ apiPath = '/user/skills' }: { apiPath?: str
                                             onClick={async () => {
                                                 const val = prompt(`Enter new value for ${k}:`);
                                                 if (val) {
-                                                    await api.put(`${apiPath}/${selected.id}/vault`, { key: k, value: val });
-                                                    loadDetail(selected.id);
+                                                    await updateSkillVault(selectedSkill.id, k, val);
                                                 }
                                             }}
                                         >
@@ -157,16 +136,6 @@ export default function SkillsView({ apiPath = '/user/skills' }: { apiPath?: str
                                     </div>
                                 </div>
                             ))}
-                            <div className="pt-6">
-                                <Button onClick={() => {
-                                    const key = prompt("Interface Variable Name:");
-                                    if (key) {
-                                        setVault({ ...vault, [key]: false });
-                                    }
-                                }} variant="secondary" className="w-full rounded-2xl border-dashed border-2 bg-transparent hover:bg-zinc-900/50">
-                                    Register Interface Variable
-                                </Button>
-                            </div>
                         </div>
                     )}
                 </div>
@@ -185,7 +154,7 @@ export default function SkillsView({ apiPath = '/user/skills' }: { apiPath?: str
                     <p className="text-zinc-500 text-sm font-medium">Manage modular logic and automated behaviors.</p>
                 </div>
                 <div className="ml-10">
-                    <Button onClick={() => { setIsEditing(true); setSelected(null); setEditData({ skillJson: {}, scriptPy: "" }); }} size="sm" className="rounded-xl">
+                    <Button onClick={() => { setIsEditing(true); setSelectedSkill(null); setEditData({ skillJson: {}, scriptPy: "" }); }} size="sm" className="rounded-xl">
                         Deploy New Skill
                     </Button>
                 </div>
@@ -204,7 +173,7 @@ export default function SkillsView({ apiPath = '/user/skills' }: { apiPath?: str
                 ))}
             </div>
 
-            <div className="bg-[#080808] border border-zinc-900 rounded-[2rem] overflow-hidden shadow-2xl">
+            <div className="bg-[#080808] border border-zinc-900 rounded-[2.5rem] overflow-hidden shadow-2xl">
                 <table className="w-full text-left border-collapse">
                     <thead>
                         <tr className="border-b border-zinc-900/50 bg-zinc-900/10">
@@ -235,15 +204,15 @@ export default function SkillsView({ apiPath = '/user/skills' }: { apiPath?: str
                                 </td>
                                 <td className="px-8 py-5 text-right">
                                     <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button onClick={() => toggleStatus(s)} className="p-2 text-zinc-600 hover:text-zinc-100" title={s.enabled ? "Deactivate" : "Activate"}>
+                                        <button onClick={() => handleToggleStatus(s)} className="p-2 text-zinc-600 hover:text-zinc-100" title={s.enabled ? "Deactivate" : "Activate"}>
                                             <Icon name={s.enabled ? "shield" : "plus"} size={16} />
                                         </button>
                                         {(!s.isGlobal || apiPath.includes('admin')) && (
                                             <>
-                                                <button onClick={() => loadDetail(s.id)} className="p-2 text-zinc-600 hover:text-zinc-100" title="Edit Logic">
+                                                <button onClick={() => handleLoadDetail(s.id)} className="p-2 text-zinc-600 hover:text-zinc-100" title="Edit Logic">
                                                     <Icon name="terminal" size={16} />
                                                 </button>
-                                                <button onClick={() => remove(s.id)} className="p-2 text-zinc-600 hover:text-red-500" title="Delete">
+                                                <button onClick={() => handleDelete(s.id)} className="p-2 text-zinc-600 hover:text-red-500" title="Delete">
                                                     <Icon name="trash" size={16} />
                                                 </button>
                                             </>
@@ -278,4 +247,3 @@ export default function SkillsView({ apiPath = '/user/skills' }: { apiPath?: str
         </div>
     );
 }
-

@@ -1,4 +1,4 @@
-import { getGlobalSettings } from "../config";
+import { getGlobalSettings } from "../data/storage";
 
 const COLORS = {
     reset: "\x1b[0m",
