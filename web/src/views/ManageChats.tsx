@@ -1,0 +1,74 @@
+import React, { useState, useEffect } from "react";
+import { Card, Icon } from "../components/UI.tsx";
+import { api } from "../api.ts";
+
+export default function ManageChatsView() {
+    const [chats, setChats] = useState<any[]>([]);
+
+    const load = async () => {
+        try {
+            const res = await api.get('/admin/chat');
+            setChats(Array.isArray(res.data) ? res.data : []);
+        } catch (e) {
+            console.error("Audit failure", e);
+        }
+    };
+
+    useEffect(() => { load(); }, []);
+
+    const remove = async (owner: string, id: string) => {
+        if (!confirm("Destroy chat history?")) return;
+        try {
+            await api.delete(`/admin/chat/${owner}/${id}`);
+            load();
+        } catch {
+            alert("Delete failed");
+        }
+    };
+
+    return (
+        <div className="space-y-8 max-w-6xl mx-auto">
+            <header>
+                <h2 className="text-3xl font-black tracking-tight text-zinc-100">Operations</h2>
+                <p className="text-zinc-500 mt-1">Audit across all user threads.</p>
+            </header>
+
+            <Card className="px-0 py-2 overflow-hidden border-zinc-800/30">
+                <table className="w-full text-sm">
+                    <thead>
+                        <tr className="border-b border-zinc-800/50 text-zinc-500">
+                            <th className="text-left py-4 px-6 font-bold uppercase tracking-widest text-[10px]">Reference</th>
+                            <th className="text-left py-4 px-6 font-bold uppercase tracking-widest text-[10px]">Owner</th>
+                            <th className="text-left py-4 px-6 font-bold uppercase tracking-widest text-[10px]">Activity</th>
+                            <th className="text-right py-4 px-6 font-bold uppercase tracking-widest text-[10px]">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-800/20">
+                        {chats.map(c => (
+                            <tr key={c.id} className="group hover:bg-zinc-900/40 transition-colors">
+                                <td className="py-4 px-6">
+                                    <div className="font-bold text-zinc-200">{c.id}</div>
+                                    <div className="text-[10px] font-mono text-zinc-600 uppercase">VOL: {c.message_count} MSG</div>
+                                </td>
+                                <td className="py-4 px-6 font-medium text-zinc-400">
+                                    <span className="bg-zinc-900 px-2 py-1 rounded text-xs border border-zinc-800">{c.owner}</span>
+                                </td>
+                                <td className="py-4 px-6 text-xs text-zinc-500">{new Date(c.last_activity).toLocaleString()}</td>
+                                <td className="py-4 px-6 text-right">
+                                    <button onClick={() => remove(c.owner, c.id)} className="p-2 text-zinc-700 hover:text-red-500 transition-colors">
+                                        <Icon name="trash" size={16} />
+                                    </button>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+                {chats.length === 0 && (
+                    <div className="py-20 text-center">
+                        <p className="text-xs font-bold text-zinc-700 uppercase tracking-widest">Awaiting Operational Stream</p>
+                    </div>
+                )}
+            </Card>
+        </div>
+    );
+}
