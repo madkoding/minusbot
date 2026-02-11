@@ -4,11 +4,14 @@ import bcrypt from "bcrypt";
 
 import { UserManager } from "@/data/users";
 import { getJWTSecret } from "@/data/storage";
-import { authenticate } from "../middleware/auth";
+import { authenticate } from "../middleware/auth.middleware";
+
+import { validate } from "../middleware/validate.middleware";
+import { LoginDTO } from "../dto/auth.dto";
 
 const router = express.Router();
 
-router.post("/login", async (req, res) => {
+router.post("/login", validate(LoginDTO), async (req, res) => {
     const { username, password } = req.body;
     const user = UserManager.getUserByUsername(username);
 

@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 
 import { UserManager } from "../data/users";
 import type { User } from "../data/users";
-import { Integration } from "./base";
+import { Integration } from "./integration-base";
 import { SerpApiIntegration } from "./serpapi";
 import { getUserIntegrationConfigFile, getUserIntegrationsDir, getGlobalIntegrationConfigFile } from "../data/storage";
 import { Logger } from "../cli/colors";

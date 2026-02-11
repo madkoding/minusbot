@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 
-import { SHARED_SKILLS_DIR } from "../src/config";
+import { SHARED_SKILLS_DIR } from "@/data/storage";
 
 const REPO_SKILLS_DIR = path.join(process.cwd(), "skills");
 

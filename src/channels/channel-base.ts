@@ -38,6 +38,7 @@ export abstract class Channel {
 
     abstract start(): Promise<void>;
     abstract stop(): Promise<void>;
+    abstract sendFile(filePath: string, filename?: string): Promise<void>;
 
     // Validate config before saving
     async validate(config: ChannelConfig): Promise<boolean> {

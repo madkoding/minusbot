@@ -7,5 +7,7 @@ import "./memo.command";
 import "./integrations.command";
 import "./chat.command";
 import "./users.command";
+import "./fs.command";
+import "./debug.command";
 
 export { commandManager, CommandManager, type CommandInfo } from "./command-manager";

@@ -4,7 +4,7 @@ import path from "node:path";
 import { WorkspaceManager } from "../data/workspaces";
 
 export class FileSystem {
-    private static async resolvePath(userId: string, workspaceId: string | null | undefined, userPath: string, chatId?: string): Promise<string> {
+    static async resolvePath(userId: string, workspaceId: string | null | undefined, userPath: string, chatId?: string): Promise<string> {
         const workspaceDir = WorkspaceManager.resolveContentPath(userId, workspaceId, chatId);
         await fs.mkdir(workspaceDir, { recursive: true });
 

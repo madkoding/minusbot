@@ -30,6 +30,7 @@ export interface Settings {
     colors: boolean;
     disabled_tools: string[];
     disabled_skills: string[];
+    debug?: boolean;
 }
 
 export type ChatType = "temporal" | "permanent";
@@ -50,6 +51,7 @@ export interface ChatMeta {
     message_count: number;
     owner: string; // User ID
     recentlyFileUploaded?: string[];
+    last_channel?: string;
 }
 
 export interface Chat {
@@ -64,7 +66,8 @@ export const DEFAULT_SETTINGS: Settings = {
     ai_endpoint: "https://api.openai.com/v1",
     colors: true,
     disabled_tools: [],
-    disabled_skills: []
+    disabled_skills: [],
+    debug: false
 };
 
 export const DEFAULT_SYSTEM_SETTINGS: SystemSettings = {
@@ -137,7 +140,8 @@ export async function getUserSettings(userId: string): Promise<Settings> {
             ai_endpoint: userSettings.ai_endpoint ?? global.ai_endpoint,
             colors: userSettings.colors ?? global.colors,
             disabled_tools: userSettings.disabled_tools ?? global.disabled_tools ?? [],
-            disabled_skills: userSettings.disabled_skills ?? global.disabled_skills ?? []
+            disabled_skills: userSettings.disabled_skills ?? global.disabled_skills ?? [],
+            debug: userSettings.debug ?? global.debug ?? false
         };
     } catch {
         return global;

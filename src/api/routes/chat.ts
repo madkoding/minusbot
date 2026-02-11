@@ -1,7 +1,7 @@
 import express from "express";
 
 import { Storage } from "@/data/storage";
-import { authenticate, adminOnly } from "../middleware/auth";
+import { authenticate, adminOnly } from "../middleware/auth.middleware";
 
 const router = express.Router();
 

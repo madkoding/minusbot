@@ -46,9 +46,20 @@ export class InputProcessor {
             }
         }
 
-        // 2. Fallback to AI Agent
+        // Update metadata
+        let metadataUpdated = false;
         if (metadata && metadata._attachments) {
             chat.meta.recentlyFileUploaded = metadata._attachments;
+            metadataUpdated = true;
+        }
+
+        if (metadata && metadata._channel) {
+            chat.meta.last_channel = metadata._channel;
+            metadataUpdated = true;
+        }
+
+        if (metadataUpdated) {
+            await Storage.saveChat(chat);
         }
 
         const agent = new Agent(chat);

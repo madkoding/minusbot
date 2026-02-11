@@ -5,7 +5,7 @@ import http from "node:http";
 import path from "node:path";
 import jwt from "jsonwebtoken";
 
-import { getSystemSettings, getJWTSecret } from "../data/storage";
+import { getSystemSettings, getJWTSecret, getUserSettings } from "../data/storage";
 import { Logger } from "../cli/colors";
 import { UserManager } from "../data/users";
 import { Storage } from "../data/storage";
@@ -16,24 +16,24 @@ import { PubSub } from "../pubsub";
 import authRoutes from "./routes/auth";
 import chatRoutes from "./routes/chat";
 
-import userAdminRoutes from "./routes/admin/users";
-import statsAdminRoutes from "./routes/admin/stats";
-import skillsAdminRoutes from "./routes/admin/skills";
-import vaultAdminRoutes from "./routes/admin/vault";
-import settingsAdminRoutes from "./routes/admin/settings";
-import toolsAdminRoutes from "./routes/admin/tools";
-import channelsAdminRoutes from "./routes/admin/channels";
-import integrationsAdminRoutes from "./routes/admin/integrations";
+import userAdminRoutes from "./routes/admin/users.admin.routes";
+import statsAdminRoutes from "./routes/admin/stats.admin.routes";
+import skillsAdminRoutes from "./routes/admin/skills.admin.routes";
+import vaultAdminRoutes from "./routes/admin/vault.admin.routes";
+import settingsAdminRoutes from "./routes/admin/settings.admin.routes";
+import toolsAdminRoutes from "./routes/admin/tools.admin.routes";
+import channelsAdminRoutes from "./routes/admin/channels.admin.routes";
+import integrationsAdminRoutes from "./routes/admin/integrations.admin.routes";
 
-import userSkillsRoutes from "./routes/user/skills";
-import userSettingsRoutes from "./routes/user/settings";
-import userVaultRoutes from "./routes/user/vault";
-import userStatsRoutes from "./routes/user/stats";
-import userIntegrationsRoutes from "./routes/user/integrations";
-import userChannelsRoutes from "./routes/user/channels";
+import userSkillsRoutes from "./routes/user/skills.routes";
+import userSettingsRoutes from "./routes/user/settings.routes";
+import userVaultRoutes from "./routes/user/vault.routes";
+import userStatsRoutes from "./routes/user/stats.routes";
+import userIntegrationsRoutes from "./routes/user/integrations.routes";
+import userChannelsRoutes from "./routes/user/channels.routes";
 
 // Middleware
-import { authenticate, adminOnly } from "./middleware/auth";
+import { authenticate, adminOnly } from "./middleware/auth.middleware";
 
 export async function startServer() {
     const sys = await getSystemSettings();
@@ -153,15 +153,31 @@ export async function startServer() {
 
                     // Subscribe new
                     currentChatId = chat.meta.id;
-                    subscriptionHandler = (event: any) => {
+                    subscriptionHandler = async (event: any) => {
                         if (ws.readyState === WebSocket.OPEN) {
+                            const settings = await getUserSettings(userId);
+                            if (!settings.debug) {
+                                if (event.type === "message") {
+                                    if (event.message.role === "tool") return;
+                                    // Optional: Hide tool calls from assistant messages?
+                                    // For now, let's just hide the explicit tool outputs and maybe the tool calls if the UI renders them separately.
+                                    // But typically the assistant message with tool_calls is followed by tool outputs.
+                                }
+                            }
                             ws.send(JSON.stringify(event));
                         }
                     };
                     PubSub.subscribe(`chat:${currentChatId}`, subscriptionHandler);
 
                     currentAgent = new Agent(chat);
-                    ws.send(JSON.stringify({ type: "chat_ready", chatId: chat.meta.id, messages: chat.messages }));
+
+                    const settings = await getUserSettings(userId);
+                    let history = chat.messages;
+                    if (!settings.debug) {
+                        history = chat.messages.filter(m => m.role !== "tool");
+                    }
+
+                    ws.send(JSON.stringify({ type: "chat_ready", chatId: chat.meta.id, messages: history }));
                 }
 
                 if (msg.type === "message" && currentAgent) {

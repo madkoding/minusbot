@@ -1,76 +1,6 @@
-import { commandManager } from "../commands";
 import { toolManager } from "./tools";
 import { FileSystem } from "../sandbox/filesystem";
-
-// Commands
-commandManager.register({
-    name: "fs",
-    description: "Manage filesystem in a workspace.",
-    usage: "/fs mkdir [workspaceId] <path> | rm [workspaceId] <path> | read [workspaceId] <path> | write [workspaceId] <path> <content> | stat [workspaceId] <path> | ls [workspaceId] <path>",
-    handler: async (args, { user, chat }) => {
-        const sub = args[0];
-        if (!sub) return "Usage: /fs mkdir [workspaceId] <path> | rm [workspaceId] <path> | read [workspaceId] <path> | write [workspaceId] <path> <content> | stat [workspaceId] <path> | ls [workspaceId] [path]";
-
-        let workspaceId = args[1];
-        let pathArg = args[2];
-
-        // Heuristic to detect if workspaceId was skipped
-        if (["ls", "read", "rm", "mkdir", "stat"].includes(sub)) {
-            // If only 2 total args (/fs ls path), then args[1] is path
-            if (args.length === 2) {
-                pathArg = args[1];
-                workspaceId = "chat";
-            }
-        }
-
-        if (sub === "write") {
-            if (args.length < 3) return "Usage: /fs write [workspaceId] <path> <content>";
-            // If total args are 3 (/fs write path content), then args[1] is path
-            if (args.length === 3) {
-                pathArg = args[1];
-                workspaceId = "chat";
-            } else if (args.length > 3) {
-                // If we have 4+ args, peer if args[1] looks like a path
-                if (args[1]?.includes("/") || args[1]?.includes(".") || args[1] === "chat") {
-                    pathArg = args[1];
-                    workspaceId = "chat";
-                }
-            }
-        }
-
-        const userId = user.id;
-
-        try {
-            switch (sub) {
-                case "mkdir":
-                    if (!pathArg) return "Error: Missing path argument.";
-                    return await FileSystem.mkdir(userId, workspaceId, pathArg, chat.meta.id);
-                case "rm":
-                    if (!pathArg) return "Error: Missing path argument.";
-                    return await FileSystem.rm(userId, workspaceId, pathArg, chat.meta.id);
-                case "read":
-                    if (!pathArg) return "Error: Missing path argument.";
-                    return await FileSystem.read(userId, workspaceId, pathArg, chat.meta.id);
-                case "write":
-                    const contentStartIdx = (workspaceId === "chat") ? 2 : 3;
-                    const content = args.slice(contentStartIdx).join(" ");
-                    if (!pathArg || !content) return "Error: Missing path or content argument.";
-                    return await FileSystem.write(userId, workspaceId, pathArg, content, chat.meta.id);
-                case "stat":
-                    if (!pathArg) return "Error: Missing path argument.";
-                    return await FileSystem.stat(userId, workspaceId, pathArg, chat.meta.id);
-                case "ls":
-                    return await FileSystem.ls(userId, workspaceId, pathArg || ".", chat.meta.id);
-                default:
-                    return "Unknown sub-command.";
-            }
-        } catch (e: any) {
-            return `FS Error: ${e.message}`;
-        }
-    }
-});
-
-// Tools
+import { ChannelManager } from "../channels";
 
 toolManager.registerTool({
     type: "function",
@@ -202,5 +132,48 @@ toolManager.registerTool({
         return await FileSystem.ls(chat.meta.owner, workspaceId, path || ".", chat.meta.id);
     } catch (e: any) {
         return `Error: ${e.message}`;
+    }
+});
+
+toolManager.registerTool({
+    type: "function",
+    function: {
+        name: "fs_sendfile",
+        description: "Send a file from the workspace to the user via their current channel (e.g. Telegram). Use workspaceId='chat' to use the current chat space.",
+        parameters: {
+            type: "object",
+            properties: {
+                workspaceId: { type: "string" },
+                path: { type: "string" }
+            },
+            required: ["path"]
+        }
+    }
+}, async ({ workspaceId, path }, { chat }) => {
+    try {
+        const lastChannelId = chat.meta.last_channel;
+        if (!lastChannelId) {
+            return "Error: No active channel found for this chat. I don't know where to send the file.";
+        }
+
+        const channel = ChannelManager.getInstance(chat.meta.owner, lastChannelId);
+        if (!channel) {
+            return `Error: Active channel '${lastChannelId}' not found or disabled.`;
+        }
+
+        const resolvedPath = await FileSystem.resolvePath(chat.meta.owner, workspaceId, path, chat.meta.id);
+
+        // Ensure file exists
+        const fs = await import("node:fs/promises"); // Dynamic import to avoid top-level require if not needed
+        await fs.access(resolvedPath);
+
+        await channel.sendFile(resolvedPath);
+        return `File '${path}' sent via ${channel.name}.`;
+    } catch (e: any) {
+        // If file not found, try to be helpful
+        if (e.code === 'ENOENT') {
+            return `Error: File '${path}' not found in the specified workspace.`;
+        }
+        return `Error sending file: ${e.message}`;
     }
 });

@@ -7,6 +7,8 @@ import {
     SYSTEM_SETTINGS_FILE,
     getSystemSettings
 } from "@/data/storage";
+import { validate } from "@/api/middleware/validate.middleware";
+import { GlobalSettingsDTO, SystemSettingsDTO, ToggleToolDTO } from "@/api/dto/settings.dto";
 
 const router = express.Router();
 
@@ -15,7 +17,7 @@ router.get("/global", async (req, res) => {
     res.json(await getGlobalSettings());
 });
 
-router.put("/global", async (req, res) => {
+router.put("/global", validate(GlobalSettingsDTO), async (req, res) => {
     await fs.writeFile(GLOBAL_SETTINGS_FILE, JSON.stringify(req.body, null, 4), "utf-8");
     res.send("Global settings updated");
 });
@@ -27,7 +29,7 @@ router.get("/system", async (req: any, res) => {
 });
 
 // Toggle global tool status
-router.post("/toggle-global-tool", async (req, res) => {
+router.post("/toggle-global-tool", validate(ToggleToolDTO), async (req, res) => {
     const { name } = req.body;
     const settings = await getGlobalSettings();
     const disabled = settings.disabled_tools || [];
@@ -43,7 +45,7 @@ router.post("/toggle-global-tool", async (req, res) => {
     res.json({ ...settings, disabled_tools: newDisabled });
 });
 
-router.put("/system", async (req: any, res) => {
+router.put("/system", validate(SystemSettingsDTO), async (req: any, res) => {
     if (req.user.role !== "root") return res.status(403).send("Root only");
     await fs.writeFile(SYSTEM_SETTINGS_FILE, JSON.stringify(req.body, null, 4), "utf-8");
     res.send("System settings updated");

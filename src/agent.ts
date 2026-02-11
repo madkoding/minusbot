@@ -94,9 +94,16 @@ Always mission-focused: Make the user's life easier, one helpful response at a t
         while (true) {
             const staticTools = toolManager.getDefinitions(settings.disabled_tools || []);
             const channelTools = await ChannelManager.getToolsForUser(userId);
-            const dynamicToolDefinitions = channelTools.map((t: any) => t.definition);
+            const { SkillManager } = await import("./data/skills");
+            const skillTools = await SkillManager.getToolsForUser(userId);
 
-            const tools = [...staticTools, ...dynamicToolDefinitions];
+            const tools = [
+                ...staticTools,
+                ...channelTools.map((t: any) => t.definition),
+                ...skillTools.map((t: any) => t.definition)
+            ];
+
+            const allDynamicTools = [...channelTools, ...skillTools];
 
             const response = await fetch(`${settings.ai_endpoint}/chat/completions`, {
                 method: "POST",
@@ -149,13 +156,13 @@ Always mission-focused: Make the user's life easier, one helpful response at a t
                 if ((settings.disabled_tools || []).includes(name)) {
                     result = `Error: Tool ${name} is disabled.`;
                 } else {
-                    // Check dynamic tools first
-                    const dynamicTool = channelTools.find((t: any) => t.definition.function.name === name);
+                    // Check dynamic tools first (channels and skills)
+                    const dynamicTool = allDynamicTools.find((t: any) => t.definition.function.name === name);
                     if (dynamicTool) {
                         try {
                             result = await dynamicTool.handler(args, { chat: this.chat });
                         } catch (e: any) {
-                            result = `Error executing channel tool ${name}: ${e.message}`;
+                            result = `Error executing dynamic tool ${name}: ${e.message}`;
                         }
                     } else {
                         result = await toolManager.execute(name, args, this.chat);

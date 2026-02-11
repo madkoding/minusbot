@@ -14,7 +14,7 @@ toolManager.registerTool(
         const skills = await SkillManager.listSkills(chat.meta.owner);
         const enabledSkills = skills.filter(s => s.enabled);
         return JSON.stringify(enabledSkills.map(s => {
-            const def = { ...s.definition };
+            const def = { ...s.definition } as any;
             Object.keys(def).forEach(k => {
                 if (k.startsWith("_")) delete def[k];
             });
@@ -40,7 +40,7 @@ toolManager.registerTool(
         const skill = await SkillManager.getSkill(chat.meta.owner, args.id);
         if (!skill) return JSON.stringify({ error: "Skill not found" });
 
-        const def = { ...skill.definition };
+        const def = { ...skill.definition } as any;
         Object.keys(def).forEach(k => {
             if (k.startsWith("_")) delete def[k];
         });
@@ -59,14 +59,15 @@ toolManager.registerTool(
                 type: "object",
                 properties: {
                     id: { type: "string" },
+                    actionName: { type: "string" },
                     workspaceId: { type: "string" },
                     inputs: { type: "object" },
                 },
-                required: ["id", "inputs"],
+                required: ["id", "actionName", "inputs"],
             },
         },
     },
     async (args, { chat }) => {
-        return await SkillManager.runSkill(chat.meta.owner, args.id, args.inputs, args.workspaceId, chat.meta.id);
+        return await SkillManager.runSkill(chat.meta.owner, args.id, args.actionName, args.inputs, args.workspaceId, chat.meta.id);
     }
 );

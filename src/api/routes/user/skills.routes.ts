@@ -2,6 +2,7 @@ import express from "express";
 import path from "node:path";
 import fs from "node:fs/promises";
 
+import { SHARED_SKILLS_DIR } from "@/data/storage";
 import { SkillManager } from "@/data/skills";
 
 import { secrets } from "@/secrets";
@@ -19,8 +20,10 @@ router.get("/:id", async (req: any, res) => {
     if (!skill) return res.status(404).send("Skill not found");
 
     try {
-        const skillJson = skill.definition;
-        const scriptPy = await fs.readFile(path.join(SkillManager.getUserSkillsDir(req.user.id), req.params.id, "script.py"), "utf-8").catch(() => "");
+        const skillJson = skill.definition as any;
+        const skillDir = skill.isGlobal ? path.join(SHARED_SKILLS_DIR, req.params.id) : path.join(SkillManager.getUserSkillsDir(req.user.id), req.params.id);
+        const scriptName = skillJson.actions?.[0]?._script || "main.py";
+        const scriptPy = await fs.readFile(path.join(skillDir, "scripts", scriptName), "utf-8").catch(() => "");
         res.json({ id: req.params.id, skillJson, scriptPy, isGlobal: skill.isGlobal });
     } catch {
         res.status(404).send("Skill files not found");
@@ -28,13 +31,13 @@ router.get("/:id", async (req: any, res) => {
 });
 
 router.get("/:id/vault", async (req: any, res) => {
-    const vaultId = `skill-${req.params.id}`;
+    const vaultId = `skill_${req.params.id}`;
     const vault = await secrets.vault(req.user.id, vaultId);
     res.json(vault.maskedValues());
 });
 
 router.put("/:id/vault", async (req: any, res) => {
-    const vaultId = `skill-${req.params.id}`;
+    const vaultId = `skill_${req.params.id}`;
     const vault = await secrets.userVault(req.user.id, vaultId);
     const { key, value } = req.body;
     await vault.set(key, value);
@@ -52,7 +55,11 @@ router.post("/", async (req: any, res) => {
     await fs.mkdir(skillDir, { recursive: true });
     await fs.writeFile(path.join(skillDir, "skill.json"), JSON.stringify(skillJson, null, 4));
     if (scriptPy !== undefined) {
-        await fs.writeFile(path.join(skillDir, "script.py"), scriptPy);
+        const scriptsDir = path.join(skillDir, "scripts");
+        await fs.mkdir(scriptsDir, { recursive: true });
+        // Use the script name from the first action or default to main.py
+        const scriptName = skillJson.actions?.[0]?._script || "main.py";
+        await fs.writeFile(path.join(scriptsDir, scriptName), scriptPy);
     }
     res.send("Personal skill saved");
 });

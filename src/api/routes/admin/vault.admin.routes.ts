@@ -5,6 +5,8 @@ import { SHARED_SECRETS_DIR } from "@/data/storage";
 import { secrets } from "@/secrets";
 
 import { IntegrationManager } from "@/integrations/integration-manager";
+import { validate } from "@/api/middleware/validate.middleware";
+import { UpdateVaultKeyDTO } from "@/api/dto/vault.dto";
 
 const router = express.Router();
 
@@ -26,8 +28,8 @@ router.get("/:id", async (req, res) => {
     res.json(vault.maskedValues());
 });
 
-router.put("/:id", async (req, res) => {
-    const vault = await secrets.globalVault(req.params.id);
+router.put("/:id", validate(UpdateVaultKeyDTO), async (req, res) => {
+    const vault = await secrets.globalVault(req.params.id as string);
     const { key, value } = req.body;
     await vault.set(key, value);
 

@@ -6,6 +6,6 @@ export const settingsService = {
         return res.data;
     },
     save: async (path: string, data: any) => {
-        return await apiClient.post(path, data);
+        return await apiClient.put(path, data);
     }
 };

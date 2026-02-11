@@ -1,3 +1,4 @@
+import path from "node:path";
 import { Context, Telegraf } from "telegraf";
 import type { Update } from "telegraf/types";
 
@@ -6,7 +7,7 @@ import type { ChannelSchema } from "../channel-base";
 import { Logger } from "@/cli/colors";
 import { PubSub } from "@/pubsub";
 import { InputProcessor } from "@/processor";
-import { Storage, uploadFileToChat } from "@/data/storage";
+import { Storage, uploadFileToChat, getUserSettings } from "@/data/storage";
 import { commandManager } from "@/commands";
 
 const activeBots = new Map<string, { bot: Telegraf<Context<Update>>, users: Set<string> }>();
@@ -105,6 +106,38 @@ export class TelegramChannel extends Channel {
         await Logger.info(`Telegram channel sync for chat '${internalChatId}' (User: ${this.user.username})`);
     }
 
+    async stop() {
+        this.isRunning = false;
+
+        if (this.pubsubListener) {
+            PubSub.unsubscribe(`chat:${this.config.settings.chat_id}`, this.pubsubListener);
+        }
+
+        if (this.botToken) {
+            const shared = activeBots.get(this.botToken);
+            if (shared) {
+                shared.users.delete(this.user.id);
+                if (shared.users.size === 0) {
+                    shared.bot.stop();
+                    activeBots.delete(this.botToken);
+                }
+            }
+        }
+    }
+
+    async sendFile(filePath: string, filename?: string) {
+        const shared = activeBots.get(this.botToken!);
+        if (!shared) throw new Error("Telegram bot not initialized");
+
+        const tgUserId = this.config.settings.user_id;
+
+        // Use InputFile for Bun/fs-friendly upload
+        await shared.bot.telegram.sendDocument(tgUserId, {
+            source: filePath,
+            filename: filename || path.basename(filePath)
+        });
+    }
+
     private async registerTelegramHandler(bot: Telegraf) {
         const internalChatId = this.config.settings.chat_id;
         const tgUserId = this.config.settings.user_id;
@@ -127,7 +160,7 @@ export class TelegramChannel extends Channel {
 
                 try {
                     const text = ctx.message.text;
-                    await InputProcessor.process(text, this.user.id, internalChatId, { _internal_source_tg: true });
+                    await InputProcessor.process(text, this.user.id, internalChatId, { _internal_source_tg: true, _channel: this.id });
                 } catch (e: any) {
                     await ctx.reply(`Error: ${e.message}`, { parse_mode: "MarkdownV2" });
                 }
@@ -220,7 +253,8 @@ export class TelegramChannel extends Channel {
 
                 await InputProcessor.process(processText, this.user.id, internalChatId, {
                     _internal_source_tg: true,
-                    _attachments: uploadedNames
+                    _attachments: uploadedNames,
+                    _channel: this.id
                 });
             } catch (e: any) {
                 await ctx.reply(`Error: ${e.message}`, { parse_mode: "MarkdownV2" });
@@ -261,7 +295,10 @@ export class TelegramChannel extends Channel {
                 return;
             }
 
+            const settings = await getUserSettings(tgUserId);
+
             if (message.role === "tool") {
+                if (!settings.debug) return; // Only show tool output if debug is ON
                 try {
                     const toolOutput = `🔧 Tool Output: \n\`\`\`\n${message.content.substring(0, 500)}\`\`\`${message.content.length > 500 ? "..." : ""}`;
                     await shared.bot.telegram.sendMessage(tgUserId, this.normalizeTGMessage(toolOutput), { parse_mode: "Markdown" });
@@ -275,7 +312,7 @@ export class TelegramChannel extends Channel {
             if (message.role === "assistant" || (message.role === "user" && !data._internal_source_tg)) {
                 try {
                     // 1. Tool Calls Notification
-                    if (message.tool_calls && message.tool_calls.length > 0) {
+                    if (settings.debug && message.tool_calls && message.tool_calls.length > 0) {
                         for (const tool of message.tool_calls) {
                             shared.bot.telegram.sendMessage(this.config.settings.user_id, this.normalizeTGMessage(`🛠️ Calling tool: *${tool.function.name}*`), { parse_mode: "Markdown" });
                         }
@@ -298,24 +335,5 @@ export class TelegramChannel extends Channel {
         };
 
         PubSub.subscribe(`chat:${internalChatId}`, this.pubsubListener);
-    }
-
-    async stop() {
-        this.isRunning = false;
-
-        if (this.pubsubListener) {
-            PubSub.unsubscribe(`chat:${this.config.settings.chat_id}`, this.pubsubListener);
-        }
-
-        if (this.botToken) {
-            const shared = activeBots.get(this.botToken);
-            if (shared) {
-                shared.users.delete(this.user.id);
-                if (shared.users.size === 0) {
-                    shared.bot.stop();
-                    activeBots.delete(this.botToken);
-                }
-            }
-        }
     }
 }

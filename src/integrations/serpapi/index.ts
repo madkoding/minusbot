@@ -1,7 +1,7 @@
 import { getJson } from "serpapi";
 
-import { Integration } from "../base";
-import type { IntegrationSchema } from "../base";
+import { Integration } from "../integration-base";
+import type { IntegrationSchema } from "../integration-base";
 import type { ToolDefinition, ToolHandler } from "@/tools/tools";
 import { Logger } from "@/cli/colors";
 

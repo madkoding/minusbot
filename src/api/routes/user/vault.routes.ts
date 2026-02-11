@@ -6,6 +6,8 @@ import { getUserDir } from "@/data/storage";
 import { secrets } from "@/secrets";
 
 import { IntegrationManager } from "@/integrations/integration-manager";
+import { validate } from "@/api/middleware/validate.middleware";
+import { UpdateVaultKeyDTO } from "@/api/dto/vault.dto";
 
 const router = express.Router();
 
@@ -29,7 +31,7 @@ router.get("/:id", async (req: any, res) => {
     res.json(vault.maskedValues());
 });
 
-router.put("/:id", async (req: any, res) => {
+router.put("/:id", validate(UpdateVaultKeyDTO), async (req: any, res) => {
     const vault = await secrets.userVault(req.user.id, req.params.id);
     const { key, value } = req.body;
     await vault.set(key, value);

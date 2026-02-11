@@ -2,6 +2,8 @@ import express from "express";
 import bcrypt from "bcrypt";
 
 import { UserManager } from "@/data/users";
+import { validate } from "@/api/middleware/validate.middleware";
+import { CreateUserDTO, UpdateUserDTO } from "@/api/dto/user.dto";
 
 const router = express.Router();
 
@@ -9,7 +11,7 @@ router.get("/", async (req, res) => {
     res.json(UserManager.getUsers());
 });
 
-router.post("/", async (req, res) => {
+router.post("/", validate(CreateUserDTO), async (req, res) => {
     const { username, password, role } = req.body;
     try {
         const user = await UserManager.createUser(username, password, role);
@@ -19,7 +21,7 @@ router.post("/", async (req, res) => {
     }
 });
 
-router.put("/", async (req, res) => {
+router.put("/", validate(UpdateUserDTO), async (req, res) => {
     const { id, username, password, role } = req.body;
     try {
         const updates: any = { username, role };

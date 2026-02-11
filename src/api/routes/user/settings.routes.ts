@@ -3,6 +3,8 @@ import fs from "node:fs/promises";
 import path from "node:path";
 
 import { getUserSettings, getUserSettingsFile } from "@/data/storage";
+import { validate } from "@/api/middleware/validate.middleware";
+import { UserSettingsDTO, ToggleToolDTO, ToggleSkillDTO } from "@/api/dto/settings.dto";
 
 const router = express.Router();
 
@@ -10,14 +12,14 @@ router.get("/", async (req: any, res) => {
     res.json(await getUserSettings(req.user.id));
 });
 
-router.put("/", async (req: any, res) => {
+router.put("/", validate(UserSettingsDTO), async (req: any, res) => {
     const file = getUserSettingsFile(req.user.id);
     await fs.mkdir(path.dirname(file), { recursive: true });
     await fs.writeFile(file, JSON.stringify(req.body, null, 4), "utf-8");
     res.send("Personal settings updated");
 });
 
-router.post("/toggle-tool", async (req: any, res) => {
+router.post("/toggle-tool", validate(ToggleToolDTO), async (req: any, res) => {
     const { name } = req.body;
     const settings = await getUserSettings(req.user.id);
     const file = getUserSettingsFile(req.user.id);
@@ -33,7 +35,7 @@ router.post("/toggle-tool", async (req: any, res) => {
     res.json({ ...settings, disabled_tools: newDisabled });
 });
 
-router.post("/toggle-skill", async (req: any, res) => {
+router.post("/toggle-skill", validate(ToggleSkillDTO), async (req: any, res) => {
     const { id } = req.body;
     const settings = await getUserSettings(req.user.id);
     const file = getUserSettingsFile(req.user.id);

@@ -68,7 +68,7 @@ export class SandboxManager {
                     Env: envArray,
                     HostConfig: {
                         Binds: [
-                            `${absSource}:/app:ro`,
+                            `${absSource}:/skill:ro`,
                             `${absWorkspace}:/workspace:rw`
                         ],
                         AutoRemove: true,

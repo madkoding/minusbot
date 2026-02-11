@@ -1,10 +1,37 @@
 {
-  "name": "hello-world",
-  "description": "A simple hello world skill",
-  "parameters": {
+  "id": "hello-world",
+  "displayName": "Hello World",
+  "description": "A sample skill that demonstrates the new multi-action architecture.",
+  "vaultKeys": [
+    "MESSAGE_PREFIX"
+  ],
+  "configSchema": {
     "type": "object",
     "properties": {
-      "name": { "type": "string" }
+      "name": {
+        "type": "string",
+        "default": "World"
+      }
     }
-  }
+  },
+  "actions": [
+    {
+      "name": "say_hello",
+      "description": "Say hello to someone using the skill's logic.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "to": {
+            "type": "string",
+            "description": "The person to greet"
+          }
+        },
+        "required": [
+          "to"
+        ]
+      },
+      "_script": "hello.py",
+      "_bins": {}
+    }
+  ]
 }

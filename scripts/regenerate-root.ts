@@ -1,6 +1,6 @@
 import bcrypt from "bcrypt";
-import { UserManager } from "../src/users";
-import { Logger } from "../src/colors";
+
+import { UserManager } from "@/data/users";
 
 async function regenerateRoot() {
     console.log("\x1b[36m󱙺\x1b[0m Regenerating root password...");
