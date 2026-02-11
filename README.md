@@ -1,40 +1,83 @@
 # Minusbot 🤖
 
-Multi-step AI Agent built with Bun, TypeScript, and Docker.
+**Minusbot** is a modular, multi-user AI Agent platform built with **Bun**, **TypeScript**, and **Docker**. It is designed to be extensible, secure, and easily integrated into various interfaces like Telegram or a Web Dashboard.
 
-## Setup
+## ✨ Features
 
-1.  **Directories**: The bot uses `~/.config/minusbot` for storage.
-2.  **API Key**: Create `~/.config/minusbot/secrets/agent.env` and add:
-    ```env
-    API_KEY=your_openai_or_compatible_key
-    ```
-3.  **Settings**: Create `~/.config/minusbot/settings.json`:
-    ```json
-    {
-      "model_id": "gpt-4o",
-      "ai_endpoint": "https://api.openai.com/v1"
-    }
-    ```
+- **🧠 Multi-Model AI**: Support for OpenAI and compatible endpoints (e.g., LocalAI, vLLM).
+- **🔌 Integrations**: Native support for **Telegram** bots and a **Web Dashboard**.
+- **🛠️ Dockerized Skills**: Extend capabilities safely by running tools in isolated Docker containers.
+- **🔐 Secure Vaults**: Per-user and global encrypted vaults for API keys and secrets.
+- **⚡ Reactive Architecture**: Event-driven design with PubSub for real-time updates.
+- **👥 Multi-User**: Complete user management with roles (Root, Admin, User).
+- **💾 Persistent Memory**: JSON-based storage for chats and configuration.
 
-## Skills
+## 🚀 Quick Start
 
-Skills are located in `~/.config/minusbot/skills/`. Each skill consists of:
-- `skill.json`: Tool definition.
-- `script.py`: Python logic executed in a disposable Docker container.
+### 1. Installation
 
-### Core Tools
-- `skill_list`: List available skills.
-- `skill_get`: Get skill schema.
-- `skill_run`: Execute a skill.
-- `cronjob_add`: Schedule an async task.
-- `cronjob_join`: Schedule a sync task (chat blocks until triggered).
-- `cronjob_list`: List scheduled tasks.
-
-## Running
+See [Installation Guide](docs/install.md) for detailed steps using Docker or manual setup.
 
 ```bash
-bun start [chat_id]
+# Clone
+git clone https://github.com/sammwyy/minusbot
+cd minusbot
+
+# Install dependencies & default skills
+bun install
+bun run skills:install
+
+# Run
+bun start
 ```
 
-If no `chat_id` is provided, a new "temporal" chat is created. Temporal chats are automatically deleted after 30 days of inactivity.
+### 2. Initial Setup via CLI
+
+Once running, interact with the CLI:
+
+1.  **Login/Root**: The CLI interaction acts as the `root` user.
+2.  **Set API Key**:
+    ```bash
+    /env set agent API_KEY sk-your-key-here
+    ```
+3.  **Validate**:
+    ```bash
+    /start
+    ```
+    This command will check your API key, model configuration, and integrations.
+
+## 📚 Documentation
+
+- [**Installation**](docs/install.md): Setup guide for Docker and Local.
+- [**Usage & Commands**](docs/usage.md): Full list of slash commands and features.
+- [**Skills System**](docs/skills.md): How to create and manage safe AI tools.
+
+## 🤖 Integrations
+
+### Telegram
+Minusbot can control a Telegram bot for you.
+1.  Get a `BOT_TOKEN` from [@BotFather](https://t.me/BotFather).
+2.  Configure it in your user vault:
+    ```bash
+    /env set integration-telegram BOT_TOKEN <token>
+    ```
+3.  Link your user:
+    Create `~/.config/minusbot/users/<user>/integrations/telegram.json`:
+    ```json
+    {
+      "chat_id": "main",
+      "user_id": "YOUR_TELEGRAM_USER_ID"
+    }
+    ```
+    *(Or allow the bot to guide you via the upcoming commands)*.
+
+## 🛠️ Tech Stack
+
+- **Runtime**: [Bun](https://bun.sh)
+- **Language**: TypeScript
+- **Containerization**: Docker (for Skills)
+- **Database**: JSON Filesystem (Simple & Portable)
+
+## 📄 License
+
+MIT

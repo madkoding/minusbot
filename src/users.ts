@@ -1,8 +1,9 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import bcrypt from "bcrypt";
+
 import { CONFIG_DIR } from "./config";
-import { Logger } from "./colors";
+import { Logger } from "./cli/colors";
 
 export type Role = "root" | "admin" | "user";
 

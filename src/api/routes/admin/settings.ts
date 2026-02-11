@@ -1,11 +1,12 @@
 import express from "express";
 import fs from "node:fs/promises";
+
 import {
     GLOBAL_SETTINGS_FILE,
     getGlobalSettings,
     SYSTEM_SETTINGS_FILE,
     getSystemSettings
-} from "../../../config";
+} from "@/config";
 
 const router = express.Router();
 

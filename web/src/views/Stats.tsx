@@ -26,10 +26,13 @@ export default function StatsView({ apiPath = '/admin/stats' }: { apiPath?: stri
     ];
 
     return (
-        <div className="space-y-10 max-w-5xl mx-auto">
+        <div className="space-y-10 max-w-6xl mx-auto h-full">
             <header>
-                <h2 className="text-3xl font-black tracking-tight text-zinc-100">Performance Metrics</h2>
-                <p className="text-zinc-500 mt-1">Real-time system utilization and token economics.</p>
+                <div className="flex items-center gap-3 mb-2">
+                    <h2 className="text-2xl font-bold tracking-tight text-zinc-100">Performance Metrics</h2>
+                    <div className="h-px flex-1 bg-zinc-900 ml-4 opacity-50"></div>
+                </div>
+                <p className="text-zinc-500 text-sm font-medium">Real-time system utilization and token economics.</p>
             </header>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

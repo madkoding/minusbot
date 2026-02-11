@@ -1,11 +1,13 @@
 import express from "express";
 import path from "node:path";
 import fs from "node:fs/promises";
-import { SHARED_SKILLS_DIR } from "../../../config";
+
+import { SHARED_SKILLS_DIR } from "@/config";
+import { SkillManager } from "@/skills";
+
+import { secrets } from "@/secrets";
 
 const router = express.Router();
-
-import { SkillManager } from "../../../skills";
 
 router.get("/", async (req: any, res) => {
     try {
@@ -39,6 +41,20 @@ router.get("/:id", async (req: any, res) => {
     } catch (e) {
         res.status(404).send("Error loading skill");
     }
+});
+
+router.get("/:id/vault", async (req: any, res) => {
+    const vaultId = `skill-${req.params.id}`;
+    const vault = await secrets.globalVault(vaultId);
+    res.json(vault.maskedValues());
+});
+
+router.put("/:id/vault", async (req: any, res) => {
+    const vaultId = `skill-${req.params.id}`;
+    const vault = await secrets.globalVault(vaultId);
+    const { key, value } = req.body;
+    await vault.set(key, value);
+    res.send("Global skill secret updated");
 });
 
 // Toggle global skill

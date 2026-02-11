@@ -45,7 +45,8 @@ export class SandboxManager {
         image: string,
         sourceDir: string,
         workspaceDir: string,
-        command: string[]
+        command: string[],
+        env: Record<string, string> = {}
     ): Promise<string> {
         const stream = new MemoryStream();
 
@@ -55,12 +56,16 @@ export class SandboxManager {
             const absSource = path.resolve(sourceDir);
             const absWorkspace = path.resolve(workspaceDir);
 
+            // Convert env map to array ["KEY=VAL", ...]
+            const envArray = Object.entries(env).map(([k, v]) => `${k}=${v}`);
+
             // Using dockerode run helper
             const [data] = await this.docker.run(
                 image,
                 command,
                 stream,
                 {
+                    Env: envArray,
                     HostConfig: {
                         Binds: [
                             `${absSource}:/app:ro`,

@@ -1,11 +1,12 @@
 import express from "express";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
-import { UserManager } from "../../users";
+
+import { UserManager } from "@/users";
+import { getJWTSecret } from "@/config";
 import { authenticate } from "../middleware/auth";
 
 const router = express.Router();
-const JWT_SECRET = process.env.JWT_SECRET || "minusbot-super-secret-123";
 
 router.post("/login", async (req, res) => {
     const { username, password } = req.body;
@@ -20,7 +21,8 @@ router.post("/login", async (req, res) => {
 
     await UserManager.saveSession({ id: sessionId, userId: user.id, expiresAt });
 
-    const token = jwt.sign({ userId: user.id, sessionId }, JWT_SECRET, { expiresIn: "24h" });
+    const secret = await getJWTSecret();
+    const token = jwt.sign({ userId: user.id, sessionId }, secret, { expiresIn: "24h" });
     res.json({ token, user: { id: user.id, username: user.username, role: user.role } });
 });
 

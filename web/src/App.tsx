@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+
 import { Sidebar } from "./components/Sidebar.tsx";
 import { Card, Input, Button } from "./components/UI.tsx";
 import { api } from "./api.ts";
@@ -12,8 +13,9 @@ import ToolsView from "./views/Tools.tsx";
 import UsersView from "./views/Users.tsx";
 import VaultView from "./views/Vault.tsx";
 import SettingsView from "./views/Settings.tsx";
-import ManageChatsView from "./views/ManageChats.tsx";
+
 import StatsView from "./views/Stats";
+import IntegrationsView from "./views/Integrations.tsx";
 
 export default function App() {
     const [page, setPage] = useState('login');
@@ -60,18 +62,18 @@ export default function App() {
         <div className="min-h-screen flex items-center justify-center p-6 bg-[#050505]">
             <div className="w-full max-sm:max-w-xs max-w-sm space-y-12 animate-fade-up">
                 <div className="text-center space-y-4">
-                    <div className="inline-flex w-14 h-14 rounded-2xl bg-zinc-50 items-center justify-center mb-2 shadow-[0_0_20px_rgba(255,255,255,0.1)]">
-                        <div className="w-6 h-6 rounded-md bg-zinc-950"></div>
+                    <div className="inline-flex w-16 h-16 rounded-2xl bg-zinc-50/5 items-center justify-center mb-2 overflow-hidden border border-zinc-800/50 shadow-[0_0_20px_rgba(255,255,255,0.05)]">
+                        <img src="/logo.png" className="w-full h-full object-cover" alt="Minusbot" />
                     </div>
                     <h1 className="text-4xl font-black tracking-tighter text-zinc-100 uppercase italic">MINUSBOT</h1>
-                    <p className="text-[10px] text-zinc-600 font-bold uppercase tracking-[0.2em]">Your pocket agent assistant</p>
+                    <p className="text-[10px] text-zinc-600 font-bold uppercase tracking-[0.2em]">Your personal assistant</p>
                 </div>
 
                 <Card className="border-zinc-800/50 bg-zinc-900/20 backdrop-blur-2xl p-8 rounded-3xl">
                     <form onSubmit={handleLogin} className="space-y-6">
-                        <Input label="Identity" name="username" placeholder="Enter username" required />
-                        <Input label="Secure Key" name="password" type="password" placeholder="••••••••" required />
-                        <Button className="w-full h-12 rounded-2xl text-base font-bold tracking-tight">Access Minusbot</Button>
+                        <Input label="Username" name="username" placeholder="Enter username" required />
+                        <Input label="Password" name="password" type="password" placeholder="••••••••" required />
+                        <Button className="w-full h-12 rounded-2xl text-base font-bold tracking-tight">Login</Button>
                     </form>
                 </Card>
             </div>
@@ -80,18 +82,20 @@ export default function App() {
 
     return (
         <BrowserRouter>
-            <div className="flex bg-[#070707] min-h-screen overflow-hidden">
+            <div className="flex bg-[#070707] h-screen overflow-hidden">
                 <Sidebar user={user} onLogout={logout} />
 
-                <main className="flex-1 p-12 overflow-y-auto custom-scrollbar">
+                <main className="flex-1 p-8 overflow-y-auto custom-scrollbar">
                     <div className="max-w-6xl mx-auto">
                         <Routes>
                             <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
                             {/* Personal Routes */}
                             <Route path="/dashboard" element={<DashboardView />} />
-                            <Route path="/interaction" element={<ChatView />} />
+                            <Route path="/chat" element={<ChatView />} />
+                            <Route path="/chat/:id" element={<ChatView />} />
                             <Route path="/skills" element={<SkillsView apiPath="/user/skills" />} />
+                            <Route path="/integrations" element={<IntegrationsView />} />
                             <Route path="/tools" element={<ToolsView apiPath="/user/settings" />} />
                             <Route path="/secrets" element={<VaultView apiPath="/user/vault" />} />
                             <Route path="/settings" element={<SettingsView apiPath="/user/settings" />} />
@@ -102,7 +106,7 @@ export default function App() {
                             <Route path="/admin/settings" element={<SettingsView apiPath="/admin/settings/global" />} />
                             <Route path="/admin/users" element={<UsersView />} />
                             <Route path="/admin/stats" element={<StatsView apiPath="/admin/stats" />} />
-                            <Route path="/admin/chats" element={<ManageChatsView />} />
+
 
                             {/* System Routes */}
                             <Route path="/system/config" element={<SettingsView apiPath="/admin/settings/system" />} />

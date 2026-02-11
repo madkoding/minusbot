@@ -5,12 +5,11 @@ import http from "node:http";
 import path from "node:path";
 import jwt from "jsonwebtoken";
 
-import { getSystemSettings } from "../config";
-import { Logger } from "../colors";
+import { getSystemSettings, getJWTSecret } from "../config";
+import { Logger } from "../cli/colors";
 import { UserManager } from "../users";
 import { Storage } from "../storage";
 import { Agent } from "../agent";
-
 import { PubSub } from "../pubsub";
 
 // Routes
@@ -28,11 +27,10 @@ import userSkillsRoutes from "./routes/user/skills";
 import userSettingsRoutes from "./routes/user/settings";
 import userVaultRoutes from "./routes/user/vault";
 import userStatsRoutes from "./routes/user/stats";
+import userIntegrationsRoutes from "./routes/user/integrations";
 
 // Middleware
 import { authenticate, adminOnly } from "./middleware/auth";
-
-const JWT_SECRET = process.env.JWT_SECRET || "minusbot-super-secret-123";
 
 export async function startServer() {
     const sys = await getSystemSettings();
@@ -61,6 +59,7 @@ export async function startServer() {
     user.use("/settings", userSettingsRoutes);
     user.use("/vault", userVaultRoutes);
     user.use("/stats", userStatsRoutes);
+    user.use("/integrations", userIntegrationsRoutes);
     api.use("/user", user);
 
     // Admin Routes
@@ -99,7 +98,8 @@ export async function startServer() {
 
                 if (msg.type === "auth") {
                     try {
-                        const decoded = jwt.verify(msg.token, JWT_SECRET) as any;
+                        const secret = await getJWTSecret();
+                        const decoded = jwt.verify(msg.token, secret) as any;
                         const session = UserManager.getSession(decoded.sessionId);
                         if (session && session.userId === decoded.userId) {
                             authenticated = true;

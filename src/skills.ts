@@ -1,8 +1,10 @@
-import { SHARED_SKILLS_DIR, getUserDir, getUserSettings } from "./config";
 import path from "node:path";
 import fs from "node:fs/promises";
-import { Storage } from "./storage";
+
+import { SHARED_SKILLS_DIR, getUserDir, getUserSettings, getUserIntegrationConfigFile } from "./config";
 import { SandboxManager } from "./sandbox/index";
+import { WorkspaceManager } from "./workspaces";
+import { secrets } from "./secrets";
 
 export interface Skill {
     id: string; // The folder name
@@ -87,7 +89,7 @@ export class SkillManager {
         }
     }
 
-    static async runSkill(userId: string, id: string, inputs: any, chat_id: string): Promise<string> {
+    static async runSkill(userId: string, id: string, inputs: any, workspaceId: string | null | undefined, chatId?: string): Promise<string> {
         const skill = await this.getSkill(userId, id);
         if (!skill || !skill.enabled) {
             throw new Error(`Skill ${id} is disabled or does not exist.`);
@@ -97,15 +99,38 @@ export class SkillManager {
             ? path.join(SHARED_SKILLS_DIR, id)
             : path.join(this.getUserSkillsDir(userId), id);
 
-        const chatWorkspaceDir = Storage.getWorkspaceDir(userId, chat_id);
-        await fs.mkdir(chatWorkspaceDir, { recursive: true });
+        const workspaceDir = WorkspaceManager.resolveContentPath(userId, workspaceId, chatId);
+        await fs.mkdir(workspaceDir, { recursive: true });
+
+        // Load Vault
+        const vaultId = `skill-${id}`;
+        const vault = await secrets.userVault(userId, vaultId);
+        const envSecrets = vault.allValues();
+
+        // Load Config
+        // We reuse the integration config file location since the prompt asked for "IGUAL que el de las integraciones"
+        // and we can just treat it as an integration ID "skill-<id>"
+        const configPath = getUserIntegrationConfigFile(userId, vaultId);
+        let configEnv: Record<string, string> = {};
+        try {
+            const configContent = await fs.readFile(configPath, "utf-8");
+            const config = JSON.parse(configContent);
+            for (const [key, value] of Object.entries(config)) {
+                configEnv[`CONFIG_${key}`] = String(value);
+            }
+        } catch {
+            // No config or failed to load
+        }
+
+        const env = { ...envSecrets, ...configEnv };
 
         // Use SandboxManager
         return await SandboxManager.runContainer(
             "python:3.11-slim",
             skillPath,
-            chatWorkspaceDir,
-            ["python", "/app/script.py", JSON.stringify(inputs)]
+            workspaceDir,
+            ["python", "/app/script.py", JSON.stringify(inputs)],
+            env
         );
     }
 }

@@ -42,10 +42,13 @@ export default function SettingsView({ apiPath = '/user/settings' }: { apiPath?:
     const subtitle = isSystem ? "Low-level server configuration." : isGlobal ? "Default fallback settings for all users." : "Your personal agent environment.";
 
     return (
-        <div className="max-w-3xl mx-auto space-y-8">
+        <div className="max-w-4xl mx-auto space-y-10">
             <header>
-                <h2 className="text-3xl font-black tracking-tight text-zinc-100">{title} Settings</h2>
-                <p className="text-zinc-500 mt-1">{subtitle}</p>
+                <div className="flex items-center gap-3 mb-2">
+                    <h2 className="text-2xl font-bold tracking-tight text-zinc-100">{title} Preferences</h2>
+                    <div className="h-px flex-1 bg-zinc-900 ml-4 opacity-50"></div>
+                </div>
+                <p className="text-zinc-500 text-sm font-medium">{subtitle}</p>
             </header>
 
             <Card className="p-8">

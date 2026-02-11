@@ -49,10 +49,13 @@ export default function DashboardView() {
     if (!stats) return <div className="animate-pulse text-zinc-500 font-bold uppercase tracking-widest">Synchronizing...</div>;
 
     return (
-        <div className="space-y-12 animate-fade-up">
+        <div className="space-y-12 max-w-6xl mx-auto">
             <header>
-                <h2 className="text-4xl font-black tracking-tight text-zinc-100">Overview</h2>
-                <p className="text-zinc-500 mt-2 font-medium">Your personal activity and resource utilization.</p>
+                <div className="flex items-center gap-3 mb-2">
+                    <h2 className="text-2xl font-bold tracking-tight text-zinc-100">Performance Telemetry</h2>
+                    <div className="h-px flex-1 bg-zinc-900 ml-4 opacity-50"></div>
+                </div>
+                <p className="text-zinc-500 text-sm font-medium">Real-time heuristics and resource utilization of your neural network.</p>
             </header>
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -89,11 +92,6 @@ export default function DashboardView() {
                             <div className="w-2 h-2 rounded-full bg-purple-500"></div>
                             <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">Output</span>
                         </div>
-                    </div>
-                </Card>
-                <Card title="Identity" description="Agent specifications">
-                    <div className="text-sm font-bold text-zinc-100 italic underline decoration-zinc-800 underline-offset-4">
-                        Minusbot Nexus Protocol v1.0.0-alpha
                     </div>
                 </Card>
             </div>

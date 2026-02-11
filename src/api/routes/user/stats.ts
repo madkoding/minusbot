@@ -1,5 +1,6 @@
 import express from "express";
-import { StatsManager } from "../../../stats";
+
+import { StatsManager } from "@/stats";
 
 const router = express.Router();
 

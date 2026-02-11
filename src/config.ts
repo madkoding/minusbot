@@ -64,8 +64,20 @@ export function getUserDir(userId: string) {
     return path.join(USERS_DIR, userId);
 }
 
+export function getWorkspacesDir(userId: string) {
+    return path.join(getUserDir(userId), "workspaces");
+}
+
 export function getUserSettingsFile(userId: string) {
     return path.join(getUserDir(userId), "user-settings.json");
+}
+
+export function getUserIntegrationsDir(userId: string) {
+    return path.join(getUserDir(userId), "integrations");
+}
+
+export function getUserIntegrationConfigFile(userId: string, integrationId: string) {
+    return path.join(getUserIntegrationsDir(userId), `${integrationId}.json`);
 }
 
 export async function getUserSettings(userId: string): Promise<Settings> {
@@ -85,10 +97,33 @@ export async function getUserSettings(userId: string): Promise<Settings> {
     }
 }
 
+// JWT Secret
+export const JWT_SECRET_FILE = path.join(CONFIG_DIR, ".jwt-secret");
+
+let cachedSecret: string | null = null;
+
+export async function getJWTSecret(): Promise<string> {
+    if (cachedSecret) return cachedSecret;
+
+    try {
+        const secret = await fs.readFile(JWT_SECRET_FILE, "utf-8");
+        cachedSecret = secret.trim();
+        return cachedSecret;
+    } catch {
+        const { randomBytes } = await import("node:crypto");
+        const newSecret = randomBytes(64).toString("hex");
+        await fs.mkdir(CONFIG_DIR, { recursive: true });
+        await fs.writeFile(JWT_SECRET_FILE, newSecret, "utf-8");
+        cachedSecret = newSecret;
+        return newSecret;
+    }
+}
+
 // Helper to ensure base directories exist
 export async function ensureDirs() {
     await fs.mkdir(USERS_DIR, { recursive: true });
     await fs.mkdir(SHARED_DIR, { recursive: true });
     await fs.mkdir(SHARED_SKILLS_DIR, { recursive: true });
     await fs.mkdir(SHARED_SECRETS_DIR, { recursive: true });
+    await getJWTSecret();
 }

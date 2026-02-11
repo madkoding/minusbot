@@ -1,6 +1,6 @@
-import { CONFIG_DIR } from "./config";
 import fs from "node:fs/promises";
-import path from "node:path";
+
+import { CONFIG_DIR } from "./config";
 
 export class ToolLogger {
     static async log(chatId: string, toolName: string, args: any, result: string) {

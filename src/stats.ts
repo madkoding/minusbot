@@ -1,6 +1,7 @@
-import { SHARED_DIR, getUserDir } from "./config";
 import fs from "node:fs/promises";
 import path from "node:path";
+
+import { SHARED_DIR, getUserDir } from "./config";
 
 export interface StatsData {
     chats_created: number;

@@ -1,27 +1,17 @@
 {
   "name": "minusbot",
   "version": "1.0.0",
+  "type": "module",
   "scripts": {
     "dev:client": "cd web && npm run dev",
-    "dev": "NODE_ENV=dev bun run src/index.ts",
+    "dev": "NODE_ENV=dev bun run --watch src/index.ts",
     "build:client": "cd web && npm run build",
     "build": "npm run build:frontend",
     "start": "NODE_ENV=prod bun run src/index.ts",
     "skills:install": "bun run scripts/install-skills.ts",
-    "setup": "bun run scripts/setup.ts"
+    "root:reset": "bun run scripts/regenerate-root.ts"
   },
   "private": true,
-  "devDependencies": {
-    "@types/bun": "latest",
-    "@types/react": "^19.2.13",
-    "@types/react-dom": "^19.2.3",
-    "@types/react-router-dom": "^5.3.3",
-    "@types/uuid": "^10.0.0",
-    "concurrently": "^9.2.1"
-  },
-  "peerDependencies": {
-    "typescript": "^5"
-  },
   "dependencies": {
     "@types/bcrypt": "^6.0.0",
     "@types/cors": "^2.8.19",
@@ -36,6 +26,18 @@
     "jsonwebtoken": "^9.0.3",
     "node-os-utils": "^2.0.1",
     "os-utils": "^0.0.14",
+    "serpapi": "^2.2.1",
+    "telegraf": "^4.16.3",
     "ws": "^8.19.0"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/react": "^19.2.13",
+    "@types/react-dom": "^19.2.3",
+    "@types/react-router-dom": "^5.3.3",
+    "@types/uuid": "^10.0.0"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
   }
 }

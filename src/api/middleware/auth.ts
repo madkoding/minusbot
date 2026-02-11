@@ -1,14 +1,15 @@
 import jwt from "jsonwebtoken";
-import { UserManager } from "../../users";
 
-const JWT_SECRET = process.env.JWT_SECRET || "minusbot-super-secret-123";
+import { UserManager } from "@/users";
+import { getJWTSecret } from "@/config";
 
-export const authenticate = (req: any, res: any, next: any) => {
+export const authenticate = async (req: any, res: any, next: any) => {
     const token = req.headers.authorization?.split(" ")[1];
     if (!token) return res.status(401).send("Unauthorized");
 
     try {
-        const decoded = jwt.verify(token, JWT_SECRET) as any;
+        const secret = await getJWTSecret();
+        const decoded = jwt.verify(token, secret) as any;
         const session = UserManager.getSession(decoded.sessionId);
 
         if (!session || session.userId !== decoded.userId) {

@@ -3,3 +3,6 @@ import "./cron.tools";
 import "./skill.tools";
 import "./fs.tools";
 import "./shell.tools";
+import "./workspace.tools";
+import "./memo.tools";
+import "./date.tools";

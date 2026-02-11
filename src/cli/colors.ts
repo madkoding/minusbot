@@ -1,4 +1,4 @@
-import { getGlobalSettings } from "./config";
+import { getGlobalSettings } from "../config";
 
 const COLORS = {
     reset: "\x1b[0m",
@@ -44,10 +44,10 @@ export class Logger {
     static async banner(version: string) {
         const art = `
   __  __ _                  _           _   
- |  \\/  (_)_ __  _   _ ___ | |__   ___ | |_ 
- | |\\/| | | '_ \\| | | / __|| '_ \\ / _ \\| __|
- | |  | | | | | | |_| \\__ \\| |_) | (_) | |_ 
- |_|  |_|_|_| |_|\\__,_|___/|_.__/ \___/ \\__|
+ |  \/  (_)_ __  _   _ ___ | |__   ___ | |_ 
+ | |\/| | | '_ \| | | / __|| '_ \ / _ \| __|
+ | |  | | | | | | |_| \__ \| |_) | (_) | |_ 
+ |_|  |_|_|_| |_|\__,_|___/|_.__/ \___/ \__|
                                       v${version}
         `;
         console.log(await this.wrap(art, COLORS.fg.blue + COLORS.bright));

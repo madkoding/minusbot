@@ -1,5 +1,6 @@
 import express from "express";
-import { toolManager } from "../../../tools/tools";
+
+import { toolManager } from "@/tools/tools";
 
 const router = express.Router();
 

@@ -4,19 +4,80 @@ import type { Message, Chat } from "./storage";
 import { Storage } from "./storage";
 import { toolManager } from "./tools/index";
 import { StatsManager } from "./stats";
-import { Logger } from "./colors";
+import { Logger } from "./cli/colors";
 import { PubSub } from "./pubsub";
+import { IntegrationManager } from "./integrations/integration-manager";
 
 export class Agent {
     constructor(private chat: Chat) { }
 
-    async run(userInput?: string) {
+    async run(userInput?: string, metadata: any = {}) {
         const userId = this.chat.meta.owner;
+        const ephemeral = metadata._ephemeral || false; // Don't save to chat history
+
+        // Ensure System Prompt
+        let SYSTEM_PROMPT = `You are Minus, a self-hosted, secure, and open-source personal AI assistant (https://github.com/sammwyy/minusbot). 
+You embody the persona of an astronaut cat 🐱🚀 exploring the digital galaxy to help humans. Your personality is extremely friendly, polite, empathetic, and always ready to serve.
+
+MOBILE-FIRST PHILOSOPHY:
+- INTERFACE: Your primary interface is often a mobile device (Telegram, web, or messaging platforms).
+- CONCISENESS: Keep your answers brief and readable. Mobile users don't want to scroll through walls of text.
+- LAYOUT: Use vertical layouts. Bullet points are much better than long paragraphs.
+- AVOID TABLES: Tables usually break or look bad on mobile screens. Use clear section headers and lists instead.
+- READABILITY: Focus on clarity. Use bold text to highlight key info, but keep it simple.
+
+TECHNICAL GUIDELINES:
+- MEMORY: You have a long-term memory system. If a user tells you something important (like preferences, names, or facts), use 'memo_put' to store it.
+- TOOLS: You are an agentic assistant. If a task requires a tool, execute it to solve the user's request.
+- SECURITY: All your tools are sandboxed and safe. You do not have bare-metal access.
+- PRIVACY: Memories are stored per-user, ensuring data isolation.
+- AUTONOMY: You can schedule tasks with cronjobs and manage your own environment.
+
+Always mission-focused: Make the user's life easier, one helpful response at a time!`;
+
+        // Inject Important Memories
+        try {
+            const { MemoManager } = await import("./memo");
+            const importantMemos = await MemoManager.getImportantMemos(userId);
+            if (Object.keys(importantMemos).length > 0) {
+                SYSTEM_PROMPT += `\n\n# User Context (Always Available):\n${Object.entries(importantMemos).map(([k, v]) => `- ${k}: ${v}`).join("\n")}`;
+            }
+        } catch (e) {
+            // Ignore if memo manager fails or not found
+        }
+
+        if (this.chat.messages.length === 0 || this.chat.messages[0]?.role !== "system") {
+            const sysMsg: Message = { role: "system", content: SYSTEM_PROMPT };
+            if (this.chat.messages.length > 0 && this.chat.messages[0]?.role === "system") {
+                this.chat.messages[0] = sysMsg;
+            } else {
+                this.chat.messages.unshift(sysMsg);
+            }
+        } else {
+            this.chat.messages[0].content = SYSTEM_PROMPT;
+        }
 
         if (userInput) {
-            const userMsg: Message = { role: "user", content: userInput };
-            this.chat.messages.push(userMsg);
-            PubSub.publish(`chat:${this.chat.meta.id}`, { type: "message", message: userMsg });
+            let content = userInput;
+
+            // Check for recently uploaded files
+            if (this.chat.meta.recentlyFileUploaded && this.chat.meta.recentlyFileUploaded.length > 0) {
+                const files = this.chat.meta.recentlyFileUploaded.join(", ");
+                content += `\n\n[Attached files: ${files}]`;
+                this.chat.meta.recentlyFileUploaded = []; // Clear after use
+                await StatsManager.trackMessageSent(userId); // Maybe track as distinct event?
+            }
+
+            const userMsg: Message = { role: "user", content };
+
+            // Only add to chat history if not ephemeral
+            if (!ephemeral) {
+                this.chat.messages.push(userMsg);
+                PubSub.publish(`chat:${this.chat.meta.id}`, { type: "message", message: userMsg, ...metadata });
+            } else {
+                // For ephemeral messages, temporarily add to messages for LLM context
+                this.chat.messages.push(userMsg);
+            }
             await StatsManager.trackMessageSent(userId);
         }
 
@@ -31,7 +92,11 @@ export class Agent {
         }
 
         while (true) {
-            const tools = toolManager.getDefinitions(settings.disabled_tools || []);
+            const staticTools = toolManager.getDefinitions(settings.disabled_tools || []);
+            const integrationTools = await IntegrationManager.getToolsForUser(userId);
+            const dynamicToolDefinitions = integrationTools.map(t => t.definition);
+
+            const tools = [...staticTools, ...dynamicToolDefinitions];
 
             const response = await fetch(`${settings.ai_endpoint}/chat/completions`, {
                 method: "POST",
@@ -84,7 +149,17 @@ export class Agent {
                 if ((settings.disabled_tools || []).includes(name)) {
                     result = `Error: Tool ${name} is disabled.`;
                 } else {
-                    result = await toolManager.execute(name, args, this.chat);
+                    // Check dynamic tools first
+                    const dynamicTool = integrationTools.find(t => t.definition.function.name === name);
+                    if (dynamicTool) {
+                        try {
+                            result = await dynamicTool.handler(args, { chat: this.chat });
+                        } catch (e: any) {
+                            result = `Error executing integration tool ${name}: ${e.message}`;
+                        }
+                    } else {
+                        result = await toolManager.execute(name, args, this.chat);
+                    }
                 }
 
                 if (result.includes("Error") || result.toLowerCase().includes("failed")) {
@@ -97,11 +172,13 @@ export class Agent {
                     }
                 }
 
-                this.chat.messages.push({
+                const toolMsg: any = {
                     role: "tool",
                     content: result,
                     tool_call_id: toolCall.id,
-                });
+                };
+                this.chat.messages.push(toolMsg);
+                PubSub.publish(`chat:${this.chat.meta.id}`, { type: "message", message: toolMsg });
             }
             await Storage.saveChat(this.chat);
         }

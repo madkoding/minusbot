@@ -1,14 +1,12 @@
 import express from "express";
+
 import { Storage } from "../../storage";
 import { authenticate, adminOnly } from "../middleware/auth";
 
 const router = express.Router();
 
 router.get("/admin/chat", authenticate, adminOnly, async (req, res) => {
-    // Admin needs a way to see all chats of all users.
-    // This is complex now with user dirs.
-    // For now, let's just return current user's chats or Implement a global list.
-    // I'll skip global list for now to focus on the structure requested.
+    // To-do: Add admin chat endpoint.
     res.json([]);
 });
 

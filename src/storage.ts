@@ -1,7 +1,7 @@
-import { getUserDir } from "./config";
 import path from "node:path";
 import fs from "node:fs/promises";
-import { Logger } from "./colors";
+
+import { getUserDir } from "./config";
 
 export type ChatType = "temporal" | "permanent";
 
@@ -20,6 +20,7 @@ export interface ChatMeta {
     title?: string;
     message_count: number;
     owner: string; // User ID
+    recentlyFileUploaded?: string[];
 }
 
 export interface Chat {
@@ -36,8 +37,8 @@ export class Storage {
         return path.join(this.getChatsDir(userId), chatId);
     }
 
-    static getWorkspaceDir(userId: string, chatId: string) {
-        return path.join(this.getChatDir(userId, chatId), "workspace");
+    static getChatContentPath(userId: string, chatId: string) {
+        return path.join(this.getChatDir(userId, chatId), "content");
     }
 
     static async getChat(userId: string, chatId: string): Promise<Chat | null> {
@@ -57,10 +58,10 @@ export class Storage {
     static async saveChat(chat: Chat) {
         const userId = chat.meta.owner;
         const chatDir = this.getChatDir(userId, chat.meta.id);
-        const workspaceDir = this.getWorkspaceDir(userId, chat.meta.id);
+        const contentDir = this.getChatContentPath(userId, chat.meta.id);
 
         await fs.mkdir(chatDir, { recursive: true });
-        await fs.mkdir(workspaceDir, { recursive: true });
+        await fs.mkdir(contentDir, { recursive: true });
 
         chat.meta.last_activity = new Date().toISOString();
         chat.meta.message_count = chat.messages.length;
@@ -68,7 +69,11 @@ export class Storage {
         const metaPath = path.join(chatDir, "meta.json");
         const historyPath = path.join(chatDir, "chat.json");
 
-        await fs.writeFile(metaPath, JSON.stringify(chat.meta, null, 4), "utf-8");
+        // Prepare meta for saving (exclude transient fields)
+        const metaToSave = { ...chat.meta };
+        delete metaToSave.recentlyFileUploaded;
+
+        await fs.writeFile(metaPath, JSON.stringify(metaToSave, null, 4), "utf-8");
         await fs.writeFile(historyPath, JSON.stringify(chat.messages, null, 4), "utf-8");
     }
 

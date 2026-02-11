@@ -1,6 +1,7 @@
 import express from "express";
 import bcrypt from "bcrypt";
-import { UserManager } from "../../../users";
+
+import { UserManager } from "@/users";
 
 const router = express.Router();
 

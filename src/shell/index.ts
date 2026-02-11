@@ -2,16 +2,14 @@ import Docker from "dockerode";
 import { Writable } from "node:stream";
 import { v4 as uuidv4 } from "uuid";
 import fs from "node:fs/promises";
-import path from "node:path";
 
-import { Storage } from "../storage";
-import { getUserDir } from "../config";
-import { SandboxManager } from "../sandbox/index";
+import { SandboxManager } from "../sandbox";
+import { WorkspaceManager } from "../workspaces";
 
 interface ShellSession {
     id: string;
     userId: string;
-    chatId: string | null;
+    workspaceId: string;
     container: Docker.Container;
     stream: NodeJS.ReadWriteStream;
     outputBuffer: string[];
@@ -26,21 +24,17 @@ export class ShellManager {
 
     static async create(
         userId: string,
-        chatId: string | null, // null = global
+        workspaceId: string | null | undefined,
         command: string,
         isBg: boolean = false,
-        timeoutMs: number = 30000
+        timeoutMs: number = 30000,
+        chatId?: string
     ): Promise<string> {
         const image = "python:3.11-slim";
         await SandboxManager.ensureImage(image);
 
         // Prepare workspace mount
-        let workspaceDir = "";
-        if (chatId) {
-            workspaceDir = Storage.getWorkspaceDir(userId, chatId);
-        } else {
-            workspaceDir = path.join(getUserDir(userId), "global_workspace");
-        }
+        const workspaceDir = WorkspaceManager.resolveContentPath(userId, workspaceId, chatId);
         await fs.mkdir(workspaceDir, { recursive: true });
 
         const container = await SandboxManager.docker.createContainer({
@@ -73,7 +67,7 @@ export class ShellManager {
         const session: ShellSession = {
             id,
             userId,
-            chatId,
+            workspaceId: workspaceId || "chat",
             container,
             stream,
             outputBuffer: [],
@@ -153,28 +147,19 @@ export class ShellManager {
         const session = this.sessions.get(id);
         if (!session) throw new Error("Shell not found.");
 
-        if (session.userId !== userId && userId !== "root") { // Allow root to peek? Or strict ownership?
+        if (session.userId !== userId && userId !== "root") {
             // Strict for now per requirements imply ownership check
-            // "scopeadas por chat y usuario"
         }
 
         // If waitSeconds > 0, we clear current buffer, wait for X seconds gathering new data, then return.
         if (waitSeconds > 0) {
-            // Unsure if we should return *only* new data or *all* data accumulated + new.
-            // Usually "read" consumes. 
-            // Let's flush current buffer, wait, return new accumulator.
-            const flushed = session.outputBuffer;
-            session.outputBuffer = []; // Clear
+            session.outputBuffer = []; // Clear current buffer
 
             await new Promise(r => setTimeout(r, waitSeconds * 1000));
 
             const newOutput = session.outputBuffer.join("");
             session.outputBuffer = []; // Clear again
-            return /*flushed.join("") +*/ newOutput; // Return what arrived during wait? 
-            // Or return everything since last read?
-            // "espera X segundos" implies waiting to see if more comes.
-            // Let's just return whatever is in buffer after X seconds delay from NOW.
-            // No, that implies blocking.
+            return newOutput;
         }
 
         const output = session.outputBuffer.join("");
@@ -204,12 +189,12 @@ export class ShellManager {
         return "Shell killed.";
     }
 
-    // List user shells (global + current chat)
-    static list(userId: string, chatId?: string): ShellSession[] {
+    // List user shells (global-only now)
+    static list(userId: string, workspaceId?: string): ShellSession[] {
         return Array.from(this.sessions.values()).filter(s => {
             if (s.userId !== userId) return false;
-            if (s.chatId === null) return true; // Global
-            if (chatId && s.chatId === chatId) return true; // Chat specific
+            if (workspaceId && s.workspaceId === workspaceId) return true;
+            if (!workspaceId) return true;
             return false;
         });
     }

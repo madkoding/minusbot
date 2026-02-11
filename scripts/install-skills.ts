@@ -1,17 +1,17 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 
-import { SKILLS_DIR } from "../src/config";
+import { SHARED_SKILLS_DIR } from "../src/config";
 
 const REPO_SKILLS_DIR = path.join(process.cwd(), "skills");
 
 async function installSkills() {
     console.log(`\x1b[36m󱙺\x1b[0m Installing skills from: \x1b[33m${REPO_SKILLS_DIR}\x1b[0m`);
-    console.log(`\x1b[36m󱙺\x1b[0m To: \x1b[33m${SKILLS_DIR}\x1b[0m`);
+    console.log(`\x1b[36m󱙺\x1b[0m To: \x1b[33m${SHARED_SKILLS_DIR}\x1b[0m`);
 
     try {
         // Ensure destination exists
-        await fs.mkdir(SKILLS_DIR, { recursive: true });
+        await fs.mkdir(SHARED_SKILLS_DIR, { recursive: true });
 
         // Read repo skills
         const skills = await fs.readdir(REPO_SKILLS_DIR);
@@ -20,7 +20,7 @@ async function installSkills() {
 
         for (const skill of skills) {
             const src = path.join(REPO_SKILLS_DIR, skill);
-            const dest = path.join(SKILLS_DIR, skill);
+            const dest = path.join(SHARED_SKILLS_DIR, skill);
 
             const stats = await fs.stat(src);
             if (stats.isDirectory()) {

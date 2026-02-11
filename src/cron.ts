@@ -1,14 +1,18 @@
-import { getUserDir, USERS_DIR } from "./config";
 import fs from "node:fs/promises";
 import path from "node:path";
+
+import { getUserDir, USERS_DIR } from "./config";
 
 export interface CronJob {
     id: string;
     chatId: string;
     userId: string;
-    triggerAt: string; // ISO string
+    triggerAt: string; // ISO string - for one-time jobs or next execution for recurring
     prompt: string;
     type: "async" | "sync";
+    recurring?: boolean; // If true, reschedule after execution
+    interval?: number; // Interval in milliseconds for recurring jobs
+    lastExecuted?: string; // ISO string of last execution time
 }
 
 export class CronManager {
@@ -49,11 +53,30 @@ export class CronManager {
             for (const userId of userDirs) {
                 const jobs = await this.list(userId);
                 const now = new Date();
-                const due = jobs.filter((j) => new Date(j.triggerAt) <= now);
-                const remaining = jobs.filter((j) => new Date(j.triggerAt) > now);
+                const due: CronJob[] = [];
+                const remaining: CronJob[] = [];
+
+                for (const job of jobs) {
+                    if (new Date(job.triggerAt) <= now) {
+                        dueJobs.push(job);
+                        due.push(job);
+
+                        // If recurring, reschedule
+                        if (job.recurring && job.interval) {
+                            const nextTrigger = new Date(now.getTime() + job.interval);
+                            remaining.push({
+                                ...job,
+                                triggerAt: nextTrigger.toISOString(),
+                                lastExecuted: now.toISOString()
+                            });
+                        }
+                        // Otherwise, one-time job is removed
+                    } else {
+                        remaining.push(job);
+                    }
+                }
 
                 if (due.length > 0) {
-                    dueJobs.push(...due);
                     await this.save(userId, remaining);
                 }
             }

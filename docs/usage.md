@@ -1,64 +1,106 @@
 # 📖 Usage Guide
 
-Minusbot is controlled via slash commands within the terminal. Any message starting with `/` is treated as a command.
+Minusbot is primarily controlled via slash commands. The bot supports multiple interfaces (CLI, Telegram, Web), but the core logic remains the same.
 
-## 🛠️ Configuration & Environment
-
-### `/env`
-Manage secrets and API keys stored in encrypted vaults.
-*   `list <vault>`: List keys in a specific vault.
-*   `set <vault> <key> <value>`: Set a secret.
-*   **Example**: `/env set agent API_KEY sk-xxxx...`
-
-### `/settings`
-Configure bot behavior and preferences.
-*   `list`: View all current settings.
-*   `set <key> <value>`: Update a setting.
-*   **Keys**: `model_id`, `ai_endpoint`, `colors`.
+Any message starting with `/` is treated as a command.
 
 ---
 
-## 📅 Task Management (Cron)
+## 🛠️ Configuration & Secrets
+
+### `/env`
+Manage your personal API keys and secrets in encrypted vaults.
+*   `list <vault>`: Show secrets in a vault.
+*   `set <vault> <key> <value>`: Save a secret.
+*   `del <vault> <key>`: Remove a secret.
+*   **Example**: `/env set agent API_KEY sk-proj-xxxx...`
+
+### `/settings`
+Configure personal AI behavior and preferences.
+*   `list`: View your current settings (model, endpoint, etc.).
+*   `set <key> <value>`: Override a global setting.
+*   **Keys**: `model_id` (e.g. gpt-4o), `ai_endpoint`, `colors`.
+
+---
+
+## 🤖 Bot Management
+
+### `/start`
+Perform a full system check. Validates:
+1.  **API Key**: Ensures your `agent` vault has a valid key.
+2.  **Model Availability**: Checks if the AI endpoint responds and has your model.
+3.  **Integrations**: Verifies Telegram or other configured accounts.
+
+### `/clear`
+Instantaneously wipe the current conversation history to start fresh.
+*   **Note**: This is irreversible for the current session.
+
+### `/help`
+Display a list of all available commands and their descriptions.
+
+---
+
+## 📅 Task Automation
 
 ### `/cron`
 Manage scheduled AI tasks.
-*   `list`: Show all pending cronjobs.
-*   `cancel <id>`: Stop a scheduled task.
-*   **Autonomous Use**: The AI can also schedule tasks using tools like `cronjob_add`.
+*   `list`: Show pending/active cronjobs.
+*   `cancel <id>`: Stop a specific task.
+*   **Autonomous Use**: The AI can self-schedule tasks using tools like `cronjob_add` (e.g., "Remind me in 10 minutes to verify deploy").
 
 ---
 
 ## 󰚚 Skills
 
 ### `/skills`
-Interact with external AI skills (Dockerized modules).
-*   `list`: List all installed skills in your system.
-*   `info <id>`: Get detailed information about a skill's inputs and description.
-
----
-
-## 💬 Chat Management
-
-### `/chats`
-Manage conversation history.
-*   `list`: List all saved chat sessions.
-*   `delete <id>`: Physically remove a chat folder.
-*   `history <id>`: Quick overview of a chat's last messages.
+Control which AI capabilities are active for your user.
+*   `list`: Show all installed skills and their status (enabled/disabled).
+*   `toggle <id>`: Enable or disable a specific skill for yourself.
 
 ---
 
 ## 📊 Analytics
 
 ### `/stats`
-View bot usage and performance metrics.
-*   `[date (YYYY-MM-DD)]`: View stats for a specific day or leave blank for total lifetime stats.
-*   **Tracked**: Chats created, messages sent, input/output tokens.
+View personal usage metrics.
+*   `[date (YYYY-MM-DD)]`: Filter by date (optional).
+*   **Metrics**: Chats created, messages exchanged, tokens consumed.
 
 ---
 
-## ❓ Assistance
+## 👥 User Management (Admin Only)
 
-### `/help`
-Get help with commands.
-*   `[command]`: View specific usage and description for a command.
-*   **Example**: `/help cron`
+### `/users`
+Manage accounts on the bot instance.
+*   `list`: Show all registered users.
+*   `add <username> <password>`: Create a new user.
+*   `passwd <username> <new_password>`: Reset a user's password.
+*   `role <username> <role>`: Change permissions (user, admin, root).
+*   `remove <username>`: Delete a user and their data.
+
+### `/genv` & `/gsettings` & `/gstats`
+Global versions of user commands for system-wide configuration.
+*   **Admins** can set default API keys or models for all users.
+*   **Example**: `/genv set agent API_KEY sk-global-key...` (Users without a key will use this one).
+
+---
+
+## 🔌 Integrations
+
+### Telegram
+Connect your bot to Telegram for mobile access.
+
+1.  **Bot Setup**: Obtain a token from BotFather.
+2.  **Configure Token**:
+    ```bash
+    /env set integration-telegram BOT_TOKEN <your-token>
+    ```
+3.  **Link Account**:
+    Create a configuration file at `~/.config/minusbot/users/<username>/integrations/telegram.json`:
+    ```json
+    {
+        "chat_id": "main",
+        "user_id": "YOUR_TELEGRAM_USER_ID"
+    }
+    ```
+    *Replace `YOUR_TELEGRAM_USER_ID` with your numeric ID (get it from @userinfobot).*

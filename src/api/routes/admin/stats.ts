@@ -1,17 +1,16 @@
 import express from "express";
 import os from "node:os";
 import fs from "node:fs/promises";
-import { UserManager } from "../../../users";
-import { SkillManager } from "../../../skills";
-import { StatsManager } from "../../../stats";
+
+import { UserManager } from "@/users";
+import { SkillManager } from "@/skills";
+import { StatsManager } from "@/stats";
 
 const router = express.Router();
 
 router.get("/", async (req: any, res) => {
-    const memory = process.memoryUsage();
-    const uptime = process.uptime();
+    const uptime = os.uptime();
     const users = UserManager.getUsers().length;
-    const skills = (await SkillManager.listSkills(req.user?.id)).length;
     const usage = await StatsManager.getStats();
 
     const stats = await fs.statfs("/");
@@ -19,21 +18,30 @@ router.get("/", async (req: any, res) => {
     const diskFree = Number(stats.bfree * stats.bsize);
     const diskUsed = diskTotal - diskFree;
 
+    const totalMem = os.totalmem();
+    const freeMem = os.freemem();
+    const usedMem = totalMem - freeMem;
+
+    // CPU usage is async in most libraries, for now let's use loadavg or a simple placeholder 
+    // unless we want to wait. Let's just use loadavg for simplified metrics or 0 for windows.
+    const cpuUsage = os.platform() === 'win32' ? 0 : os.loadavg()[0];
+
     res.json({
         ...usage,
         memory: {
-            rss: memory.rss,
-            heapUsed: memory.heapUsed,
-            heapTotal: memory.heapTotal
+            total: totalMem,
+            used: usedMem,
+            free: freeMem,
+            percentage: (usedMem / totalMem) * 100
         },
-        cpu: os.loadavg()[0],
+        cpu: cpuUsage,
         uptime,
         users,
-        skills,
         disk: {
             total: diskTotal,
             used: diskUsed,
-            free: diskFree
+            free: diskFree,
+            percentage: (diskUsed / diskTotal) * 100
         },
         platform: os.platform(),
         arch: os.arch()

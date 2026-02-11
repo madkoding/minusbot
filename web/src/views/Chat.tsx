@@ -1,124 +1,97 @@
 import React, { useState, useEffect, useRef } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { Button, Icon } from "../components/UI.tsx";
 import { api, getWSUrl } from "../api.ts";
 
 export default function ChatView() {
+    const { id } = useParams();
+    const navigate = useNavigate();
     const [ws, setWs] = useState<WebSocket | null>(null);
     const [messages, setMessages] = useState<any[]>([]);
     const [inputText, setInputText] = useState('');
-    const [chats, setChats] = useState<any[]>([]);
-    const [currentChatId, setCurrentChatId] = useState<string | null>(null);
     const chatEndRef = useRef<HTMLDivElement>(null);
 
-    const loadChats = async () => {
-        try {
-            const res = await api.get('/user/chat');
-            setChats(Array.isArray(res.data) ? res.data : []);
-        } catch (e) {
-            console.error("Failed to load chats", e);
-        }
-    };
-
     useEffect(() => {
-        loadChats();
         const socket = new WebSocket(getWSUrl());
+
         socket.onopen = () => {
             const token = localStorage.getItem('token');
             socket.send(JSON.stringify({ type: 'auth', token }));
+
+            // If we have an ID, join it immediately after auth
+            if (id) {
+                socket.send(JSON.stringify({ type: 'init_chat', chatId: id }));
+            } else {
+                // For /chat without ID, we can either stay empty or auto-create
+                // Let's stay empty until user interacts
+            }
         };
+
         socket.onmessage = (e) => {
             const msg = JSON.parse(e.data);
             if (msg.type === 'chat_ready') {
                 setMessages(msg.messages || []);
-                setCurrentChatId(msg.chatId);
-                loadChats();
-            } else if (msg.type === 'bot_response') {
-                // Legacy support (optional, can be removed if backend fully switched)
-                setMessages(prev => [...prev, { role: 'assistant', content: msg.content }]);
+                if (!id && msg.chatId) {
+                    navigate(`/chat/${msg.chatId}`, { replace: true });
+                }
             } else if (msg.type === 'message') {
                 setMessages(prev => [...prev, msg.message]);
             }
         };
+
         setWs(socket);
         return () => socket.close();
-    }, []);
+    }, [id]);
 
     useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
-
-    const selectChat = (id: string | null) => {
-        setCurrentChatId(id);
-        ws?.send(JSON.stringify({ type: 'init_chat', chatId: id }));
-    };
 
     const send = () => {
         if (!inputText.trim()) return;
         ws?.send(JSON.stringify({ type: 'message', content: inputText }));
-        // setMessages(prev => [...prev, { role: 'user', content: inputText }]); // Removed optimistic update
         setInputText('');
     };
 
     return (
-        <div className="flex h-[calc(100vh-12rem)] max-w-7xl mx-auto gap-8">
-            <div className="w-72 flex flex-col space-y-4 h-full">
-                <Button onClick={() => selectChat(null)} variant="secondary" className="w-full rounded-2xl flex-shrink-0">
-                    <Icon name="plus" size={16} /> <span className="ml-2 font-bold tracking-tight">New Thread</span>
-                </Button>
-                <div className="flex-1 overflow-y-auto space-y-1 pr-2 custom-scrollbar">
-                    {chats.map(c => (
-                        <button
-                            key={c.id}
-                            onClick={() => selectChat(c.id)}
-                            className={`w-full text-left p-3 rounded-xl border transition-all ${currentChatId === c.id
-                                ? 'bg-zinc-900 border-zinc-700 text-zinc-100 shadow-xl'
-                                : 'bg-transparent border-transparent text-zinc-600 hover:bg-zinc-900/40 hover:text-zinc-400'
-                                }`}
-                        >
-                            <div className="text-xs font-bold truncate">Thread: {c.id}</div>
-                            <div className="text-[10px] font-medium opacity-60 mt-0.5">
-                                {new Date(c.last_activity).toLocaleDateString()}
-                            </div>
-                        </button>
-                    ))}
-                </div>
+        <div className="flex h-full max-w-5xl mx-auto flex-col border border-zinc-800/50 rounded-[2.5rem] bg-zinc-900/10 overflow-hidden shadow-2xl animate-fade-in">
+            <div className="flex-1 overflow-y-auto p-10 space-y-8 scroll-smooth custom-scrollbar">
+                {messages.filter(m => m.role !== 'system' && m.role !== 'tool').map((m, i) => (
+                    <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-up`}>
+                        <div className={`max-w-[80%] rounded-3xl px-6 py-4 text-sm leading-[1.6] ${m.role === 'user'
+                            ? 'bg-zinc-100 text-zinc-950 font-semibold shadow-[0_10px_30px_rgba(255,255,255,0.05)]'
+                            : 'bg-zinc-900/80 border border-zinc-800/50 text-zinc-300 shadow-inner'
+                            }`}>
+                            {m.content}
+                        </div>
+                    </div>
+                ))}
+                <div ref={chatEndRef} />
+
+                {messages.length === 0 && (
+                    <div className="h-full flex flex-col items-center justify-center text-zinc-800 opacity-40 py-20">
+                        <div className="w-20 h-20 rounded-[2rem] bg-zinc-900/50 flex items-center justify-center mb-6">
+                            <Icon name="chat_alt" size={40} />
+                        </div>
+                        <h3 className="text-sm font-black uppercase tracking-[0.2em] mb-2">Initialize Link</h3>
+                        <p className="max-w-[200px] text-[10px] font-bold uppercase tracking-widest leading-relaxed text-center">Neural connection established. Waiting for your input.</p>
+                    </div>
+                )}
             </div>
 
-            <div className="flex-1 flex flex-col border border-zinc-800/50 rounded-3xl bg-zinc-900/20 overflow-hidden shadow-2xl h-full">
-                <div className="flex-1 overflow-y-auto p-8 space-y-6 scroll-smooth custom-scrollbar">
-                    {messages.filter(m => m.role !== 'system' && m.role !== 'tool').map((m, i) => (
-                        <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-up`}>
-                            <div className={`max-w-[85%] rounded-2xl px-5 py-3 text-sm leading-relaxed ${m.role === 'user'
-                                ? 'bg-zinc-100 text-zinc-950 font-medium shadow-lg'
-                                : 'bg-zinc-900 border border-zinc-800 text-zinc-300'
-                                }`}>
-                                {m.content}
-                            </div>
-                        </div>
-                    ))}
-                    <div ref={chatEndRef} />
-                    {messages.length === 0 && (
-                        <div className="h-full flex flex-col items-center justify-center text-zinc-700 opacity-50">
-                            <Icon name="chat" size={48} />
-                            <p className="mt-4 font-bold uppercase tracking-widest text-xs">Waiting for Signal</p>
-                        </div>
-                    )}
-                </div>
-
-                <div className="p-6 bg-zinc-950/50 border-t border-zinc-800/40 backdrop-blur-md flex-shrink-0">
-                    <div className="relative flex items-center">
-                        <input
-                            className="w-full bg-zinc-900 border border-zinc-800 rounded-2xl pl-6 pr-14 py-4 text-sm text-zinc-100 outline-none focus:border-zinc-500 transition-all placeholder:text-zinc-600"
-                            placeholder="Establish intent..."
-                            value={inputText}
-                            onChange={e => setInputText(e.target.value)}
-                            onKeyDown={e => e.key === 'Enter' && send()}
-                        />
-                        <button
-                            onClick={send}
-                            className="absolute right-3 p-2 bg-zinc-100 text-zinc-950 rounded-xl hover:bg-zinc-300 transition-all active:scale-95 shadow-lg"
-                        >
-                            <Icon name="send" size={18} />
-                        </button>
-                    </div>
+            <div className="p-8 bg-[#0a0a0a]/80 border-t border-zinc-900/50 backdrop-blur-xl flex-shrink-0">
+                <div className="relative flex items-center group">
+                    <input
+                        className="w-full bg-black border border-zinc-800/40 rounded-2xl pl-8 pr-16 py-5 text-sm text-zinc-100 outline-none focus:border-zinc-500 transition-all placeholder:text-zinc-700 shadow-inner group-hover:border-zinc-700/50"
+                        placeholder="Speak with Minus..."
+                        value={inputText}
+                        onChange={e => setInputText(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && send()}
+                    />
+                    <button
+                        onClick={send}
+                        className="absolute right-3 p-3 bg-zinc-100 text-zinc-950 rounded-xl hover:bg-white transition-all active:scale-95 shadow-xl"
+                    >
+                        <Icon name="send" size={20} />
+                    </button>
                 </div>
             </div>
         </div>

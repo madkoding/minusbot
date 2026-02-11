@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from "react";
-import { Card, Button, Icon } from "../components/UI.tsx";
+import { Card, Button, Icon, Input, Modal } from "../components/UI.tsx";
 import { api } from "../api.ts";
 
-export default function SkillsView({ apiPath = '/admin/skills' }: { apiPath?: string }) {
+export default function SkillsView({ apiPath = '/user/skills' }: { apiPath?: string }) {
     const [skills, setSkills] = useState<any[]>([]);
     const [selected, setSelected] = useState<any>(null);
     const [isEditing, setIsEditing] = useState(false);
     const [editData, setEditData] = useState<any>({ skillJson: {}, scriptPy: "" });
+    const [vault, setVault] = useState<Record<string, boolean>>({});
+    const [editTab, setEditTab] = useState<'code' | 'vault'>('code');
+    const [activeGroup, setActiveGroup] = useState<string>("All");
+    const [descModal, setDescModal] = useState<any>(null);
 
     const load = async () => {
         try {
@@ -23,7 +27,10 @@ export default function SkillsView({ apiPath = '/admin/skills' }: { apiPath?: st
             const data = res.data;
             setSelected(data);
             setEditData({ skillJson: data.skillJson, scriptPy: data.scriptPy });
+            const vres = await api.get(`${apiPath}/${id}/vault`);
+            setVault(vres.data);
             setIsEditing(true);
+            setEditTab('code');
         } catch (e) {
             console.error("Failed to load skill details", e);
         }
@@ -34,10 +41,8 @@ export default function SkillsView({ apiPath = '/admin/skills' }: { apiPath?: st
     const save = async () => {
         const id = selected?.id || prompt("Skill ID (folder name):");
         if (!id) return;
-
         try {
             await api.post(apiPath, { id, ...editData });
-            alert("Skill saved.");
             setIsEditing(false);
             setSelected(null);
             load();
@@ -46,138 +51,231 @@ export default function SkillsView({ apiPath = '/admin/skills' }: { apiPath?: st
         }
     };
 
+    const toggleStatus = async (skill: any) => {
+        try {
+            if (apiPath.includes('admin')) {
+                await api.post(`/admin/skills/${skill.id}/toggle`);
+            } else if (skill.isGlobal) {
+                await api.post('/user/settings/toggle-skill', { id: skill.id });
+            } else {
+                const newStatus = !skill.enabled;
+                const updatedJson = { ...(skill.definition || skill.skillJson), enabled: newStatus };
+                await api.post(apiPath, { id: skill.id, skillJson: updatedJson });
+            }
+            load();
+        } catch (e) {
+            alert("Status update failed");
+        }
+    };
+
     const remove = async (id: string) => {
-        if (!confirm("Delete skill modules?")) return;
+        if (!confirm("Permanently delete this module?")) return;
         try {
             await api.delete(`${apiPath}/${id}`);
             load();
         } catch (e) {
-            console.error("Failed to delete skill", e);
+            console.error("Deletion failed");
         }
     };
 
-    const toggleStatus = async (skill: any) => {
-        if (apiPath.includes('admin')) {
-            // Admin toggling global skill enabled status
-            try {
-                await api.post(`/admin/skills/${skill.id}/toggle`);
-                load();
-            } catch {
-                alert("Failed to toggle global skill");
-            }
-            return;
-        }
+    // Grouping logic
+    const groups = ["All", ...new Set(skills.map(s => s.id.includes('_') ? s.id.split('_')[0] : "Others"))];
+    const filteredSkills = skills.filter(s => {
+        if (activeGroup === "All") return true;
+        const g = s.id.includes('_') ? s.id.split('_')[0] : "Others";
+        return g === activeGroup;
+    });
 
-        if (skill.isGlobal && apiPath.includes('/user')) {
-            // User personal toggle for global skill
-            try {
-                await api.post('/user/settings/toggle-skill', { id: skill.id });
-                load();
-            } catch {
-                alert("Failed to toggle personal override");
-            }
-            return;
-        }
-
-        const newStatus = !skill.enabled;
-        const updatedJson = { ...skill.definition, enabled: newStatus };
-        try {
-            await api.post(apiPath, {
-                id: skill.id,
-                skillJson: updatedJson
-            });
-            load();
-        } catch (e) {
-            alert("Failed to update status");
-        }
-    };
-
-    return (
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-10 max-w-7xl mx-auto h-[calc(100vh-12rem)]">
-            <div className="md:col-span-4 flex flex-col space-y-6">
-                <header className="flex justify-between items-center flex-shrink-0">
-                    <div>
-                        <h2 className="text-3xl font-black tracking-tight text-zinc-100">Skills</h2>
-                        <p className="text-zinc-500 mt-1">{apiPath.includes('admin') ? 'Global' : 'Personal'} agent capabilities.</p>
+    if (isEditing) {
+        return (
+            <div className="max-w-5xl mx-auto h-full">
+                <div className="flex items-center justify-between mb-8">
+                    <div className="flex items-center gap-4">
+                        <button onClick={() => setIsEditing(false)} className="p-2 text-zinc-500 hover:text-zinc-100 transition-colors">
+                            <Icon name="logout" size={20} className="rotate-180" />
+                        </button>
+                        <h2 className="text-2xl font-bold text-zinc-100">{selected?.id || "Neural Manifest"}</h2>
                     </div>
-                    {(!apiPath.includes('admin') || true) && (
-                        <Button onClick={() => { setIsEditing(true); setSelected(null); setEditData({ skillJson: {}, scriptPy: "" }); }} variant="secondary" size="sm" className="rounded-xl">
-                            <Icon name="plus" size={16} />
-                        </Button>
-                    )}
-                </header>
+                    <div className="flex gap-3">
+                        <Button variant="secondary" onClick={() => setIsEditing(false)}>Cancel</Button>
+                        <Button onClick={save}>Publish Changes</Button>
+                    </div>
+                </div>
 
-                <div className="flex-1 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
-                    {skills.map(s => (
-                        <div key={s.id} className={`group flex items-center justify-between p-4 rounded-2xl border transition-all ${s.enabled ? 'bg-zinc-900 border-zinc-800/30' : 'bg-zinc-950 border-zinc-900 opacity-60'
-                            }`}>
-                            <button onClick={() => s.isGlobal && !apiPath.includes('admin') ? null : loadDetail(s.id)} className={`flex-1 text-left ${s.isGlobal && !apiPath.includes('admin') ? 'cursor-default' : 'cursor-pointer'}`}>
-                                <span className={`text-sm font-bold ${s.enabled ? 'text-zinc-200' : 'text-zinc-500'}`}>{s.id}</span>
-                                {s.isGlobal && (
-                                    <span className="ml-2 px-1.5 py-0.5 rounded-md bg-zinc-800 text-[8px] font-black uppercase text-zinc-400">Global</span>
-                                )}
-                                <div className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest mt-1">
-                                    {s.enabled ? 'Active' : 'Disabled'}
+                <div className="flex gap-4 mb-8 border-b border-zinc-900">
+                    <button onClick={() => setEditTab('code')} className={`px-4 py-2 text-xs font-bold uppercase tracking-widest transition-all ${editTab === 'code' ? 'text-zinc-100 border-b-2 border-zinc-100' : 'text-zinc-500'}`}>Source Code</button>
+                    <button onClick={() => setEditTab('vault')} className={`px-4 py-2 text-xs font-bold uppercase tracking-widest transition-all ${editTab === 'vault' ? 'text-zinc-100 border-b-2 border-zinc-100' : 'text-zinc-500'}`}>Environments</button>
+                </div>
+
+                <div className="space-y-8">
+                    {editTab === 'code' ? (
+                        <>
+                            <textarea
+                                className="w-full h-40 bg-zinc-950 border border-zinc-900 rounded-2xl p-6 font-mono text-xs text-zinc-400 outline-none focus:border-zinc-800 transition-all resize-none shadow-inner"
+                                value={JSON.stringify(editData.skillJson, null, 4)}
+                                onChange={(e) => {
+                                    try {
+                                        const json = JSON.parse(e.target.value);
+                                        setEditData({ ...editData, skillJson: json });
+                                    } catch { }
+                                }}
+                            />
+                            <textarea
+                                className="w-full h-96 bg-zinc-950 border border-zinc-900 rounded-2xl p-6 font-mono text-xs text-zinc-400 outline-none focus:border-zinc-800 transition-all resize-none shadow-inner"
+                                value={editData.scriptPy}
+                                onChange={(e) => setEditData({ ...editData, scriptPy: e.target.value })}
+                            />
+                        </>
+                    ) : (
+                        <div className="bg-zinc-950 border border-zinc-900 rounded-3xl p-8 divide-y divide-zinc-900">
+                            {Object.entries(vault).map(([k, hasValue]: [string, any]) => (
+                                <div key={k} className="py-6 first:pt-0 last:pb-0 flex items-center justify-between group">
+                                    <div className="flex-1 mr-10">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <span className="text-xs font-bold text-zinc-300 font-mono">{k}</span>
+                                            <div className={`w-1 h-1 rounded-full ${hasValue ? 'bg-emerald-500' : 'bg-zinc-800'}`}></div>
+                                        </div>
+                                        <div className="text-[10px] font-black uppercase tracking-widest text-zinc-600">
+                                            {hasValue ? 'Environment configured' : 'Variable missing'}
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <Button
+                                            size="sm"
+                                            variant="secondary"
+                                            className="rounded-xl h-9"
+                                            onClick={async () => {
+                                                const val = prompt(`Enter new value for ${k}:`);
+                                                if (val) {
+                                                    await api.put(`${apiPath}/${selected.id}/vault`, { key: k, value: val });
+                                                    loadDetail(selected.id);
+                                                }
+                                            }}
+                                        >
+                                            Overwrite
+                                        </Button>
+                                    </div>
                                 </div>
-                            </button>
-                            <div className="flex items-center gap-2">
-                                <button
-                                    onClick={() => toggleStatus(s)}
-                                    className={`p-2 rounded-lg transition-colors ${s.enabled ? 'text-zinc-600 hover:text-zinc-400' : 'text-zinc-800 hover:text-zinc-600'}`}
-                                    title={s.enabled ? 'Deactivate' : 'Activate'}
-                                >
-                                    <Icon name={s.enabled ? 'dashboard' : 'plus'} size={14} />
-                                </button>
-                                {(!s.isGlobal || apiPath.includes('admin')) && (
-                                    <button onClick={() => remove(s.id)} className="p-2 text-zinc-800 hover:text-red-500 transition-colors">
-                                        <Icon name="trash" size={14} />
-                                    </button>
-                                )}
+                            ))}
+                            <div className="pt-6">
+                                <Button onClick={() => {
+                                    const key = prompt("Interface Variable Name:");
+                                    if (key) {
+                                        setVault({ ...vault, [key]: false });
+                                    }
+                                }} variant="secondary" className="w-full rounded-2xl border-dashed border-2 bg-transparent hover:bg-zinc-900/50">
+                                    Register Interface Variable
+                                </Button>
                             </div>
                         </div>
-                    ))}
+                    )}
                 </div>
             </div>
+        );
+    }
 
-            <div className="md:col-span-8 h-full overflow-hidden">
-                {isEditing ? (
-                    <Card title={selected ? `Edit: ${selected.id}` : "Create Module"} className="flex flex-col h-full">
-                        <div className="flex-1 overflow-y-auto space-y-6 pr-2 custom-scrollbar pb-6">
-                            <div>
-                                <label className="text-[10px] font-black text-zinc-600 uppercase tracking-widest mb-2 block ml-1">skill.json</label>
-                                <textarea
-                                    className="w-full h-48 bg-zinc-950 border border-zinc-800 rounded-2xl p-4 font-mono text-xs text-zinc-300 outline-none focus:border-zinc-600 transition-all resize-none"
-                                    value={JSON.stringify(editData.skillJson, null, 4)}
-                                    onChange={(e) => {
-                                        try {
-                                            const json = JSON.parse(e.target.value);
-                                            setEditData({ ...editData, skillJson: json });
-                                        } catch { }
-                                    }}
-                                />
-                            </div>
-                            <div>
-                                <label className="text-[10px] font-black text-zinc-600 uppercase tracking-widest mb-2 block ml-1">script.py</label>
-                                <textarea
-                                    className="w-full h-96 bg-zinc-950 border border-zinc-800 rounded-2xl p-4 font-mono text-xs text-zinc-300 outline-none focus:border-zinc-600 transition-all resize-none"
-                                    value={editData.scriptPy}
-                                    onChange={(e) => setEditData({ ...editData, scriptPy: e.target.value })}
-                                />
-                            </div>
-                        </div>
-                        <div className="flex justify-end gap-3 pt-6 border-t border-zinc-800/50 flex-shrink-0">
-                            <Button variant="ghost" onClick={() => setIsEditing(false)}>Cancel</Button>
-                            <Button onClick={save} className="rounded-xl px-8">Save</Button>
-                        </div>
-                    </Card>
-                ) : (
-                    <div className="h-full flex flex-col items-center justify-center text-zinc-700 border border-dashed border-zinc-800 rounded-3xl bg-zinc-900/10 p-10 text-center">
-                        <Icon name="send" size={32} />
-                        <h3 className="text-lg font-bold text-zinc-500 mt-4">Module Editor</h3>
-                        <p className="max-w-[200px] text-xs mt-2 font-medium">Select a skill or create a new one to modify its intelligence logic.</p>
+    return (
+        <div className="space-y-10 max-w-6xl mx-auto h-full">
+            <header className="flex justify-between items-end">
+                <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                        <h2 className="text-2xl font-bold tracking-tight text-zinc-100">Cognitive Skills</h2>
+                        <div className="h-px flex-1 bg-zinc-900 ml-4 opacity-50"></div>
+                    </div>
+                    <p className="text-zinc-500 text-sm font-medium">Manage modular logic and automated behaviors.</p>
+                </div>
+                <div className="ml-10">
+                    <Button onClick={() => { setIsEditing(true); setSelected(null); setEditData({ skillJson: {}, scriptPy: "" }); }} size="sm" className="rounded-xl">
+                        Deploy New Skill
+                    </Button>
+                </div>
+            </header>
+
+            <div className="flex gap-6 overflow-x-auto pb-2 scrollbar-none border-b border-zinc-900/50">
+                {groups.map(g => (
+                    <button
+                        key={g}
+                        onClick={() => setActiveGroup(g)}
+                        className={`text-xs font-bold uppercase tracking-widest whitespace-nowrap pb-3 transition-all ${activeGroup === g ? 'text-zinc-100 border-b-2 border-zinc-100' : 'text-zinc-600 hover:text-zinc-400'
+                            }`}
+                    >
+                        {g}
+                    </button>
+                ))}
+            </div>
+
+            <div className="bg-[#080808] border border-zinc-900 rounded-[2rem] overflow-hidden shadow-2xl">
+                <table className="w-full text-left border-collapse">
+                    <thead>
+                        <tr className="border-b border-zinc-900/50 bg-zinc-900/10">
+                            <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-600 w-1/4">Identifier</th>
+                            <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-600 w-1/2">Purpose</th>
+                            <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-600 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-900/30">
+                        {filteredSkills.map(s => (
+                            <tr key={s.id} className="group hover:bg-zinc-900/20 transition-colors">
+                                <td className="px-8 py-5">
+                                    <div className="flex items-center gap-3">
+                                        <div className={`w-2 h-2 rounded-full ${s.enabled ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.3)]' : 'bg-zinc-800'}`}></div>
+                                        <span className={`text-sm font-bold ${s.enabled ? 'text-zinc-200' : 'text-zinc-600'}`}>{s.id}</span>
+                                        {s.isGlobal && (
+                                            <span className="text-[8px] font-black uppercase bg-zinc-900 text-zinc-500 px-1.5 py-0.5 rounded border border-zinc-800">System</span>
+                                        )}
+                                    </div>
+                                </td>
+                                <td className="px-8 py-5">
+                                    <p
+                                        className="text-[11px] text-zinc-500 font-medium truncate max-w-md cursor-pointer hover:text-zinc-300 transition-colors"
+                                        onClick={() => setDescModal(s)}
+                                    >
+                                        {(s.definition || s.skillJson)?.description || "No description provided."}
+                                    </p>
+                                </td>
+                                <td className="px-8 py-5 text-right">
+                                    <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button onClick={() => toggleStatus(s)} className="p-2 text-zinc-600 hover:text-zinc-100" title={s.enabled ? "Deactivate" : "Activate"}>
+                                            <Icon name={s.enabled ? "shield" : "plus"} size={16} />
+                                        </button>
+                                        {(!s.isGlobal || apiPath.includes('admin')) && (
+                                            <>
+                                                <button onClick={() => loadDetail(s.id)} className="p-2 text-zinc-600 hover:text-zinc-100" title="Edit Logic">
+                                                    <Icon name="terminal" size={16} />
+                                                </button>
+                                                <button onClick={() => remove(s.id)} className="p-2 text-zinc-600 hover:text-red-500" title="Delete">
+                                                    <Icon name="trash" size={16} />
+                                                </button>
+                                            </>
+                                        )}
+                                    </div>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+                {filteredSkills.length === 0 && (
+                    <div className="py-20 text-center text-zinc-800 italic uppercase text-[10px] font-black tracking-widest">
+                        Nothing found in this sector
                     </div>
                 )}
             </div>
+
+            <Modal
+                isOpen={!!descModal}
+                onClose={() => setDescModal(null)}
+                title={descModal?.id}
+            >
+                <div className="space-y-4">
+                    <p className="text-zinc-400 text-sm leading-relaxed font-medium">
+                        {(descModal?.definition || descModal?.skillJson)?.description}
+                    </p>
+                    <div className="pt-4 border-t border-zinc-900 flex justify-end">
+                        <Button variant="secondary" size="sm" onClick={() => setDescModal(null)}>Dismiss</Button>
+                    </div>
+                </div>
+            </Modal>
         </div>
     );
 }
+

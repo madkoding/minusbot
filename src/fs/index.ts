@@ -1,16 +1,12 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { Storage } from "../storage";
+
+import { WorkspaceManager } from "../workspaces";
 
 export class FileSystem {
-    private static async getWorkspace(userId: string, chatId: string): Promise<string> {
-        const workspace = Storage.getWorkspaceDir(userId, chatId);
-        await fs.mkdir(workspace, { recursive: true });
-        return workspace;
-    }
-
-    private static async resolvePath(userId: string, chatId: string, userPath: string): Promise<string> {
-        const workspace = await this.getWorkspace(userId, chatId);
+    private static async resolvePath(userId: string, workspaceId: string | null | undefined, userPath: string, chatId?: string): Promise<string> {
+        const workspaceDir = WorkspaceManager.resolveContentPath(userId, workspaceId, chatId);
+        await fs.mkdir(workspaceDir, { recursive: true });
 
         // Treat all paths as relative to workspace
         let safePath = userPath;
@@ -19,30 +15,30 @@ export class FileSystem {
         }
 
         // Resolve absolute path
-        const resolvedPath = path.resolve(workspace, safePath);
+        const resolvedPath = path.resolve(workspaceDir, safePath);
 
         // Security check: ensure resolved path is inside workspace
-        if (!resolvedPath.startsWith(workspace)) {
+        if (!resolvedPath.startsWith(workspaceDir)) {
             throw new Error("Access denied: Path is outside of the workspace.");
         }
 
         return resolvedPath;
     }
 
-    static async mkdir(userId: string, chatId: string, dirPath: string): Promise<string> {
-        const target = await this.resolvePath(userId, chatId, dirPath);
+    static async mkdir(userId: string, workspaceId: string | null | undefined, dirPath: string, chatId?: string): Promise<string> {
+        const target = await this.resolvePath(userId, workspaceId, dirPath, chatId);
         await fs.mkdir(target, { recursive: true });
         return `Directory '${dirPath}' created.`;
     }
 
-    static async rm(userId: string, chatId: string, targetPath: string): Promise<string> {
-        const target = await this.resolvePath(userId, chatId, targetPath);
+    static async rm(userId: string, workspaceId: string | null | undefined, targetPath: string, chatId?: string): Promise<string> {
+        const target = await this.resolvePath(userId, workspaceId, targetPath, chatId);
         await fs.rm(target, { recursive: true, force: true });
         return `Deleted '${targetPath}'.`;
     }
 
-    static async read(userId: string, chatId: string, filePath: string): Promise<string> {
-        const target = await this.resolvePath(userId, chatId, filePath);
+    static async read(userId: string, workspaceId: string | null | undefined, filePath: string, chatId?: string): Promise<string> {
+        const target = await this.resolvePath(userId, workspaceId, filePath, chatId);
         const stat = await fs.stat(target);
         if (stat.isDirectory()) {
             throw new Error(`'${filePath}' is a directory.`);
@@ -50,8 +46,8 @@ export class FileSystem {
         return await fs.readFile(target, "utf-8");
     }
 
-    static async write(userId: string, chatId: string, filePath: string, content: string): Promise<string> {
-        const target = await this.resolvePath(userId, chatId, filePath);
+    static async write(userId: string, workspaceId: string | null | undefined, filePath: string, content: string, chatId?: string): Promise<string> {
+        const target = await this.resolvePath(userId, workspaceId, filePath, chatId);
 
         // Ensure parent directory exists
         const parentDir = path.dirname(target);
@@ -61,8 +57,8 @@ export class FileSystem {
         return `Written to '${filePath}'.`;
     }
 
-    static async stat(userId: string, chatId: string, targetPath: string): Promise<string> {
-        const target = await this.resolvePath(userId, chatId, targetPath);
+    static async stat(userId: string, workspaceId: string | null | undefined, targetPath: string, chatId?: string): Promise<string> {
+        const target = await this.resolvePath(userId, workspaceId, targetPath, chatId);
         try {
             const stat = await fs.stat(target);
             return JSON.stringify({
@@ -81,8 +77,8 @@ export class FileSystem {
         }
     }
 
-    static async ls(userId: string, chatId: string, dirPath: string = "."): Promise<string> {
-        const target = await this.resolvePath(userId, chatId, dirPath);
+    static async ls(userId: string, workspaceId: string | null | undefined, dirPath: string = ".", chatId?: string): Promise<string> {
+        const target = await this.resolvePath(userId, workspaceId, dirPath, chatId);
         const stat = await fs.stat(target);
 
         if (!stat.isDirectory()) {

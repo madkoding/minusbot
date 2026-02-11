@@ -1,36 +1,54 @@
 import express from "express";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { getUserDir } from "../../../config";
-import { secrets } from "../../../secrets";
+
+import { getUserDir } from "@/config";
+import { secrets } from "@/secrets";
+
+import { IntegrationManager } from "@/integrations/integration-manager";
 
 const router = express.Router();
 
 router.get("/", async (req: any, res) => {
     const userSecretsDir = path.join(getUserDir(req.user.id), "secrets");
     const vaults = await fs.readdir(userSecretsDir).catch(() => []);
-    res.json(vaults.map(v => v.replace(".env", "")));
+    const names = vaults.map(v => v.replace(".env", ""));
+
+    // Ensure default vaults are always visible
+    const defaults = ["agent", "integration-telegram"];
+    for (const d of defaults) {
+        if (!names.includes(d)) names.push(d);
+    }
+
+    res.json(names);
 });
 
 router.get("/:id", async (req: any, res) => {
-    // We show the merged list of keys but mask them
+    // We show the merged list of keys and their masked status
     const vault = await secrets.vault(req.user.id, req.params.id);
-    const keys = vault.listKeys();
-    const data: any = {};
-    for (const k of keys) data[k] = "******";
-    res.json(data);
+    res.json(vault.maskedValues());
 });
 
 router.put("/:id", async (req: any, res) => {
     const vault = await secrets.userVault(req.user.id, req.params.id);
     const { key, value } = req.body;
     await vault.set(key, value);
+
+    if (req.params.id.startsWith("integration-") || req.params.id.startsWith("skill-")) {
+        await IntegrationManager.reloadUser(req.user.id);
+    }
+
     res.send("Personal secret updated");
 });
 
 router.delete("/:id/:key", async (req: any, res) => {
     const vault = await secrets.userVault(req.user.id, req.params.id);
     await vault.delete(req.params.key);
+
+    if (req.params.id.startsWith("integration-") || req.params.id.startsWith("skill-")) {
+        await IntegrationManager.reloadUser(req.user.id);
+    }
+
     res.send("Personal secret deleted (falling back to global)");
 });
 

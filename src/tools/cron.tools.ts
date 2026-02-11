@@ -1,4 +1,4 @@
-import { toolManager } from ".";
+import { toolManager } from "../tools";
 import { CronManager } from "../cron";
 
 // Register Cron Tools
@@ -20,12 +20,14 @@ toolManager.registerTool(
         type: "function",
         function: {
             name: "cronjob_add",
-            description: "Add a new cronjob",
+            description: "Add a new cronjob. Can be one-time or recurring. The cronjob will send a system notification to activate the chat when triggered.",
             parameters: {
                 type: "object",
                 properties: {
-                    triggerAt: { type: "string", description: "ISO date string" },
-                    prompt: { type: "string" },
+                    triggerAt: { type: "string", description: "ISO date string for first/next execution" },
+                    prompt: { type: "string", description: "Description of what this cronjob is for (shown in notification)" },
+                    recurring: { type: "boolean", description: "If true, the job will repeat at the specified interval" },
+                    intervalMs: { type: "number", description: "Interval in milliseconds for recurring jobs (e.g., 3600000 for 1 hour)" },
                 },
                 required: ["triggerAt", "prompt"],
             },
@@ -40,8 +42,12 @@ toolManager.registerTool(
             triggerAt: args.triggerAt,
             prompt: args.prompt,
             type: "async",
+            recurring: args.recurring || false,
+            interval: args.intervalMs,
         });
-        return `Cronjob added with ID: ${id}`;
+
+        const recurringInfo = args.recurring ? ` (recurring every ${args.intervalMs}ms)` : " (one-time)";
+        return `Cronjob added with ID: ${id}${recurringInfo}. When triggered, you will receive a system notification to activate this chat.`;
     }
 );
 

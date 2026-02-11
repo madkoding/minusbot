@@ -44,7 +44,7 @@ export default function UsersView() {
         <div className="space-y-8 max-w-5xl mx-auto">
             <header className="flex justify-between items-end">
                 <div>
-                    <h2 className="text-3xl font-black tracking-tight text-zinc-100">Identity</h2>
+                    <h2 className="text-3xl font-black tracking-tight text-zinc-100">Users</h2>
                     <p className="text-zinc-500 mt-1">Manage system access and privileges.</p>
                 </div>
                 <Button onClick={() => setIsAdding(!isAdding)} variant="secondary" size="sm" className="rounded-xl border-zinc-800">
@@ -53,7 +53,7 @@ export default function UsersView() {
             </header>
 
             {isAdding && (
-                <Card title="Register Access" className="border-dashed border-zinc-700">
+                <Card title="Register User" className="border-dashed border-zinc-700">
                     <form onSubmit={addUser} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
                         <Input label="Username" name="username" placeholder="alex_dev" required />
                         <Input label="Password" name="password" type="password" placeholder="••••••••" required />
@@ -64,7 +64,7 @@ export default function UsersView() {
                                 <option value="admin">Admin</option>
                             </select>
                         </div>
-                        <Button className="h-11 rounded-xl">Create Identity</Button>
+                        <Button className="h-11 rounded-xl">Register User</Button>
                     </form>
                 </Card>
             )}

@@ -25,21 +25,31 @@ commandManager.register({
 
 commandManager.register({
     name: "shell",
-    description: "Manage interactive shells in the current chat.",
-    usage: "/shell exec <cmd> | execbg <cmd> | read <id> [wait] | write <id> <input> | kill <id> | ls",
+    description: "Manage interactive shells.",
+    usage: "/shell exec [workspaceId] <cmd> | execbg [workspaceId] <cmd> | read <id> [wait] | write <id> <input> | kill <id> | ls [workspaceId]",
     handler: async (args, { user, chat }) => {
         const sub = args[0];
 
         try {
             if (sub === "exec") {
-                const cmd = args.slice(1).join(" ");
-                if (!cmd) return "Usage: /shell exec <command>";
-                return await ShellManager.create(user.id, chat.meta.id, cmd, false);
+                let workspaceId = args[1];
+                let cmd = args.slice(2).join(" ");
+                if (!cmd && workspaceId) {
+                    cmd = workspaceId;
+                    workspaceId = "chat";
+                }
+                if (!cmd) return "Usage: /shell exec [workspaceId] <command>";
+                return await ShellManager.create(user.id, workspaceId, cmd, false, 30000, chat.meta.id);
             }
             if (sub === "execbg") {
-                const cmd = args.slice(1).join(" ");
-                if (!cmd) return "Usage: /shell execbg <command>";
-                const id = await ShellManager.create(user.id, chat.meta.id, cmd, true);
+                let workspaceId = args[1];
+                let cmd = args.slice(2).join(" ");
+                if (!cmd && workspaceId) {
+                    cmd = workspaceId;
+                    workspaceId = "chat";
+                }
+                if (!cmd) return "Usage: /shell execbg [workspaceId] <command>";
+                const id = await ShellManager.create(user.id, workspaceId, cmd, true, 30000, chat.meta.id);
                 return `Shell started in background. ID: ${id}`;
             }
             if (sub === "read" && args[1]) {
@@ -48,71 +58,24 @@ commandManager.register({
                 return out || "(No output)";
             }
             if (sub === "write" && args[1]) {
+                const id = args[1];
                 const input = args.slice(2).join(" ");
-                return await ShellManager.stdin(user.id, args[1], input);
+                return await ShellManager.stdin(user.id, id, input);
             }
             if (sub === "kill" && args[1]) {
                 return await ShellManager.kill(user.id, args[1]);
             }
             if (sub === "ls") {
-                const shells = ShellManager.list(user.id, chat.meta.id);
-                if (shells.length === 0) return "No active shells for this chat.";
-                return shells.map(s => `[${s.id}] ${s.command} (${s.isFinished ? "Finished" : "Running"})`).join("\n");
+                const workspaceId = args[1] || "chat";
+                const shells = ShellManager.list(user.id, workspaceId);
+                if (shells.length === 0) return "No active shells.";
+                return shells.map(s => `[${s.id}] ${s.workspaceId} - ${s.command} (${s.isFinished ? "Finished" : "Running"})`).join("\n");
             }
         } catch (e: any) {
             return `Shell Error: ${e.message}`;
         }
 
-        return "Usage: /shell exec <cmd> | execbg <cmd> | read <id> [wait] | write <id> <input> | kill <id> | ls";
-    }
-});
-
-// User Shells (Global + All Chats)
-commandManager.register({
-    name: "ushells",
-    description: "Manage all your shells (global + chat specific).",
-    usage: "/ushells list | kill <id>",
-    handler: async (args, { user }) => {
-        const sub = args[0];
-        if (sub === "list" || !sub) {
-            const shells = ShellManager.list(user.id);
-            if (shells.length === 0) return "No active shells.";
-            return shells.map(s => `[${s.id}] ${s.chatId ? `(Chat: ${s.chatId})` : "(Global)"} ${s.command}`).join("\n");
-        }
-        if (sub === "kill" && args[1]) {
-            return await ShellManager.kill(user.id, args[1]);
-        }
-        return "Usage: /ushells list | kill <id>";
-    }
-});
-
-// Global Shells (Admin)
-commandManager.register({
-    name: "gshells",
-    description: "Manage ALL system shells (Admin only).",
-    usage: "/gshells list | kill <id>",
-    needRole: "admin",
-    handler: async (args, { user }) => {
-        const sub = args[0];
-        if (sub === "list" || !sub) {
-            const shells = ShellManager.listAll();
-            if (shells.length === 0) return "No active system shells.";
-            return shells.map(s => `[${s.id}] User: ${s.userId} | ${s.command}`).join("\n");
-        }
-        if (sub === "kill" && args[1]) {
-            // Admin kill, verify user is admin (already checked by needRole)
-            // We need to bypass owner check in kill?
-            // ShellManager.kill checks session existence.
-            // But we should probably implement a 'forceKill' or pass 'root' as userId to bypass check if we added one. 
-            // Currently ShellManager.kill only checks if session exists, no ownership check YET in kill() implementation above?
-            // Checking ShellManager impl: yes, kill() only checks existence.
-            // So any user could kill any shell if they knew the ID?
-            // Wait, ShellManager.kill definition: (userId: string, id: string).
-            // It doesn't check userId ownership in the current implementation. I should probably add that for security.
-            // For now, admin can use it.
-            return await ShellManager.kill(user.id, args[1]);
-        }
-        return "Usage: /gshells list | kill <id>";
+        return "Usage: /shell exec [workspaceId] <cmd> | execbg [workspaceId] <cmd> | read <id> [wait] | write <id> <input> | kill <id> | ls [workspaceId]";
     }
 });
 
@@ -123,22 +86,21 @@ toolManager.registerTool({
     type: "function",
     function: {
         name: "shell_create",
-        description: "Create a new shell session. If bg=false, waits for output.",
+        description: "Create a new shell session. If bg=false, waits for output. Use workspaceId='chat' to use the current chat space.",
         parameters: {
             type: "object",
             properties: {
+                workspaceId: { type: "string" },
                 command: { type: "string" },
                 bg: { type: "boolean", description: "Run in background? Default false." },
-                timeout: { type: "number", description: "Timeout in ms if bg=false. Default 30000." },
-                global: { type: "boolean", description: "If true, shell survives chat context. Default false." }
+                timeout: { type: "number", description: "Timeout in ms if bg=false. Default 30000." }
             },
             required: ["command"]
         }
     }
-}, async ({ command, bg, timeout, global }, { chat }) => {
+}, async ({ workspaceId, command, bg, timeout }, { chat }) => {
     try {
-        const chatId = global ? null : chat.meta.id;
-        const result = await ShellManager.create(chat.meta.owner, chatId, command, bg, timeout);
+        const result = await ShellManager.create(chat.meta.owner, workspaceId, command, bg, timeout, chat.meta.id);
         return result;
     } catch (e: any) {
         return `Error: ${e.message}`;
@@ -218,18 +180,18 @@ toolManager.registerTool({
         parameters: {
             type: "object",
             properties: {
-                global: { type: "boolean" }
+                workspaceId: { type: "string" }
             }
         }
     }
-}, async ({ global }, { chat }) => {
+}, async ({ workspaceId }, { chat }) => {
     try {
-        const list = ShellManager.list(chat.meta.owner, global ? undefined : chat.meta.id);
+        const list = ShellManager.list(chat.meta.owner, workspaceId);
         return JSON.stringify(list.map(s => ({
             id: s.id,
+            workspaceId: s.workspaceId,
             command: s.command,
-            status: s.isFinished ? "finished" : "running",
-            scope: s.chatId ? "chat" : "global"
+            status: s.isFinished ? "finished" : "running"
         })));
     } catch (e: any) {
         return `Error: ${e.message}`;
