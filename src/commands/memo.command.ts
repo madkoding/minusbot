@@ -1,70 +1,115 @@
 import { commandManager } from "./command-manager";
 import { KnowledgeManager } from "../data/memory";
 
-// /memo
 commandManager.register({
     name: "memo",
-    description: "Manage your personal memories.",
-    usage: "/memo query [terms...] | /memo set <key> <value> | /memo setimp <key> <value> | /memo clear",
-    handler: async (args, { user }) => {
-        const sub = args[0]?.toLowerCase();
+    description: "Manage your personal memories",
+    subs: [
+        {
+            name: "query",
+            description: "Query your memories",
+            args: [
+                {
+                    name: "terms",
+                    description: "Search terms (optional)",
+                    type: "string",
+                    required: false
+                }
+            ],
+            handler: async (args, { user }) => {
+                const terms = args;
+                const allMemos = await KnowledgeManager.loadMemos(user.id);
+                let filteredKeys = Object.keys(allMemos);
 
-        if (sub === "put" || sub === "set") {
-            if (args[1] && args[2]) {
-                const key = args[1];
-                const value = args.slice(2).join(" ");
+                if (terms.length > 0) {
+                    const search = terms.map(t => t.toLowerCase());
+                    filteredKeys = filteredKeys.filter(k => {
+                        const val = allMemos[k];
+                        if (!val) return false;
+                        const vStr = typeof val === 'string' ? val : val.value;
+                        return search.some(s => k.toLowerCase().includes(s) || vStr.toLowerCase().includes(s));
+                    });
+                }
+
+                if (filteredKeys.length === 0) {
+                    return "No memories found matching your criteria.";
+                }
+
+                const lines = filteredKeys.map(k => {
+                    const item = allMemos[k];
+                    if (!item) return "";
+                    const val = typeof item === 'string' ? item : item.value;
+                    const imp = typeof item !== 'string' && item.important ? " [IMPORTANT]" : "";
+                    return `  • ${k}${imp}: ${val}`;
+                }).filter(Boolean);
+                return `Memories:\n${lines.join("\n")}`;
+            }
+        },
+        {
+            name: "set",
+            description: "Store a memory",
+            args: [
+                {
+                    name: "key",
+                    description: "Memory key",
+                    type: "string",
+                    required: true
+                },
+                {
+                    name: "value",
+                    description: "Memory value",
+                    type: "string",
+                    required: true
+                }
+            ],
+            handler: async (args, { user }) => {
+                const key = args[0];
+                const value = args.slice(1).join(" ");
+
+                if (!key || !value) {
+                    return "Error: key and value are required";
+                }
+
                 await KnowledgeManager.put(user.id, key, value, false);
                 return `Memory stored: '${key}' = '${value}'`;
             }
-            return "Usage: /memo set <key> <value>";
-        }
+        },
+        {
+            name: "setimp",
+            description: "Store an important memory",
+            args: [
+                {
+                    name: "key",
+                    description: "Memory key",
+                    type: "string",
+                    required: true
+                },
+                {
+                    name: "value",
+                    description: "Memory value",
+                    type: "string",
+                    required: true
+                }
+            ],
+            handler: async (args, { user }) => {
+                const key = args[0];
+                const value = args.slice(1).join(" ");
 
-        if (sub === "setimp" || sub === "putimp") {
-            if (args[1] && args[2]) {
-                const key = args[1];
-                const value = args.slice(2).join(" ");
+                if (!key || !value) {
+                    return "Error: key and value are required";
+                }
+
                 await KnowledgeManager.put(user.id, key, value, true);
                 return `Important memory stored: '${key}' = '${value}'`;
             }
-            return "Usage: /memo setimp <key> <value>";
-        }
-
-        if (sub === "clear") {
-            await KnowledgeManager.clear(user.id);
-            return "All memories cleared.";
-        }
-
-        if (sub === "query") {
-            const terms = args.slice(1);
-            // query returns Record<string, string> values now, we need to load manually if we want to show 'important' status in list
-            // Or just use loadMemos directly here for better debugging output
-            const allMemos = await KnowledgeManager.loadMemos(user.id);
-            let filteredKeys = Object.keys(allMemos);
-
-            if (terms.length > 0) {
-                const search = terms.map(t => t.toLowerCase());
-                filteredKeys = filteredKeys.filter(k => {
-                    const val = allMemos[k];
-                    if (!val) return false;
-                    const vStr = typeof val === 'string' ? val : val.value;
-                    return search.some(s => k.toLowerCase().includes(s) || vStr.toLowerCase().includes(s));
-                });
+        },
+        {
+            name: "clear",
+            description: "Clear all memories",
+            handler: async (args, { user }) => {
+                await KnowledgeManager.clear(user.id);
+                return "All memories cleared.";
             }
-
-            if (filteredKeys.length === 0) {
-                return "No memories found matching your criteria.";
-            }
-
-            const lines = filteredKeys.map(k => {
-                const item = allMemos[k];
-                if (!item) return "";
-                const val = typeof item === 'string' ? item : item.value;
-                const imp = typeof item !== 'string' && item.important ? " [IMPORTANT]" : "";
-                return `  • ${k}${imp}: ${val}`;
-            }).filter(Boolean);
-            return `Memories:\n${lines.join("\n")}`;
         }
-
-        return "Usage: /memo query [terms...] | /memo set <key> <value> | /memo setimp <key> <value> | /memo clear";
-    }
+    ]
 });

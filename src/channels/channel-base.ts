@@ -90,4 +90,9 @@ export abstract class Channel {
     async getTools(): Promise<{ definition: ToolDefinition, handler: ToolHandler }[]> {
         return [];
     }
+
+    protected formatUploadNotification(filenames: string[]): string {
+        if (filenames.length === 0) return "";
+        return `\n\n[System Notification: User uploaded ${filenames.length} file(s) to workspace: chat. Filenames: ${filenames.join(", ")}]`;
+    }
 }

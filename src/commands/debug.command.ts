@@ -5,8 +5,19 @@ import path from "node:path";
 
 commandManager.register({
     name: "debug",
-    description: "Toggle debug mode for verbose output (tool calls/results).",
-    usage: "/debug [on|off]",
+    description: "Toggle debug mode for verbose output",
+    args: [
+        {
+            name: "mode",
+            description: "Debug mode (on/off, or toggle if not specified)",
+            type: "string",
+            required: false,
+            choices: [
+                { name: "on", value: "on" },
+                { name: "off", value: "off" }
+            ]
+        }
+    ],
     handler: async (args, { user }) => {
         const file = getUserSettingsFile(user.id);
         const current = await fs.readFile(file, "utf-8").then(c => JSON.parse(c)).catch(() => ({}));

@@ -3,14 +3,16 @@ import { UserManager } from "../data/users";
 import type { User } from "../data/users";
 import { Channel, type ChannelConfig } from "./channel-base";
 import { TelegramChannel } from "./telegram/telegram.channel";
+import { DiscordChannel } from "./discord/discord.channel";
 import { getUserChannelsDir, getUserChannelConfigFile } from "../data/storage";
 import { Logger } from "../cli/colors";
 
 export class ChannelManager {
     private static userInstances: Map<string, Map<string, Channel>> = new Map();
 
-    static readonly AVAILABLE_CHANNELS = [
-        TelegramChannel
+    static readonly AVAILABLE_CHANNELS: any = [
+        TelegramChannel,
+        DiscordChannel
     ];
 
     static async init() {
@@ -153,8 +155,11 @@ export class ChannelManager {
 
     // Get all available channel schemas
     static getAvailableChannels() {
-        return this.AVAILABLE_CHANNELS.map(ChannelClass => {
-            const instance = new ChannelClass({ id: "temp", username: "temp", role: "user", passwordHash: "" }, {
+        return (this.AVAILABLE_CHANNELS as any[]).map(ChannelClass => {
+            // Need a dummy user and config to get schema instance property, 
+            // or better yet, make schema static?
+            // Since it's an instance property currently in base class, we create dummy instance.
+            const instance = new ChannelClass({ id: "temp", username: "temp", role: "user", passwordHash: "" } as User, {
                 enabled: false,
                 settings: {},
                 secrets: {}

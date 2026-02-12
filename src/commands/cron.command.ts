@@ -1,30 +1,45 @@
 import { commandManager } from "./command-manager";
 import { TaskManager } from "../data/tasks";
 
-// /cron
 commandManager.register({
     name: "cron",
-    description: "Manage your personal scheduled tasks.",
-    usage: "/cron list | /cron cancel <id>",
-    handler: async (args, { user }) => {
-        const sub = args[0]?.toLowerCase();
-        if (sub === "list") {
-            const jobs = await TaskManager.list(user.id);
-            if (jobs.length === 0) return "No personal cronjobs.";
+    description: "Manage your personal scheduled tasks",
+    subs: [
+        {
+            name: "list",
+            description: "List all your scheduled tasks",
+            handler: async (args, { user }) => {
+                const jobs = await TaskManager.list(user.id);
+                if (jobs.length === 0) return "No personal cronjobs.";
 
-            const lines = jobs.map(j => {
-                const recurringBadge = j.recurring ? "🔁" : "⏱️";
-                const lastExec = j.lastExecuted ? ` | Last: ${new Date(j.lastExecuted).toLocaleString()}` : "";
-                const intervalInfo = j.recurring && j.interval ? ` | Every ${j.interval}ms` : "";
-                return `  ${recurringBadge} [${j.id}] Next: ${j.triggerAt}${intervalInfo}${lastExec}\n     ${j.prompt.substring(0, 60)}${j.prompt.length > 60 ? "..." : ""}`;
-            });
+                const lines = jobs.map(j => {
+                    const recurringBadge = j.recurring ? "🔁" : "⏱️";
+                    const lastExec = j.lastExecuted ? ` | Last: ${new Date(j.lastExecuted).toLocaleString()}` : "";
+                    const intervalInfo = j.recurring && j.interval ? ` | Every ${j.interval}ms` : "";
+                    return `  ${recurringBadge} [${j.id}] Next: ${j.triggerAt}${intervalInfo}${lastExec}\n     ${j.prompt.substring(0, 60)}${j.prompt.length > 60 ? "..." : ""}`;
+                });
 
-            return `Your Cronjobs:\n${lines.join("\n")}`;
+                return `Your Cronjobs:\n${lines.join("\n")}`;
+            }
+        },
+        {
+            name: "cancel",
+            description: "Cancel a scheduled task",
+            args: [
+                {
+                    name: "task_id",
+                    description: "ID of the task to cancel",
+                    type: "string",
+                    required: true
+                }
+            ],
+            handler: async (args, { user }) => {
+                const taskId = args[0];
+                if (!taskId) return "Error: task_id is required";
+
+                await TaskManager.cancel(user.id, taskId);
+                return `Cancelled your cronjob '${taskId}'.`;
+            }
         }
-        if (sub === "cancel" && args[1]) {
-            await TaskManager.cancel(user.id, args[1]);
-            return `Cancelled your cronjob '${args[1]}'.`;
-        }
-        return "Usage: /cron list | /cron cancel <id>";
-    }
+    ]
 });

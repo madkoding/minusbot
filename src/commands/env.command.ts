@@ -4,55 +4,189 @@ import { secrets } from "../secrets";
 // /env
 commandManager.register({
     name: "env",
-    description: "Manage your personal environment secrets.",
-    usage: "/env list <vault> | /env set <vault> <key> <value> | /env del <vault> <key>",
-    handler: async (args, { user }) => {
-        const sub = args[0];
-        const vaultName = args[1];
-        if (sub === "list" && vaultName) {
-            const vault = await secrets.userVault(user.id, vaultName);
-            const keys = vault.listKeys();
-            return `Personal vault '${vaultName}':\n  • ${keys.join("\n  • ")}`;
+    description: "Manage your personal environment secrets",
+    subs: [
+        {
+            name: "list",
+            description: "List keys in a vault",
+            args: [
+                {
+                    name: "vault",
+                    description: "Vault name to list",
+                    type: "string",
+                    required: true
+                }
+            ],
+            handler: async (args, { user }) => {
+                const vaultName = args[0];
+                if (!vaultName) return "Error: vault name is required";
+
+                const vault = await secrets.userVault(user.id, vaultName);
+                const keys = vault.listKeys();
+                return `Personal vault '${vaultName}':\n  • ${keys.join("\n  • ")}`;
+            }
+        },
+        {
+            name: "set",
+            description: "Set a secret value in a vault",
+            args: [
+                {
+                    name: "vault",
+                    description: "Vault name",
+                    type: "string",
+                    required: true
+                },
+                {
+                    name: "key",
+                    description: "Secret key",
+                    type: "string",
+                    required: true
+                },
+                {
+                    name: "value",
+                    description: "Secret value",
+                    type: "string",
+                    required: true
+                }
+            ],
+            handler: async (args, { user }) => {
+                const vaultName = args[0];
+                const key = args[1];
+                const value = args.slice(2).join(" ");
+
+                if (!vaultName || !key || !value) {
+                    return "Error: vault, key, and value are required";
+                }
+
+                const vault = await secrets.userVault(user.id, vaultName);
+                await vault.set(key, value);
+                return `Set '${key}' in your personal vault '${vaultName}'.`;
+            }
+        },
+        {
+            name: "del",
+            description: "Delete a secret from a vault",
+            args: [
+                {
+                    name: "vault",
+                    description: "Vault name",
+                    type: "string",
+                    required: true
+                },
+                {
+                    name: "key",
+                    description: "Secret key to delete",
+                    type: "string",
+                    required: true
+                }
+            ],
+            handler: async (args, { user }) => {
+                const vaultName = args[0];
+                const key = args[1];
+
+                if (!vaultName || !key) {
+                    return "Error: vault and key are required";
+                }
+
+                const vault = await secrets.userVault(user.id, vaultName);
+                await vault.delete(key);
+                return `Deleted '${key}' from your personal vault '${vaultName}'.`;
+            }
         }
-        if (sub === "set" && vaultName && args[2]) {
-            const vault = await secrets.userVault(user.id, vaultName);
-            const key = args[2];
-            const value = args.slice(3).join(" ");
-            await vault.set(key, value);
-            return `Set '${key}' in your personal vault '${vaultName}'.`;
-        }
-        if ((sub === "del" || sub === "delete") && vaultName && args[2]) {
-            const vault = await secrets.userVault(user.id, vaultName);
-            await vault.delete(args[2]);
-            return `Deleted '${args[2]}' from your personal vault '${vaultName}'.`;
-        }
-        return "Usage: /env list <vault> | /env set <vault> <key> <value> | /env del <vault> <key>";
-    }
+    ]
 });
 
 // /genv
 commandManager.register({
     name: "genv",
-    description: "Manage shared/global environment secrets.",
-    usage: "/genv list <vault> | /genv set <vault> <key> <value> | /genv del <vault> <key>",
+    description: "Manage shared/global environment secrets",
     needRole: "admin",
-    handler: async (args) => {
-        const sub = args[0];
-        const vaultName = args[1];
-        if (sub === "list" && vaultName) {
-            const vault = await secrets.globalVault(vaultName);
-            return `Global vault '${vaultName}':\n  • ${vault.listKeys().join("\n  • ")}`;
+    subs: [
+        {
+            name: "list",
+            description: "List keys in a global vault",
+            args: [
+                {
+                    name: "vault",
+                    description: "Vault name to list",
+                    type: "string",
+                    required: true
+                }
+            ],
+            handler: async (args) => {
+                const vaultName = args[0];
+                if (!vaultName) return "Error: vault name is required";
+
+                const vault = await secrets.globalVault(vaultName);
+                return `Global vault '${vaultName}':\n  • ${vault.listKeys().join("\n  • ")}`;
+            }
+        },
+        {
+            name: "set",
+            description: "Set a secret value in a global vault",
+            args: [
+                {
+                    name: "vault",
+                    description: "Vault name",
+                    type: "string",
+                    required: true
+                },
+                {
+                    name: "key",
+                    description: "Secret key",
+                    type: "string",
+                    required: true
+                },
+                {
+                    name: "value",
+                    description: "Secret value",
+                    type: "string",
+                    required: true
+                }
+            ],
+            handler: async (args) => {
+                const vaultName = args[0];
+                const key = args[1];
+                const value = args.slice(2).join(" ");
+
+                if (!vaultName || !key || !value) {
+                    return "Error: vault, key, and value are required";
+                }
+
+                const vault = await secrets.globalVault(vaultName);
+                await vault.set(key, value);
+                return `Set '${key}' in global vault '${vaultName}'.`;
+            }
+        },
+        {
+            name: "del",
+            description: "Delete a secret from a global vault",
+            args: [
+                {
+                    name: "vault",
+                    description: "Vault name",
+                    type: "string",
+                    required: true
+                },
+                {
+                    name: "key",
+                    description: "Secret key to delete",
+                    type: "string",
+                    required: true
+                }
+            ],
+            handler: async (args) => {
+                const vaultName = args[0];
+                const key = args[1];
+
+                if (!vaultName || !key) {
+                    return "Error: vault and key are required";
+                }
+
+                const vault = await secrets.globalVault(vaultName);
+                await vault.delete(key);
+                return `Deleted '${key}' from global vault '${vaultName}'.`;
+            }
         }
-        if (sub === "set" && vaultName && args[2]) {
-            const vault = await secrets.globalVault(vaultName);
-            await vault.set(args[2], args.slice(3).join(" "));
-            return `Set '${args[2]}' in global vault '${vaultName}'.`;
-        }
-        if ((sub === "del" || sub === "delete") && vaultName && args[2]) {
-            const vault = await secrets.globalVault(vaultName);
-            await vault.delete(args[2]);
-            return `Deleted '${args[2]}' from global vault '${vaultName}'.`;
-        }
-        return "Usage: /genv list <vault> | /genv set <vault> <key> <value> | /genv del <vault> <key>";
-    }
+    ]
 });

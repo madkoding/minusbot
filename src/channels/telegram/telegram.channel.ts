@@ -217,9 +217,9 @@ export class TelegramChannel extends Channel {
             // If no text and no files, ignore
             if (!text && files.length === 0) return next();
 
-            try {
-                const uploadedNames: string[] = [];
+            const uploadedNames: string[] = [];
 
+            try {
                 if (files.length > 0) {
                     // Ensure chat exists
                     let chat = await Storage.getChat(this.user.id, internalChatId);
@@ -249,13 +249,28 @@ export class TelegramChannel extends Channel {
                     }
                 }
 
-                const processText = text || (uploadedNames.length > 0 ? "Shared a file." : "");
+                let processText = text || "";
+                if (uploadedNames.length > 0) {
+                    processText += this.formatUploadNotification(uploadedNames);
+                }
 
-                await InputProcessor.process(processText, this.user.id, internalChatId, {
-                    _internal_source_tg: true,
-                    _attachments: uploadedNames,
-                    _channel: this.id
-                });
+                if (!processText.trim()) return next();
+
+                // Typing Indicator
+                await ctx.sendChatAction("typing");
+                const typingInterval = setInterval(() => {
+                    ctx.sendChatAction("typing").catch(() => { });
+                }, 4500);
+
+                try {
+                    await InputProcessor.process(processText, this.user.id, internalChatId, {
+                        _internal_source_tg: true,
+                        _attachments: uploadedNames,
+                        _channel: this.id
+                    });
+                } finally {
+                    clearInterval(typingInterval);
+                }
             } catch (e: any) {
                 await ctx.reply(`Error: ${e.message}`, { parse_mode: "MarkdownV2" });
             }
