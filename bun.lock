@@ -17,6 +17,7 @@
         "dockerode": "^4.0.9",
         "express": "^5.2.1",
         "jsonwebtoken": "^9.0.3",
+        "semver": "^7.7.4",
         "serpapi": "^2.2.1",
         "telegraf": "^4.16.3",
         "ws": "^8.19.0",
@@ -27,6 +28,7 @@
         "@types/react": "^19.2.13",
         "@types/react-dom": "^19.2.3",
         "@types/react-router-dom": "^5.3.3",
+        "@types/semver": "^7.7.1",
         "@types/uuid": "^10.0.0",
       },
       "peerDependencies": {
@@ -122,6 +124,8 @@
     "@types/react-router": ["@types/react-router@5.1.20", "", { "dependencies": { "@types/history": "^4.7.11", "@types/react": "*" } }, "sha512-jGjmu/ZqS7FjSH6owMcD5qpq19+1RS9DeVRqfl1FeBMxTDQAGwlMWOcs52NDoXaNKyG3d1cYQFMs9rCrb88o9Q=="],
 
     "@types/react-router-dom": ["@types/react-router-dom@5.3.3", "", { "dependencies": { "@types/history": "^4.7.11", "@types/react": "*", "@types/react-router": "*" } }, "sha512-kpqnYK4wcdm5UaWI3fLcELopqLrHgLqNsdpHauzlQktfkHL3npOSwtj1Uz9oKBAzs7lFtVkV8j83voAz2D8fhw=="],
+
+    "@types/semver": ["@types/semver@7.7.1", "", {}, "sha512-FmgJfu+MOcQ370SD0ev7EI8TlCAfKYU+B4m5T3yXc1CiRN94g/SZPtsCkk506aUDtlMnFZvasDwHHUcZUEaYuA=="],
 
     "@types/send": ["@types/send@1.2.1", "", { "dependencies": { "@types/node": "*" } }, "sha512-arsCikDvlU99zl1g69TcAB3mzZPpxgw0UQnaHeC1Nwb015xp8bknZv5rIfri9xTOcMuaVgvabfIRA7PSZVuZIQ=="],
 

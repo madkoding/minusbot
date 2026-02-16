@@ -4,6 +4,7 @@ import { Icon } from "../icons/Icon";
 import { useAuthStore } from "../../stores/useAuthStore";
 import { chatService } from "../../services/chatService";
 import { useStats } from "../../hooks/useStats";
+import { updateService } from "../../services/updateService";
 
 type SidebarMode = 'chats' | 'user' | 'admin' | 'system';
 
@@ -56,7 +57,25 @@ export const Sidebar = () => {
         { id: '/admin/users', label: 'User Directory', icon: 'users' },
     ];
 
+    const [updateCount, setUpdateCount] = React.useState(0);
+
+    const checkUpdates = async () => {
+        try {
+            const data = await updateService.getStatus();
+            setUpdateCount(data.updates.length);
+        } catch { }
+    };
+
+    React.useEffect(() => {
+        if (isRoot) {
+            checkUpdates();
+            const interval = setInterval(checkUpdates, 60000 * 60); // Check every hour
+            return () => clearInterval(interval);
+        }
+    }, [isRoot]);
+
     const systemItems = [
+        { id: '/system/update', label: 'Update System', icon: 'loader', badge: updateCount > 0 ? updateCount : undefined },
         { id: '/system/config', label: 'System Config', icon: 'settings' },
     ];
 
@@ -102,6 +121,11 @@ export const Sidebar = () => {
                     >
                         <Icon name={item.icon} size={16} />
                         <span>{item.label}</span>
+                        {item.badge !== undefined && (
+                            <span className="ml-auto bg-emerald-500 text-emerald-950 text-[10px] font-black px-1.5 py-0.5 rounded-full leading-none">
+                                {item.badge}
+                            </span>
+                        )}
                     </NavLink>
                 ))}
             </nav>

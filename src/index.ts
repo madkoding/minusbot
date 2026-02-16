@@ -4,11 +4,13 @@ import { ChannelManager } from "./channels";
 import { ensureDirs } from "./data/storage";
 import { startServer } from "./api/index";
 import { runCLI } from "./cli/repl"; // This handles the CLI loop and cron jobs for now
+import { Updater } from "./updater";
 
 async function main() {
     console.log("Starting engine components...");
     await ensureDirs();
     await UserManager.init();
+    await Updater.init();
     console.log("Users module initialized.");
 
     const pkg = await Bun.file("package.json").json();

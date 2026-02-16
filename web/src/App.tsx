@@ -16,6 +16,7 @@ import SettingsView from "./views/Settings.tsx";
 import StatsView from "./views/Stats";
 import IntegrationsView from "./views/Integrations.tsx";
 import ChannelsView from "./views/Channels.tsx";
+import UpdateView from "./views/Update.tsx";
 
 export default function App() {
     const { isAuthenticated, initialize } = useAuthStore();
@@ -58,6 +59,7 @@ export default function App() {
                     <Route path="/admin/channels" element={<ChannelsView apiPath="/admin/channels" />} />
 
                     {/* System Routes */}
+                    <Route path="/system/update" element={<UpdateView />} />
                     <Route path="/system/config" element={<SettingsView apiPath="/admin/settings/system" />} />
                 </Route>
 

@@ -12,6 +12,9 @@ export const GlobalSettingsDTO = UserSettingsDTO;
 
 export const SystemSettingsDTO = z.object({
     web_port: z.number().int().min(1024).max(65535),
+    updater_channel: z.enum(["stable", "nightly", "development"]),
+    updater_stable_url: z.string().url(),
+    updater_nightly_url: z.string().url(),
 });
 
 export const ToggleToolDTO = z.object({

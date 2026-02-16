@@ -24,6 +24,8 @@ import settingsAdminRoutes from "./routes/admin/settings.admin.routes";
 import toolsAdminRoutes from "./routes/admin/tools.admin.routes";
 import channelsAdminRoutes from "./routes/admin/channels.admin.routes";
 import integrationsAdminRoutes from "./routes/admin/integrations.admin.routes";
+import updaterAdminRoutes from "./routes/admin/updater.admin.routes";
+
 
 import userSkillsRoutes from "./routes/user/skills.routes";
 import userSettingsRoutes from "./routes/user/settings.routes";
@@ -77,6 +79,7 @@ export async function startServer() {
     admin.use("/tools", toolsAdminRoutes);
     admin.use("/channels", channelsAdminRoutes);
     admin.use("/integrations", integrationsAdminRoutes);
+    admin.use("/update", updaterAdminRoutes);
     api.use("/admin", admin);
 
     app.use("/api", api);

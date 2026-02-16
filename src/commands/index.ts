@@ -3,6 +3,7 @@ import "./settings.command";
 import "./skills.command";
 import "./cron.command";
 import "./stats.command";
+import "./update.command";
 import "./memo.command";
 import "./integrations.command";
 import "./chat.command";

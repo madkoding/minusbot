@@ -22,6 +22,9 @@ export const GLOBAL_INTEGRATIONS_DIR = path.join(SHARED_DIR, "integrations");
 
 export interface SystemSettings {
     web_port: number;
+    updater_channel: "stable" | "nightly" | "development";
+    updater_stable_url: string;
+    updater_nightly_url: string;
 }
 
 export interface Settings {
@@ -71,7 +74,10 @@ export const DEFAULT_SETTINGS: Settings = {
 };
 
 export const DEFAULT_SYSTEM_SETTINGS: SystemSettings = {
-    web_port: 9753
+    web_port: 9753,
+    updater_channel: "stable",
+    updater_stable_url: "https://raw.githubusercontent.com/sammwyy/minusbot/stable/versions.json",
+    updater_nightly_url: "https://raw.githubusercontent.com/sammwyy/minusbot/nightly/versions.json"
 };
 
 // --- Settings Persistence ---
