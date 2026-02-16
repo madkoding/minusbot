@@ -45,39 +45,42 @@ export async function runCLI(chatId: string | null, userId: string, isPermanent:
     // We import agent here to avoid circular dep issues potentially or keep it clean
     const agent = new Agent(currentChat);
 
-    // Setup Cron Listener affecting CLI
+    // Guard for cron processor
+    let isProcessing = false;
     const processCronJobs = async () => {
-        const dueJobs = await TaskManager.getAllDueJobs();
-        for (const job of dueJobs) {
-            const isCurrentChat = job.chatId === currentChat.meta.id && job.userId === userId;
-            const jobChat = isCurrentChat ? currentChat : await Storage.getChat(job.userId, job.chatId);
+        if (isProcessing) return;
+        isProcessing = true;
+        try {
+            const dueJobs = await TaskManager.getAllDueJobs();
+            for (const job of dueJobs) {
+                const isCurrentChat = job.chatId === currentChat.meta.id && job.userId === userId;
+                const jobChat = isCurrentChat ? currentChat : await Storage.getChat(job.userId, job.chatId);
 
-            if (jobChat) {
-                const jobAgent = isCurrentChat ? agent : new Agent(jobChat);
-                try {
-                    // Send system notification about cron trigger
-                    const systemNotification = `[SYSTEM NOTIFICATION] Scheduled task triggered: "${job.prompt}"\n\nA cronjob you scheduled has been activated. You may now proceed with any actions you planned for this trigger.`;
+                if (jobChat) {
+                    const jobAgent = isCurrentChat ? agent : new Agent(jobChat);
+                    try {
+                        // Send system context about cron trigger
+                        const systemContext = `[CRON TRIGGERED] Task: "${job.prompt}"\nAction: Please process this scheduled task immediately.`;
 
-                    const response = await jobAgent.run(systemNotification, { _ephemeral: true });
-
-                    // Only publish the assistant's response if it exists
-                    if (response && response.trim()) {
-                        PubSub.publish(`chat:${jobChat.meta.id}`, {
-                            type: "message",
-                            message: { role: "assistant", content: response },
-                            chatId: jobChat.meta.id,
-                            userId: job.userId
+                        // We use ephemeral: true so this trigger doesn't clutter chat history
+                        const response = await jobAgent.run(systemContext, {
+                            _ephemeral: true,
+                            _from_cron: true,
+                            _role: "system"
                         });
 
-                        if (isCurrentChat) {
+                        // We don't publish here anymore because jobAgent.run calls PubSub.publish internally
+                        if (isCurrentChat && response && response.trim()) {
                             await Logger.bot(response);
                             process.stdout.write(await Logger.prompt());
                         }
+                    } catch (e: any) {
+                        await Logger.error(`Cron error: ${e.message}`);
                     }
-                } catch (e: any) {
-                    await Logger.error(`Cron error: ${e.message}`);
                 }
             }
+        } finally {
+            isProcessing = false;
         }
     };
 
@@ -93,9 +96,17 @@ export async function runCLI(chatId: string | null, userId: string, isPermanent:
 
     const shutdown = async () => {
         clearInterval(cronInterval);
-        if (isNewChat && currentChat.messages.length === 0) {
-            await Storage.deleteChat(userId, currentChat.meta.id);
+
+        // Reload chat to check accurate message count
+        const latestChat = await Storage.getChat(userId, chatId!);
+        if (latestChat && latestChat.meta.type === "temporal" && latestChat.messages.length === 0) {
+            try {
+                await Storage.deleteChat(userId, chatId!);
+            } catch (e: any) {
+                await Logger.error(`Failed to cleanup empty temporal chat: ${e.message}`);
+            }
         }
+
         await Logger.info("Goodbye!");
         process.exit(0);
     };

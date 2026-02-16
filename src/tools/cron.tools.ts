@@ -47,7 +47,7 @@ toolManager.registerTool(
         });
 
         const recurringInfo = args.recurring ? ` (recurring every ${args.intervalMs}ms)` : " (one-time)";
-        return `Cronjob added with ID: ${id}${recurringInfo}. When triggered, you will receive a system notification to activate this chat.`;
+        return `SUCCESS: Cronjob scheduled with ID ${id}${recurringInfo}. You can now provide a final concise confirmation to the user and end your turn.`;
     }
 );
 
@@ -66,7 +66,7 @@ toolManager.registerTool(
     },
     async (args, { chat }) => {
         await TaskManager.cancel(chat.meta.owner, args.id);
-        return `Cronjob ${args.id} cancelled`;
+        return `SUCCESS: Cronjob ${args.id} has been cancelled. Confirm this to the user and finish.`;
     }
 );
 

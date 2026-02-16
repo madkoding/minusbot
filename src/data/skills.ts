@@ -8,12 +8,20 @@ import { WorkspaceManager } from "./workspaces";
 import { secrets } from "../secrets";
 import { Logger } from "../cli/colors";
 
+export interface BinaryDefinition {
+    name: string;
+    urls: Record<string, string>;
+    actions: string[];
+}
+
 export interface SkillAction {
     name: string;
     description: string;
     parameters: any;
     _script: string;
-    _bins?: Record<string, Record<string, string>>;
+    dockerImage?: string;
+    extraVolumes?: string[];
+    enableNetwork?: boolean;
 }
 
 export interface SkillDefinition {
@@ -22,6 +30,9 @@ export interface SkillDefinition {
     description: string;
     vaultKeys?: string[];
     configSchema?: any;
+    bins?: BinaryDefinition[];
+    dockerImage?: string;
+    enableNetwork?: boolean;
     actions: SkillAction[];
     enabled?: boolean;
 }
@@ -103,20 +114,33 @@ export class SkillManager {
         }
     }
 
-    private static async ensureBinaries(skillPath: string, action: SkillAction) {
-        if (!action._bins) return;
+    private static async ensureBinaries(skillPath: string, actionName: string, definition: SkillDefinition) {
+        if (!definition.bins || !Array.isArray(definition.bins)) return;
 
         const binDir = path.join(skillPath, "bin");
         await fs.mkdir(binDir, { recursive: true });
 
         const arch = `${os.platform()}-${os.arch()}`;
+        const archAliases: Record<string, string> = {
+            "linux-x64": "linux-x86_64",
+            "linux-arm64": "linux-aarch64",
+            "linux-x86_64": "linux-x64",
+            "linux-aarch64": "linux-arm64"
+        };
 
-        for (const [binName, archs] of Object.entries(action._bins)) {
+        for (const binDef of definition.bins) {
+            if (!binDef.actions.includes(actionName)) continue;
+
+            const binName = binDef.name;
             const binPath = path.join(binDir, binName);
             const exists = await fs.stat(binPath).catch(() => null);
 
             if (!exists) {
-                const url = archs[arch] || archs["all"] || archs["default"];
+                const url = binDef.urls[arch] ||
+                    binDef.urls[archAliases[arch] || ""] ||
+                    binDef.urls["all"] ||
+                    binDef.urls["default"];
+
                 if (url) {
                     await Logger.info(`Downloading binary ${binName} for ${arch}...`);
                     try {
@@ -132,15 +156,22 @@ export class SkillManager {
                             const { execSync } = await import("node:child_process");
                             try {
                                 execSync(`unzip -o "${zipPath}" -d "${binDir}"`);
-                                // If the zip contains a binary with a different name, we might need a rename logic.
-                                // ffbinaries usually names them 'ffmpeg' inside the zip.
-                                if (binName !== "ffmpeg" && binName !== "ffprobe") {
-                                    // Fallback rename if needed, but for ffmpeg it's usually fine.
-                                }
                             } catch (unzipErr: any) {
                                 await Logger.error(`Unzip failed: ${unzipErr.message}. Make sure 'unzip' is installed.`);
                             } finally {
                                 await fs.unlink(zipPath).catch(() => { });
+                            }
+                        } else if (url.endsWith(".tar.gz") || url.endsWith(".tgz")) {
+                            const tarPath = `${binPath}.tar.gz`;
+                            await fs.writeFile(tarPath, buffer);
+
+                            const { execSync } = await import("node:child_process");
+                            try {
+                                execSync(`tar -xzf "${tarPath}" -C "${binDir}"`);
+                            } catch (tarErr: any) {
+                                await Logger.error(`Tar extraction failed: ${tarErr.message}. Make sure 'tar' is installed.`);
+                            } finally {
+                                await fs.unlink(tarPath).catch(() => { });
                             }
                         } else {
                             await fs.writeFile(binPath, buffer);
@@ -178,7 +209,7 @@ export class SkillManager {
             : path.join(this.getUserSkillsDir(userId), id);
 
         // Ensure binaries
-        await this.ensureBinaries(skillPath, action);
+        await this.ensureBinaries(skillPath, actionName, skill.definition);
 
         const workspaceDir = WorkspaceManager.resolveContentPath(userId, workspaceId, chatId);
         await fs.mkdir(workspaceDir, { recursive: true });
@@ -205,13 +236,39 @@ export class SkillManager {
             PATH: `/skill/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin`
         };
 
+        const dockerImage = action.dockerImage || skill.definition.dockerImage || "python:3.11-slim";
+        const scriptExt = path.extname(action._script).toLowerCase();
+
+        let cmd: string[] = [];
+        let entrypoint: string[] | undefined = undefined;
+
+        if (scriptExt === ".py") {
+            cmd = ["python", `/skill/scripts/${action._script}`, JSON.stringify({ ...inputs, _action: actionName, _skillId: id })];
+        } else if (scriptExt === ".sh") {
+            // If image is alpine/git or similar with custom entrypoints, override it
+            if (dockerImage.includes("git")) {
+                entrypoint = ["/bin/sh"];
+                cmd = ["/skill/scripts/" + action._script, JSON.stringify({ ...inputs, _action: actionName, _skillId: id })];
+            } else {
+                cmd = ["sh", `/skill/scripts/${action._script}`, JSON.stringify({ ...inputs, _action: actionName, _skillId: id })];
+            }
+        } else {
+            // Default to direct execution
+            cmd = [`/skill/scripts/${action._script}`, JSON.stringify({ ...inputs, _action: actionName, _skillId: id })];
+        }
+
         // Use SandboxManager
         return await SandboxManager.runContainer(
-            "python:3.11-slim",
+            dockerImage,
             skillPath,
             workspaceDir,
-            ["python", `/skill/scripts/${action._script}`, JSON.stringify(inputs)],
-            env
+            cmd,
+            env,
+            {
+                extraVolumes: action.extraVolumes,
+                enableNetwork: action.enableNetwork || skill.definition.enableNetwork,
+                entrypoint
+            }
         );
     }
 

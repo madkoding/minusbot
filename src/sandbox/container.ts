@@ -46,7 +46,12 @@ export class SandboxManager {
         sourceDir: string,
         workspaceDir: string,
         command: string[],
-        env: Record<string, string> = {}
+        env: Record<string, string> = {},
+        options: {
+            extraVolumes?: string[];
+            enableNetwork?: boolean;
+            entrypoint?: string[];
+        } = {}
     ): Promise<string> {
         const stream = new MemoryStream();
 
@@ -59,6 +64,19 @@ export class SandboxManager {
             // Convert env map to array ["KEY=VAL", ...]
             const envArray = Object.entries(env).map(([k, v]) => `${k}=${v}`);
 
+            const binds = [
+                `${absSource}:/skill:ro`,
+                `${absWorkspace}:/workspace:rw`
+            ];
+
+            if (options.extraVolumes) {
+                binds.push(...options.extraVolumes);
+            }
+
+            const uid = typeof process.getuid === "function" ? process.getuid() : undefined;
+            const gid = typeof process.getgid === "function" ? process.getgid() : undefined;
+            const userStr = uid !== undefined ? `${uid}:${gid}` : undefined;
+
             // Using dockerode run helper
             const [data] = await this.docker.run(
                 image,
@@ -66,13 +84,12 @@ export class SandboxManager {
                 stream,
                 {
                     Env: envArray,
+                    Entrypoint: options.entrypoint,
+                    User: userStr,
                     HostConfig: {
-                        Binds: [
-                            `${absSource}:/skill:ro`,
-                            `${absWorkspace}:/workspace:rw`
-                        ],
+                        Binds: binds,
                         AutoRemove: true,
-                        NetworkMode: "none"
+                        NetworkMode: options.enableNetwork ? "bridge" : "none"
                     },
                     WorkingDir: "/workspace",
                     Tty: false

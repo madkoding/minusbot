@@ -4,6 +4,28 @@
     "description": "Universal FFmpeg and FFprobe access. Use this to run any video/audio processing command.",
     "vaultKeys": [],
     "configSchema": {},
+    "bins": [
+        {
+            "name": "ffmpeg",
+            "urls": {
+                "linux-x64": "https://github.com/ffbinaries/ffbinaries-prebuilt/releases/download/v4.4.1/ffmpeg-4.4.1-linux-64.zip",
+                "linux-arm64": "https://github.com/ffbinaries/ffbinaries-prebuilt/releases/download/v4.4.1/ffmpeg-4.4.1-linux-arm-64.zip"
+            },
+            "actions": [
+                "ffmpeg"
+            ]
+        },
+        {
+            "name": "ffprobe",
+            "urls": {
+                "linux-x64": "https://github.com/ffbinaries/ffbinaries-prebuilt/releases/download/v4.4.1/ffprobe-4.4.1-linux-64.zip",
+                "linux-arm64": "https://github.com/ffbinaries/ffbinaries-prebuilt/releases/download/v4.4.1/ffprobe-4.4.1-linux-arm-64.zip"
+            },
+            "actions": [
+                "ffprobe"
+            ]
+        }
+    ],
     "actions": [
         {
             "name": "ffmpeg",
@@ -20,13 +42,7 @@
                     "args"
                 ]
             },
-            "_script": "ffmpeg.py",
-            "_bins": {
-                "ffmpeg": {
-                    "linux-x64": "https://github.com/ffbinaries/ffbinaries-prebuilt/releases/download/v4.4.1/ffmpeg-4.4.1-linux-64.zip",
-                    "linux-arm64": "https://github.com/ffbinaries/ffbinaries-prebuilt/releases/download/v4.4.1/ffmpeg-4.4.1-linux-arm-64.zip"
-                }
-            }
+            "_script": "ffmpeg.py"
         },
         {
             "name": "ffprobe",
@@ -43,13 +59,7 @@
                     "args"
                 ]
             },
-            "_script": "ffprobe.py",
-            "_bins": {
-                "ffprobe": {
-                    "linux-x64": "https://github.com/ffbinaries/ffbinaries-prebuilt/releases/download/v4.4.1/ffprobe-4.4.1-linux-64.zip",
-                    "linux-arm64": "https://github.com/ffbinaries/ffbinaries-prebuilt/releases/download/v4.4.1/ffprobe-4.4.1-linux-arm-64.zip"
-                }
-            }
+            "_script": "ffprobe.py"
         }
     ]
 }

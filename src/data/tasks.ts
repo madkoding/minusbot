@@ -13,6 +13,7 @@ export interface CronJob {
     recurring?: boolean; // If true, reschedule after execution
     interval?: number; // Interval in milliseconds for recurring jobs
     lastExecuted?: string; // ISO string of last execution time
+    processing?: boolean; // Flag to prevent multi-instance execution
 }
 
 export class TaskManager {
@@ -53,31 +54,31 @@ export class TaskManager {
             for (const userId of userDirs) {
                 const jobs = await this.list(userId);
                 const now = new Date();
-                const due: CronJob[] = [];
-                const remaining: CronJob[] = [];
+                const dueInThisUser: CronJob[] = [];
+                const updatedList: CronJob[] = [];
 
                 for (const job of jobs) {
-                    if (new Date(job.triggerAt) <= now) {
-                        dueJobs.push(job);
-                        due.push(job);
+                    if (!job.processing && new Date(job.triggerAt) <= now) {
+                        job.processing = true;
+                        dueJobs.push({ ...job });
+                        dueInThisUser.push(job);
 
-                        // If recurring, reschedule
                         if (job.recurring && job.interval) {
                             const nextTrigger = new Date(now.getTime() + job.interval);
-                            remaining.push({
+                            updatedList.push({
                                 ...job,
                                 triggerAt: nextTrigger.toISOString(),
-                                lastExecuted: now.toISOString()
+                                lastExecuted: now.toISOString(),
+                                processing: false // Ready for next cycle
                             });
                         }
-                        // Otherwise, one-time job is removed
                     } else {
-                        remaining.push(job);
+                        updatedList.push(job);
                     }
                 }
 
-                if (due.length > 0) {
-                    await this.save(userId, remaining);
+                if (dueInThisUser.length > 0) {
+                    await this.save(userId, updatedList);
                 }
             }
         } catch { }

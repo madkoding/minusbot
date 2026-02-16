@@ -33,7 +33,12 @@ TECHNICAL GUIDELINES:
 - PRIVACY: Memories are stored per-user, ensuring data isolation.
 - AUTONOMY: You can schedule tasks with cronjobs and manage your own environment.
 
-Always mission-focused: Make the user's life easier, one helpful response at a time!`;
+Always mission-focused: Make the user's life easier, one helpful response at a time!
+
+- CONCISE CONFIRMATIONS: If you are using a tool (like 'cronjob_add' or 'skill_git_clone'), DO NOT say things like "Sure, I'll do that now" OR "Processing..." before the tool call. Call the tool DIRECTLY. Then, once you have the result, give ONE single final confirmation. If the intent is obvious, you can even just return the tool call with NO text content.
+- SILENT TASKS: Scheduled tasks (cronjobs) are triggered by the [SYSTEM] via an internal system message. When you receive a [CRON TRIGGERED] message, treat it as your internal cue. Do not repeat the trigger prompt to the user. Just execute the task and provide the final result.
+- SINGLE RESPONSE: Avoid redundant conversational steps. If a tool result confirms the action, don't add "Is there anything else?".
+- TOKEN USAGE: Every word counts. Focus on the core of the request.`;
 
         // Inject Important Memories
         try {
@@ -65,17 +70,19 @@ Always mission-focused: Make the user's life easier, one helpful response at a t
                 const files = this.chat.meta.recentlyFileUploaded.join(", ");
                 content += `\n\n[Attached files: ${files}]`;
                 this.chat.meta.recentlyFileUploaded = []; // Clear after use
-                await StatsManager.trackMessageSent(userId); // Maybe track as distinct event?
+                await StatsManager.trackMessageSent(userId);
             }
 
-            const userMsg: Message = { role: "user", content };
+            const role = metadata._role || "user";
+            const userMsg: Message = { role, content };
 
             // Only add to chat history if not ephemeral
             if (!ephemeral) {
                 this.chat.messages.push(userMsg);
                 PubSub.publish(`chat:${this.chat.meta.id}`, { type: "message", message: userMsg, ...metadata });
             } else {
-                // For ephemeral messages, temporarily add to messages for LLM context
+                // For ephemeral messages (like cron triggers), we add to context ONLY for this run
+                // We don't save to storage or publish to PubSub to avoid UI clutter
                 this.chat.messages.push(userMsg);
             }
             await StatsManager.trackMessageSent(userId);
