@@ -20,26 +20,34 @@ toolManager.registerTool(
         type: "function",
         function: {
             name: "cronjob_add",
-            description: "Add a new cronjob. Can be one-time or recurring. The cronjob will send a system notification to activate the chat when triggered.",
+            description: "Add a new cronjob. Can be one-time or recurring.",
             parameters: {
                 type: "object",
                 properties: {
-                    triggerAt: { type: "string", description: "ISO date string for first/next execution" },
-                    prompt: { type: "string", description: "Description of what this cronjob is for (shown in notification)" },
-                    recurring: { type: "boolean", description: "If true, the job will repeat at the specified interval" },
-                    intervalMs: { type: "number", description: "Interval in milliseconds for recurring jobs (e.g., 3600000 for 1 hour)" },
+                    triggerAt: {
+                        type: "string",
+                        description: "ISO date string for first/next execution. If not provided, it will trigger immediately."
+                    },
+                    prompt: {
+                        type: "string",
+                        description: "Full instruction of what you (the assistant) should do when triggered. Be specific."
+                    },
+                    recurring: { type: "boolean", description: "If true, the job will repeat at the specified interval." },
+                    intervalMs: { type: "number", description: "Interval in milliseconds for recurring jobs (minimum 10000ms)." },
                 },
-                required: ["triggerAt", "prompt"],
+                required: ["prompt"],
             },
         },
     },
     async (args, { chat }) => {
         const id = Math.random().toString(36).substring(7);
+        const triggerAt = args.triggerAt || new Date().toISOString();
+
         await TaskManager.add({
             id,
             chatId: chat.meta.id,
             userId: chat.meta.owner,
-            triggerAt: args.triggerAt,
+            triggerAt,
             prompt: args.prompt,
             type: "async",
             recurring: args.recurring || false,
@@ -47,7 +55,7 @@ toolManager.registerTool(
         });
 
         const recurringInfo = args.recurring ? ` (recurring every ${args.intervalMs}ms)` : " (one-time)";
-        return `SUCCESS: Cronjob scheduled with ID ${id}${recurringInfo}. You can now provide a final concise confirmation to the user and end your turn.`;
+        return `SUCCESS: Cronjob scheduled with ID ${id}${recurringInfo}. Next execution at ${triggerAt}. End your turn concisely.`;
     }
 );
 

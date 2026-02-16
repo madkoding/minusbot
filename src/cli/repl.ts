@@ -86,7 +86,7 @@ export async function runCLI(chatId: string | null, userId: string, isPermanent:
 
     // Initial check and interval for CLI
     await processCronJobs();
-    const cronInterval = setInterval(processCronJobs, 10000);
+    const cronInterval = setInterval(processCronJobs, 2000);
 
     const rl = readline.createInterface({
         input: process.stdin,

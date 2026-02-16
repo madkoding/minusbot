@@ -35,9 +35,9 @@ TECHNICAL GUIDELINES:
 
 Always mission-focused: Make the user's life easier, one helpful response at a time!
 
-- CONCISE CONFIRMATIONS: If you are using a tool (like 'cronjob_add' or 'skill_git_clone'), DO NOT say things like "Sure, I'll do that now" OR "Processing..." before the tool call. Call the tool DIRECTLY. Then, once you have the result, give ONE single final confirmation. If the intent is obvious, you can even just return the tool call with NO text content.
-- SILENT TASKS: Scheduled tasks (cronjobs) are triggered by the [SYSTEM] via an internal system message. When you receive a [CRON TRIGGERED] message, treat it as your internal cue. Do not repeat the trigger prompt to the user. Just execute the task and provide the final result.
-- SINGLE RESPONSE: Avoid redundant conversational steps. If a tool result confirms the action, don't add "Is there anything else?".
+- SILENT TASKS: Scheduled tasks (cronjobs) are triggered by the [SYSTEM]. When you receive a [CRON TRIGGERED] message, just perform that specific task. If it's a recurring task, DO NOT cancel it unless the user explicitly asks you to. The system manages the repetition automatically.
+- NO PRE-CONFIRMATIONS: Do not say "I'll do that" before calling a tool. Call it directly.
+- SINGLE RESPONSE: Give one final confirmation. If you've already answered a recurring task before (check history), keep it extremely brief or just update the info.
 - TOKEN USAGE: Every word counts. Focus on the core of the request.`;
 
         // Inject Important Memories
@@ -62,6 +62,7 @@ Always mission-focused: Make the user's life easier, one helpful response at a t
             this.chat.messages[0].content = SYSTEM_PROMPT;
         }
 
+        const originalMessageCount = this.chat.messages.length;
         if (userInput) {
             let content = userInput;
 
@@ -76,14 +77,10 @@ Always mission-focused: Make the user's life easier, one helpful response at a t
             const role = metadata._role || "user";
             const userMsg: Message = { role, content };
 
-            // Only add to chat history if not ephemeral
+            this.chat.messages.push(userMsg);
+
             if (!ephemeral) {
-                this.chat.messages.push(userMsg);
                 PubSub.publish(`chat:${this.chat.meta.id}`, { type: "message", message: userMsg, ...metadata });
-            } else {
-                // For ephemeral messages (like cron triggers), we add to context ONLY for this run
-                // We don't save to storage or publish to PubSub to avoid UI clutter
-                this.chat.messages.push(userMsg);
             }
             await StatsManager.trackMessageSent(userId);
         }
@@ -140,7 +137,21 @@ Always mission-focused: Make the user's life easier, one helpful response at a t
 
             this.chat.messages.push(message);
             PubSub.publish(`chat:${this.chat.meta.id}`, { type: "message", message });
-            await Storage.saveChat(this.chat);
+
+            // Prepare messages for saving (filter out the ephemeral trigger if present)
+            let messagesToSave = this.chat.messages;
+            if (ephemeral && userInput) {
+                // Remove the one message we added at the start (at index originalMessageCount)
+                messagesToSave = [
+                    ...this.chat.messages.slice(0, originalMessageCount),
+                    ...this.chat.messages.slice(originalMessageCount + 1)
+                ];
+            }
+
+            await Storage.saveChat({
+                ...this.chat,
+                messages: messagesToSave
+            });
 
             if (!message.tool_calls || message.tool_calls.length === 0) {
                 return message.content;
