@@ -10,6 +10,18 @@ This guide will help you get **Minusbot** up and running using Docker or simply 
 
 ## 🚀 Getting Started
 
+### ⚡ Automated Installation (Recommended)
+
+The quickest way to install Minusbot is using our installation script:
+
+```bash
+curl -sSL https://raw.githubusercontent.com/sammwyy/minusbot/main/install.sh | bash
+```
+
+### 🛠 Manual Installation
+
+If you prefer to set up the environment manually:
+
 ### 1. Clone the repository
 
 ```bash
@@ -19,10 +31,13 @@ cd minusbot
 
 ### 2. Install dependencies & Skills
 
-Before running, you should fetch the default AI skills (like `skill_run`, `cronjob_add`, etc.).
+Before running, you should install all dependencies and fetch the default AI skills.
 
 ```bash
-bun install
+# Install everything (Backend + Frontend)
+bun run install:all
+
+# Fetch default skills
 bun run skills:install
 ```
 
@@ -65,6 +80,7 @@ You can containerize the entire bot for deployment.
     docker run -d \
       --name minusbot \
       --restart unless-stopped \
+      -p 9753:9753 \
       -v /var/run/docker.sock:/var/run/docker.sock \
       -v $HOME/.config/minusbot:/root/.config/minusbot \
       minusbot

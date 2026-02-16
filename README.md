@@ -14,20 +14,39 @@
 
 ## 🚀 Quick Start
 
-### 1. Installation
+### ⚡ Automated Installation (Recommended)
 
-See [Installation Guide](docs/install.md) for detailed steps using Docker or manual setup.
+The easiest way to get **Minusbot** up and running is using our automated installer script.
+
+```bash
+# Run the installer
+curl -sSL https://raw.githubusercontent.com/sammwyy/minusbot/main/install.sh | bash
+```
+
+This script will:
+1.  Check for dependencies (**Git** & **Docker**) and install them if missing.
+2.  Clone the repository.
+3.  Build the **Docker** container and compile the **Web Dashboard**.
+4.  Optionally install default **Skills**.
+5.  Generate your initial **Root** credentials.
+
+### 🛠️ Manual Installation (Fallback)
+
+If you prefer to set up manually:
 
 ```bash
 # Clone
 git clone https://github.com/sammwyy/minusbot
 cd minusbot
 
-# Install dependencies & default skills
-bun install
+# Install all dependencies (Backend + Frontend)
+bun run install:all
+
+# Install default skills
 bun run skills:install
 
-# Run
+# Build and run
+bun run build
 bun start
 ```
 

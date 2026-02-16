@@ -35,10 +35,42 @@ const COLORS = {
 };
 
 export class Logger {
-    private static async wrap(text: string, style: string): Promise<string> {
+    private static async parseMarkdown(text: string): Promise<string> {
         const settings = await getGlobalSettings();
         if (!settings.colors) return text;
-        return `${style}${text}${COLORS.reset}`;
+
+        let parsed = text;
+
+        // 1. Headers: # Text, ## Text, ### Text (Needs to be first to handle ^ correctly)
+        parsed = parsed.replace(/^# (.*$)/gm, `${COLORS.bright}${COLORS.fg.blue}$1${COLORS.reset}${COLORS.fg.white}`);
+        parsed = parsed.replace(/^## (.*$)/gm, `${COLORS.bright}${COLORS.fg.cyan}$1${COLORS.reset}${COLORS.fg.white}`);
+        parsed = parsed.replace(/^### (.*$)/gm, `${COLORS.bright}${COLORS.fg.yellow}$1${COLORS.reset}${COLORS.fg.white}`);
+
+        // 2. Bold: **text** or __text__ -> Bright
+        parsed = parsed.replace(/(\*\*|__)(.*?)\1/g, `${COLORS.bright}$2${COLORS.reset}${COLORS.fg.white}`);
+
+        // 3. Italic: *text* or _text_ -> Italic
+        parsed = parsed.replace(/(\*|_)(.*?)\1/g, `${COLORS.italic}$2${COLORS.reset}${COLORS.fg.white}`);
+
+        // 4. Inline Code: `text` -> Magenta/Gray
+        parsed = parsed.replace(/`(.*?)`/g, `${COLORS.fg.magenta}$1${COLORS.reset}${COLORS.fg.white}`);
+
+        // 5. Lists: - item, * item
+        parsed = parsed.replace(/^(\s*)[-*]\s+(.*)$/gm, `$1  • $2`);
+
+        return parsed;
+    }
+
+    private static async wrap(text: string, style: string, parseMkd: boolean = false): Promise<string> {
+        const settings = await getGlobalSettings();
+        let content = text;
+
+        if (parseMkd) {
+            content = await this.parseMarkdown(text);
+        }
+
+        if (!settings.colors) return content;
+        return `${style}${content}${COLORS.reset}`;
     }
 
     static async banner(version: string) {
@@ -56,13 +88,13 @@ export class Logger {
     static async bot(text: string) {
         const tag = await this.wrap(" ⚙ MINUS ", COLORS.bg.blue + COLORS.fg.white + COLORS.bright);
         const sep = await this.wrap(" » ", COLORS.fg.blue + COLORS.bright);
-        console.log(`${tag}${sep}${await this.wrap(text, COLORS.fg.white)}\n`);
+        console.log(`${tag}${sep}${await this.wrap(text, COLORS.fg.white, true)}\n`);
     }
 
     static async system(text: string) {
         const tag = await this.wrap(" ⚙ SYSTEM ", COLORS.bg.magenta + COLORS.fg.white + COLORS.bright);
         const sep = await this.wrap(" » ", COLORS.fg.magenta + COLORS.bright);
-        console.log(`${tag}${sep}${await this.wrap(text, COLORS.fg.gray)}\n`);
+        console.log(`${tag}${sep}${await this.wrap(text, COLORS.fg.gray, true)}\n`);
     }
 
     static async task(text: string) {

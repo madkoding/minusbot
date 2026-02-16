@@ -69,7 +69,7 @@ export class CommandManager {
             const subCmd = cmd.subs.find(s => s.name.toLowerCase() === subName);
 
             if (subCmd) {
-                return await this.executeCommand(subCmd, args.slice(1), context, [...path, subName]);
+                return await this.executeCommand(subCmd, args.slice(1), context, [...path?.concat(subName || [])]);
             }
         }
 
