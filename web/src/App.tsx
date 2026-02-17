@@ -99,7 +99,7 @@ export default function App() {
                         <Route path="/admin/secrets" element={<VaultView mode="admin" />} />
                         <Route path="/admin/settings" element={<SettingsView mode="admin" />} />
                         <Route path="/admin/users" element={<UsersView />} />
-                        <Route path="/admin/stats" element={<StatsView mode="admin" />} />
+                        <Route path="/admin/stats" element={<StatsView />} />
                         <Route path="/admin/integrations" element={<IntegrationsView mode="admin" />} />
                         <Route path="/admin/channels" element={<ChannelsView mode="admin" />} />
                         <Route path="/admin/providers" element={<ProvidersView mode="admin" />} />

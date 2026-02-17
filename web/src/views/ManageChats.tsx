@@ -2,9 +2,10 @@ import React, { useEffect } from "react";
 import { Card } from "../components/cards";
 import { Icon } from "../components/icons";
 import { useChatsAsAdmin } from "../hooks/useChat";
+import { type ChatMeta } from "@shared/types";
 
 export default function ManageChatsView() {
-    const { adminChats, fetchAdminChats, deleteChat, isLoading } = useChatsAsAdmin();
+    const { chats: adminChats, fetchChats: fetchAdminChats, deleteChat, isLoading } = useChatsAsAdmin();
 
     useEffect(() => { fetchAdminChats(); }, [fetchAdminChats]);
 
@@ -34,7 +35,7 @@ export default function ManageChatsView() {
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-zinc-800/20">
-                        {adminChats.map(c => (
+                        {(adminChats as ChatMeta[]).map(c => (
                             <tr key={c.id} className="group hover:bg-zinc-900/40 transition-colors">
                                 <td className="py-4 px-6">
                                     <div className="font-bold text-zinc-200">{c.id}</div>

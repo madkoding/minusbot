@@ -5,7 +5,7 @@ import { Icon } from "../icons";
 import { useProviders } from "../../hooks/useProviders";
 import { channelsService } from "../../services/channelsService";
 import { useSettings } from "../../hooks/useSettings";
-import { type Channel } from "../../types";
+import { type ChannelStatus } from "../../types";
 
 type OnboardingStep =
     | "ai-provider"
@@ -36,7 +36,7 @@ export const OnboardingModal = () => {
     const [loadingModels, setLoadingModels] = useState(false);
 
     // Channel Config State
-    const [availableChannels, setAvailableChannels] = useState<Channel[]>([]);
+    const [availableChannels, setAvailableChannels] = useState<ChannelStatus[]>([]);
     const [selectedChannelId, setSelectedChannelId] = useState<string>("");
     const [channelConfig, setChannelConfig] = useState<Record<string, any>>({});
 
@@ -55,7 +55,7 @@ export const OnboardingModal = () => {
                 const channels = await channelsService.list();
                 setAvailableChannels(channels || []);
 
-                const hasConfiguredChannels = Array.isArray(channels) && channels.some((c: Channel) => c.configured);
+                const hasConfiguredChannels = Array.isArray(channels) && (channels as ChannelStatus[]).some((c) => c.configured);
                 const hasProviders = providers.length > 0;
 
                 // Show ONLY if NO providers AND NO configured channels
