@@ -57,10 +57,31 @@ if ! [ -x "$(command -v docker)" ]; then
     curl -fsSL https://get.docker.com -o get-docker.sh
     sudo sh get-docker.sh || print_error "Failed to install docker"
     rm get-docker.sh
-    sudo usermod -aG docker $USER
-    echo -e "${YELLOW}Docker installed. You might need to restart your session if permission errors occur.${NC}"
+    echo -e "${YELLOW}Docker installed successfully.${NC}"
 fi
 print_success "Docker is ready"
+
+# 2.1 Docker Socket Permission Check
+DOCKER_CMD="docker"
+if ! docker ps >/dev/null 2>&1; then
+    echo -e "${YELLOW}Warning: Current user ($USER) does not have permission to access the Docker socket.${NC}"
+    echo -e "This is required to manage Minusbot without 'sudo'."
+    read -p "$(echo -e ${CYAN}"Would you like to add $USER to the 'docker' group? (y/N): "${NC})" ADD_TO_DOCKER
+    ADD_TO_DOCKER=${ADD_TO_DOCKER:-N}
+    
+    if [[ "$ADD_TO_DOCKER" =~ ^[Yy]$ ]]; then
+        print_status "Adding $USER to docker group"
+        sudo usermod -aG docker "$USER" || print_error "Failed to add user to docker group"
+        print_success "User $USER added to docker group successfully"
+        echo -e "${YELLOW}IMPORTANT: You MUST log out and log back in for group changes to take effect.${NC}"
+        echo -e "${YELLOW}The installer will continue using 'sudo' for now.${NC}"
+        echo ""
+        DOCKER_CMD="sudo docker"
+    else
+        echo -e "${YELLOW}Installer will proceed using 'sudo' for Docker commands.${NC}"
+        DOCKER_CMD="sudo docker"
+    fi
+fi
 
 # 3. Interactive Configuration
 echo -e "${BOLD}Setup Configuration:${NC}"
@@ -89,12 +110,12 @@ fi
 # 5. Build Container
 print_status "Compiling Docker Container and installing dependencies"
 echo -e "${YELLOW}(This might take a few minutes as it builds the frontend)${NC}"
-docker build -t "$CONTAINER_NAME" . || print_error "Docker build failed"
+$DOCKER_CMD build -t "$CONTAINER_NAME" . || print_error "Docker build failed"
 print_success "Container compiled successfully"
 
 # 6. Run System (Initial Boot)
 print_status "Launching system core"
-docker run -d --name "$CONTAINER_NAME" \
+$DOCKER_CMD run -d --name "$CONTAINER_NAME" \
     -p 9753:9753 \
     -v "/var/run/docker.sock:/var/run/docker.sock" \
     -v "$HOME/.config/$CONTAINER_NAME:/root/.config/minusbot" \
@@ -109,14 +130,14 @@ INSTALL_SKILLS=${INSTALL_SKILLS:-Y}
 
 if [[ "$INSTALL_SKILLS" =~ ^[Yy]$ ]]; then
     print_status "Installing skills registry"
-    docker exec -it "$CONTAINER_NAME" bun run skills:install
+    $DOCKER_CMD exec -it "$CONTAINER_NAME" bun run skills:install
     print_success "Skills synchronized"
 fi
 
 # 8. Admin Reset
 print_status "Generating root credentials"
 echo -ne "${GREEN}${BOLD}"
-docker exec -it "$CONTAINER_NAME" bun run root:reset
+$DOCKER_CMD exec -it "$CONTAINER_NAME" bun run root:reset
 echo -ne "${NC}"
 
 echo ""
