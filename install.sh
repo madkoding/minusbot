@@ -62,7 +62,7 @@ fi
 print_success "Docker is ready"
 
 # 2.1 Docker Socket Permission Check
-DOCKER_CMD="docker"
+DOCKER_CMD="docker ps"
 if ! docker ps >/dev/null 2>&1; then
     echo -e "${YELLOW}Warning: Current user ($USER) does not have permission to access the Docker socket.${NC}"
     echo -e "This is required to manage Minusbot without 'sudo'."
