@@ -1,7 +1,10 @@
 import axios from "axios";
 
-const API_BASE_URL = import.meta.env.DEV
-    ? "http://localhost:9753/api"
+const isDev = import.meta.env.DEV;
+const BACKEND_PORT = "9753";
+
+const API_BASE_URL = isDev
+    ? `${window.location.protocol}//${window.location.hostname}:${BACKEND_PORT}/api`
     : "/api";
 
 export const apiClient = axios.create({
@@ -18,6 +21,6 @@ apiClient.interceptors.request.use((config) => {
 
 export const getWSUrl = () => {
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const host = import.meta.env.DEV ? "127.0.0.1:9753" : window.location.host;
+    const host = isDev ? `${window.location.hostname}:${BACKEND_PORT}` : window.location.host;
     return `${protocol}//${host}`;
 };

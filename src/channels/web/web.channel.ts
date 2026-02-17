@@ -62,11 +62,18 @@ export class WebChannel extends Channel {
 
         socket.on("message", async (data) => {
             try {
-                if (!state.chatId) {
+                const targetChatId = data.chatId || state.chatId;
+
+                if (!targetChatId) {
                     return socket.emit("error", { message: "No active chat initialized" });
                 }
 
-                await InputProcessor.process(data.content, this.user.id, state.chatId, {
+                // If message comes with a different chatId, initialize it first
+                if (data.chatId && data.chatId !== state.chatId) {
+                    await this.initChat(socket, data.chatId);
+                }
+
+                await InputProcessor.process(data.content, this.user.id, targetChatId, {
                     _channel: this.id,
                     _internal_source_web: true
                 });

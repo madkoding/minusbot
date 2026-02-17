@@ -14,61 +14,63 @@ export default function StatsView({ apiPath }: { apiPath?: string }) {
     if (!adminStats) return <div className="text-zinc-500 font-bold uppercase tracking-widest text-center py-20">No data.</div>;
 
     const items = [
-        { label: "Chats Initiated", value: adminStats.chats_created, icon: "chat", color: "text-blue-500" },
-        { label: "Messages Exchanged", value: adminStats.messages_sent, icon: "send", color: "text-emerald-500" },
-        { label: "Neural Input Tokens", value: adminStats.tokens_input, icon: "dashboard", color: "text-amber-500" },
-        { label: "Neural Output Tokens", value: adminStats.tokens_output, icon: "vault", color: "text-purple-500" },
+        { label: "Chats Processed", value: adminStats.chats_created, icon: "chat", color: "text-blue-500" },
+        { label: "Messages Sent", value: adminStats.messages_sent, icon: "send", color: "text-emerald-500" },
+        { label: "Total Input", value: adminStats.tokens_input, icon: "dashboard", color: "text-amber-500" },
+        { label: "Total Output", value: adminStats.tokens_output, icon: "vault", color: "text-purple-500" },
     ];
 
     return (
-        <div className="space-y-10 max-w-6xl mx-auto h-full">
-            <header>
-                <div className="flex items-center gap-3 mb-2">
-                    <h2 className="text-2xl font-bold tracking-tight text-zinc-100">Performance Metrics</h2>
-                    <div className="h-px flex-1 bg-zinc-900 ml-4 opacity-50"></div>
-                </div>
-                <p className="text-zinc-500 text-sm font-medium">Real-time system utilization and token economics.</p>
-            </header>
+        <div className="h-full overflow-y-auto custom-scrollbar p-4 md:p-8">
+            <div className="space-y-6 md:space-y-10 max-w-6xl mx-auto">
+                <header>
+                    <div className="flex items-center gap-3 mb-2">
+                        <h2 className="text-xl md:text-2xl font-bold tracking-tight text-zinc-100">Live Activity</h2>
+                        <div className="h-px flex-1 bg-zinc-900 ml-4 opacity-50"></div>
+                    </div>
+                    <p className="text-zinc-500 text-xs md:text-sm font-medium">Real-time resource utilization and system performance.</p>
+                </header>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {items.map((item, i) => (
-                    <Card key={i} className="p-6 bg-zinc-900/40 border-zinc-800/50">
-                        <div className={`p-2 rounded-lg bg-zinc-950 w-fit mb-4 ${item.color}`}>
-                            <Icon name={item.icon} size={18} />
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+                    {items.map((item, i) => (
+                        <Card key={i} className="p-4 md:p-6 bg-zinc-900/40 border-zinc-800/50">
+                            <div className={`p-2 rounded-lg bg-zinc-950 w-fit mb-4 ${item.color}`}>
+                                <Icon name={item.icon} size={18} />
+                            </div>
+                            <div className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-600 mb-1">{item.label}</div>
+                            <div className="text-2xl md:text-3xl font-black text-zinc-100 tracking-tighter tabular-nums">
+                                {item.value?.toLocaleString() ?? "0"}
+                            </div>
+                        </Card>
+                    ))}
+                </div>
+
+                <Card className="p-6 md:p-8 border-zinc-800/30 bg-zinc-950/20 backdrop-blur-sm">
+                    <div className="flex items-center gap-4 mb-6">
+                        <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-zinc-50 flex items-center justify-center text-zinc-950">
+                            <Icon name="dashboard" size={20} className="md:w-6 md:h-a6" />
                         </div>
-                        <div className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-600 mb-1">{item.label}</div>
-                        <div className="text-3xl font-black text-zinc-100 tracking-tighter tabular-nums">
-                            {item.value?.toLocaleString() ?? "0"}
+                        <div>
+                            <h3 className="font-bold text-zinc-100 text-sm md:text-base">System Load</h3>
+                            <p className="text-[10px] md:text-xs text-zinc-500 mt-0.5">Distribution of data processed by the assistant.</p>
                         </div>
-                    </Card>
-                ))}
+                    </div>
+                    <div className="h-3 md:h-4 bg-zinc-900 rounded-full overflow-hidden flex">
+                        <div className="bg-amber-500/80 h-full transition-all duration-1000" style={{ width: `${((adminStats.tokens_input || 0) / ((adminStats.tokens_input || 0) + (adminStats.tokens_output || 0) || 1)) * 100}%` }}></div>
+                        <div className="bg-purple-500/80 h-full transition-all duration-1000" style={{ width: `${((adminStats.tokens_output || 0) / ((adminStats.tokens_input || 0) + (adminStats.tokens_output || 0) || 1)) * 100}%` }}></div>
+                    </div>
+                    <div className="flex flex-col md:flex-row justify-between gap-2 mt-4">
+                        <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-amber-500"></div>
+                            <span className="text-[9px] md:text-[10px] font-bold text-zinc-600 uppercase tracking-widest">Input Tokens</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 rounded-full bg-purple-500"></div>
+                            <span className="text-[9px] md:text-[10px] font-bold text-zinc-600 uppercase tracking-widest">Output Tokens</span>
+                        </div>
+                    </div>
+                </Card>
             </div>
-
-            <Card className="p-8 border-zinc-800/30 bg-zinc-950/20 backdrop-blur-sm">
-                <div className="flex items-center gap-4 mb-6">
-                    <div className="w-12 h-12 rounded-2xl bg-zinc-50 flex items-center justify-center text-zinc-950">
-                        <Icon name="dashboard" size={24} />
-                    </div>
-                    <div>
-                        <h3 className="font-bold text-zinc-100">Computational Efficiency</h3>
-                        <p className="text-xs text-zinc-500 mt-0.5">Estimated neural processing load distributed.</p>
-                    </div>
-                </div>
-                <div className="h-4 bg-zinc-900 rounded-full overflow-hidden flex">
-                    <div className="bg-amber-500/80 h-full transition-all duration-1000" style={{ width: `${((adminStats.tokens_input || 0) / ((adminStats.tokens_input || 0) + (adminStats.tokens_output || 0) || 1)) * 100}%` }}></div>
-                    <div className="bg-purple-500/80 h-full transition-all duration-1000" style={{ width: `${((adminStats.tokens_output || 0) / ((adminStats.tokens_input || 0) + (adminStats.tokens_output || 0) || 1)) * 100}%` }}></div>
-                </div>
-                <div className="flex justify-between mt-4">
-                    <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-amber-500"></div>
-                        <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">Input Tokens</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-purple-500"></div>
-                        <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">Output Tokens</span>
-                    </div>
-                </div>
-            </Card>
         </div>
     );
 }

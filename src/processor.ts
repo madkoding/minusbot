@@ -28,17 +28,21 @@ export class InputProcessor {
         if (userInput.startsWith("/")) {
             const commandResult = await commandManager.handle(userInput, user, chat);
             if (commandResult !== null) {
+                // Add to history
+                const userMsg: any = { role: "user", content: userInput };
+                const assistantMsg: any = { role: "assistant", content: commandResult, _is_command: true };
+
+                chat.messages.push(userMsg);
+                chat.messages.push(assistantMsg);
+                await Storage.saveChat(chat);
+
                 // Publish user message for successfully handled commands
-                const userMsg = { role: "user", content: userInput };
                 PubSub.publish(`chat:${chatId}`, { type: "message", message: userMsg, ...metadata });
 
                 // Publish command result so subscribers (like Web UI or Integrations) can see it
                 PubSub.publish(`chat:${chatId}`, {
                     type: "message",
-                    message: {
-                        role: "assistant",
-                        content: commandResult
-                    },
+                    message: assistantMsg,
                     _is_command: true,
                     ...metadata
                 });

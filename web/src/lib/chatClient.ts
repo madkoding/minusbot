@@ -23,7 +23,7 @@ export class ChatClient {
         }
 
         const isDev = import.meta.env.DEV;
-        const url = isDev ? 'http://localhost:9753' : window.location.origin;
+        const url = isDev ? `${window.location.protocol}//${window.location.hostname}:9753` : window.location.origin;
 
         try {
             this.socket = io(url, {
@@ -85,13 +85,13 @@ export class ChatClient {
         }
     }
 
-    sendMessage(content: string) {
+    sendMessage(content: string, chatId?: string) {
         if (!this.socket || !this.socket.connected) {
             this.notifyError('Not connected to server');
             return;
         }
 
-        this.socket.emit('message', { content });
+        this.socket.emit('message', { content, chatId });
     }
 
     onMessage(handler: MessageHandler) {

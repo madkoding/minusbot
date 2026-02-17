@@ -48,13 +48,13 @@ export async function startServer() {
     // Socket.IO setup
     const io = new SocketIOServer(server, {
         cors: {
-            origin: isDev ? "http://localhost:5173" : true,
+            origin: isDev ? "*" : true,
             credentials: true
         }
     });
 
     app.use(cors({
-        origin: isDev ? "http://localhost:5173" : true,
+        origin: isDev ? "*" : true,
         credentials: true
     }));
     app.use(express.json());

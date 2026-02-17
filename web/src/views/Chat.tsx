@@ -9,6 +9,8 @@ import { Skeleton } from "../components/ui";
 import { CommandAutocomplete } from "../components/CommandAutocomplete";
 import { useChat } from "../hooks/useChat";
 import { useCommands } from "../hooks/useCommands";
+import { useAuthStore } from "../stores/useAuthStore";
+import { useUIStore } from "../stores/useUIStore";
 
 // Component for rendering Tool Calls/Outputs
 const ToolBubble = ({ message }: { message: any }) => {
@@ -106,28 +108,36 @@ const ToolBubble = ({ message }: { message: any }) => {
 export default function ChatView() {
     const { id } = useParams();
     const navigate = useNavigate();
-    const [chatId, setChatId] = useState<string | undefined>(id);
-    const { messages, sendMessage, isConnected, error } = useChat(chatId);
+    const { user } = useAuthStore();
+    const { setIsMobileMenuOpen } = useUIStore();
+    const { messages, sendMessage, isConnected, error } = useChat(id);
     const { commands } = useCommands();
     const [inputText, setInputText] = useState('');
     const [isLoading, setIsLoading] = useState(true);
     const [showAutocomplete, setShowAutocomplete] = useState(false);
     const [hoveredMessageIndex, setHoveredMessageIndex] = useState<number | null>(null);
 
+    const intros = useMemo(() => [
+        "How can I help you today?",
+        "What's on your mind?",
+        "Ready for a new chat. What's up?",
+        "I'm here to help. Just ask!",
+        "Need a hand with something?",
+        "Waiting for your message..."
+    ], []);
+
+    const introText = useMemo(() => intros[Math.floor(Math.random() * intros.length)], [intros]);
+
+    const greeting = useMemo(() => {
+        const hour = new Date().getHours();
+        if (hour < 12) return "Good morning";
+        if (hour < 18) return "Good afternoon";
+        return "Good evening";
+    }, []);
+
     const chatEndRef = useRef<HTMLDivElement>(null);
     const messagesContainerRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
-
-    // If no ID is provided, create a new chat
-    useEffect(() => {
-        if (!id && !chatId) {
-            const newChatId = `chat_${Math.random().toString(36).substring(7)}`;
-            setChatId(newChatId);
-            navigate(`/chat/${newChatId}`, { replace: true });
-        } else if (id && id !== chatId) {
-            setChatId(id);
-        }
-    }, [id, chatId, navigate]);
 
     useEffect(() => {
         if (messages.length > 0 || isConnected) {
@@ -146,7 +156,15 @@ export default function ChatView() {
 
     const handleSend = () => {
         if (!inputText.trim()) return;
-        sendMessage(inputText);
+
+        if (!id) {
+            const newChatId = `chat_${Math.random().toString(36).substring(7)}`;
+            sendMessage(inputText, newChatId);
+            navigate(`/chat/${newChatId}`, { replace: true });
+        } else {
+            sendMessage(inputText);
+        }
+
         setInputText('');
         setShowAutocomplete(false);
     };
@@ -179,17 +197,60 @@ export default function ChatView() {
         return new Date(dateStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     };
 
+    const isLanding = !id;
+    const isChatEmpty = useMemo(() => messages.filter(m => m.role !== 'system').length === 0, [messages]);
+
+    const handleNewChat = () => {
+        navigate(`/chat`, { replace: false });
+    };
+
     return (
-        <div className="flex flex-col h-screen w-full overflow-hidden">
+        <div className="flex flex-col h-[100dvh] w-full overflow-hidden bg-[#050505]">
+            {/* Chat Header */}
+            <header className="flex-shrink-0 h-16 border-b border-zinc-900 bg-[#070707]/50 backdrop-blur-xl px-4 flex items-center justify-between z-10">
+                {/* Left: Sidebar Toggle (Mobile) */}
+                <div className="flex items-center lg:w-32">
+                    <button
+                        onClick={() => setIsMobileMenuOpen(true)}
+                        className="lg:hidden p-2 text-zinc-500 hover:text-zinc-100 transition-colors"
+                    >
+                        <Icon name="menu" size={24} />
+                    </button>
+
+                    <div className="hidden lg:flex items-center gap-3">
+                        <img src="/logo.png" className="w-5 h-5 opacity-50" alt="" />
+                    </div>
+                </div>
+
+                {/* Center: Title */}
+                <div className="flex-1 flex justify-center min-w-0">
+                    <h2 className="text-xs font-bold text-zinc-100 uppercase tracking-widest truncate px-2">
+                        {id || 'New Chat'}
+                    </h2>
+                </div>
+
+                {/* Right: Actions */}
+                <div className="flex items-center justify-end gap-2 lg:w-32">
+                    <button
+                        onClick={handleNewChat}
+                        className="p-2 text-zinc-500 hover:text-zinc-100 hover:bg-zinc-900 rounded-lg transition-all"
+                        title="New Chat"
+                    >
+                        <Icon name="plus" size={18} />
+                    </button>
+                    <div className="hidden md:block h-4 w-px bg-zinc-800 mx-2" />
+                </div>
+            </header>
+
             {/* Connection Status Bar */}
             {!isConnected && (
-                <div className="bg-yellow-500/10 border-b border-yellow-500/20 px-4 py-2 text-xs text-yellow-500 text-center">
-                    Reconnecting to server...
+                <div className="bg-yellow-500/10 border-b border-yellow-500/20 px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-yellow-500 text-center">
+                    Connecting to server...
                 </div>
             )}
 
             {error && (
-                <div className="bg-red-500/10 border-b border-red-500/20 px-4 py-2 text-xs text-red-500 text-center">
+                <div className="bg-red-500/10 border-b border-red-500/20 px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-red-500 text-center">
                     {error}
                 </div>
             )}
@@ -197,9 +258,9 @@ export default function ChatView() {
             {/* Messages Container - Takes remaining space */}
             <div
                 ref={messagesContainerRef}
-                className="flex-1 overflow-y-auto p-6 md:p-10 space-y-6 scroll-smooth custom-scrollbar"
+                className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-10 scroll-smooth custom-scrollbar"
             >
-                <div className="max-w-4xl mx-auto">
+                <div className="max-w-4xl mx-auto h-full flex flex-col">
                     {isLoading ? (
                         <div className="space-y-6">
                             {[1, 2, 3].map((i) => (
@@ -210,92 +271,144 @@ export default function ChatView() {
                         </div>
                     ) : (
                         <>
-                            {messages.filter(m => m.role !== 'system').map((m, i) => {
-                                const isUser = m.role === 'user';
-                                const isTool = m.role === 'tool' || (m.tool_calls && m.tool_calls.length > 0);
+                            {isLanding ? (
+                                <div className="flex-1 flex flex-col items-center justify-center animate-fade-up">
+                                    <div className="text-center space-y-8 w-full max-w-xl px-4">
+                                        <div className="flex justify-center mb-8">
+                                            <img src="/logo.png" className="w-18 h-18 md:w-24 md:h-24" alt="Minusbot" />
+                                        </div>
 
-                                if (isTool) {
-                                    return <ToolBubble key={i} message={m} />;
-                                }
+                                        <div className="space-y-3">
+                                            <h1 className="text-3xl md:text-5xl font-black text-zinc-100 tracking-tighter">
+                                                {greeting}, <span className="bg-gradient-to-r from-zinc-100 to-zinc-500 bg-clip-text text-transparent">{user?.username}</span>
+                                            </h1>
+                                            <p className="text-sm md:text-base text-zinc-500 font-medium">
+                                                {introText}
+                                            </p>
+                                        </div>
 
-                                return (
-                                    <div
-                                        key={i}
-                                        className={`flex w-full group ${isUser ? 'justify-end' : 'justify-start'} mb-4 animate-fade-up`}
-                                        onMouseEnter={() => setHoveredMessageIndex(i)}
-                                        onMouseLeave={() => setHoveredMessageIndex(null)}
-                                    >
-                                        <div className={`relative max-w-[90%] md:max-w-[80%] rounded-3xl p-5 text-sm leading-[1.6] group ${isUser
-                                            ? 'bg-zinc-100 text-zinc-950 font-medium shadow-[0_10px_30px_rgba(255,255,255,0.05)]'
-                                            : 'bg-zinc-900/80 border border-zinc-800/50 text-zinc-300 shadow-inner'
-                                            }`}>
-
-                                            {/* Copy Button */}
-                                            <button
-                                                onClick={() => copyToClipboard(m.content)}
-                                                className={`absolute top-2 right-2 p-1.5 rounded-lg transition-all opacity-0 group-hover:opacity-100 ${isUser
-                                                    ? 'hover:bg-zinc-200/50 text-zinc-500'
-                                                    : 'hover:bg-zinc-800 text-zinc-500'
-                                                    }`}
-                                                title="Copy message"
-                                            >
-                                                <Icon name="copy" size={14} />
-                                            </button>
-
-                                            {/* Content */}
-                                            <div className={`prose ${isUser ? 'prose-zinc' : 'prose-invert'} max-w-none prose-sm prose-p:leading-relaxed prose-pre:p-0 prose-pre:bg-transparent`}>
-                                                <ReactMarkdown
-                                                    remarkPlugins={[remarkGfm, remarkBreaks]}
-                                                    components={{
-                                                        // Custom components to ensure proper rendering
-                                                        p: ({ children }) => <p className="mb-2 last:mb-0 break-words">{children}</p>,
-                                                        ul: ({ children }) => <ul className="list-disc pl-4 mb-2 space-y-1">{children}</ul>,
-                                                        ol: ({ children }) => <ol className="list-decimal pl-4 mb-2 space-y-1">{children}</ol>,
-                                                        li: ({ children }) => <li className="pl-1">{children}</li>,
-                                                        a: ({ href, children }) => <a href={href} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">{children}</a>,
-                                                        code({ node, inline, className, children, ...props }: any) {
-                                                            return !inline ? (
-                                                                <div className="relative group/code my-2">
-                                                                    <button
-                                                                        onClick={() => copyToClipboard(String(children).replace(/\n$/, ''))}
-                                                                        className="absolute right-2 top-2 p-1.5 rounded-lg bg-zinc-800/50 text-zinc-400 opacity-0 group-hover/code:opacity-100 transition-opacity hover:bg-zinc-700 hover:text-zinc-200"
-                                                                        title="Copy code"
-                                                                    >
-                                                                        <Icon name="copy" size={12} />
-                                                                    </button>
-                                                                    <code className={`${className} block bg-zinc-950/50 p-3 rounded-lg overflow-x-auto`} {...props}>
-                                                                        {children}
-                                                                    </code>
-                                                                </div>
-                                                            ) : (
-                                                                <code className={`${className} bg-zinc-500/10 rounded px-1 py-0.5`} {...props}>
-                                                                    {children}
-                                                                </code>
-                                                            )
-                                                        }
-                                                    }}
+                                        <div className="pt-6 w-full px-4">
+                                            <div className="relative flex items-center group max-w-sm mx-auto">
+                                                <input
+                                                    className="w-full bg-zinc-900/50 border border-zinc-800/80 rounded-2xl pl-5 pr-14 py-4 text-sm text-zinc-100 outline-none focus:border-zinc-500 transition-all placeholder:text-zinc-700 shadow-2xl"
+                                                    placeholder="Type a message..."
+                                                    value={inputText}
+                                                    onChange={e => setInputText(e.target.value)}
+                                                    onKeyDown={handleKeyDown}
+                                                    disabled={!isConnected}
+                                                    autoFocus
+                                                />
+                                                <button
+                                                    onClick={handleSend}
+                                                    disabled={!isConnected || !inputText.trim()}
+                                                    className="absolute right-2.5 p-2 bg-zinc-100 text-zinc-950 rounded-xl hover:bg-white transition-all active:scale-95 shadow-xl disabled:opacity-50"
                                                 >
-                                                    {m.content}
-                                                </ReactMarkdown>
-                                            </div>
-
-                                            {/* Timestamp */}
-                                            <div className={`text-[10px] mt-2 font-medium opacity-40 select-none ${isUser ? 'text-right' : 'text-left'}`}>
-                                                {formatTime(m.timestamp || m.created_at)}
+                                                    <Icon name="send" size={16} />
+                                                </button>
                                             </div>
                                         </div>
-                                    </div>
-                                )
-                            })}
-                            <div ref={chatEndRef} />
 
-                            {messages.length === 0 && (
-                                <div className="h-full flex flex-col items-center justify-center text-zinc-800 opacity-40 py-20">
-                                    <div className="w-20 h-20 rounded-[2rem] bg-zinc-900/50 flex items-center justify-center mb-6">
-                                        <Icon name="chat_alt" size={40} />
+                                        <div className="pt-12 grid grid-cols-2 gap-3 max-w-sm mx-auto opacity-40">
+                                            {['/help', '/stats'].map(cmd => (
+                                                <button
+                                                    key={cmd}
+                                                    onClick={() => setInputText(cmd)}
+                                                    className="px-4 py-2 rounded-xl border border-zinc-800 text-[10px] font-black uppercase tracking-widest hover:bg-zinc-900 hover:text-zinc-200 transition-all"
+                                                >
+                                                    {cmd}
+                                                </button>
+                                            ))}
+                                        </div>
                                     </div>
-                                    <h3 className="text-sm font-black uppercase tracking-[0.2em] mb-2">Ready</h3>
-                                    <p className="max-w-[200px] text-[10px] font-bold uppercase tracking-widest leading-relaxed text-center">Start a conversation with Minus</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-4 md:space-y-6">
+                                    {messages.filter(m => m.role !== 'system').map((m, i) => {
+                                        const isUser = m.role === 'user';
+                                        const isTool = m.role === 'tool' || (m.tool_calls && m.tool_calls.length > 0);
+
+                                        if (isTool) {
+                                            return <ToolBubble key={i} message={m} />;
+                                        }
+
+                                        return (
+                                            <div
+                                                key={i}
+                                                className={`flex w-full group ${isUser ? 'justify-end' : 'justify-start'} mb-4 animate-fade-up`}
+                                                onMouseEnter={() => setHoveredMessageIndex(i)}
+                                                onMouseLeave={() => setHoveredMessageIndex(null)}
+                                            >
+                                                <div className={`relative max-w-[95%] md:max-w-[90%] lg:max-w-[80%] rounded-2xl md:rounded-3xl p-4 md:p-5 text-sm leading-[1.6] group ${isUser
+                                                    ? 'bg-zinc-100 text-zinc-950 font-medium shadow-[0_10px_30px_rgba(255,255,255,0.05)]'
+                                                    : 'bg-zinc-900/80 border border-zinc-800/50 text-zinc-300 shadow-inner'
+                                                    }`}>
+
+                                                    {/* Copy Button */}
+                                                    <button
+                                                        onClick={() => copyToClipboard(m.content)}
+                                                        className={`absolute top-2 right-2 p-1.5 rounded-lg transition-all opacity-0 group-hover:opacity-100 ${isUser
+                                                            ? 'hover:bg-zinc-200/50 text-zinc-500'
+                                                            : 'hover:bg-zinc-800 text-zinc-500'
+                                                            }`}
+                                                        title="Copy message"
+                                                    >
+                                                        <Icon name="copy" size={14} />
+                                                    </button>
+
+                                                    {/* Content */}
+                                                    <div className={`prose ${isUser ? 'prose-zinc font-medium' : 'prose-invert'} max-w-none prose-sm prose-p:leading-relaxed prose-pre:p-0 prose-pre:bg-transparent`}>
+                                                        <ReactMarkdown
+                                                            remarkPlugins={[remarkGfm, remarkBreaks]}
+                                                            components={{
+                                                                // Use div instead of p to avoid hydration errors when nesting blocks
+                                                                p: ({ children }) => <div className="mb-3 last:mb-0 break-words">{children}</div>,
+                                                                ul: ({ children }) => <ul className="list-disc pl-4 mb-3 space-y-1">{children}</ul>,
+                                                                ol: ({ children }) => <ol className="list-decimal pl-4 mb-3 space-y-1">{children}</ol>,
+                                                                li: ({ children }) => <li className="pl-1 mb-1">{children}</li>,
+                                                                a: ({ href, children }) => <a href={href} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">{children}</a>,
+                                                                code({ node, inline, className, children, ...props }: any) {
+                                                                    return !inline ? (
+                                                                        <div className="relative group/code my-2">
+                                                                            <button
+                                                                                onClick={() => copyToClipboard(String(children).replace(/\n$/, ''))}
+                                                                                className="absolute right-2 top-2 p-1.5 rounded-lg bg-zinc-800/50 text-zinc-400 opacity-0 group-hover/code:opacity-100 transition-opacity hover:bg-zinc-700 hover:text-zinc-200"
+                                                                                title="Copy code"
+                                                                            >
+                                                                                <Icon name="copy" size={12} />
+                                                                            </button>
+                                                                            <code className={`${className} block bg-zinc-950/50 p-3 rounded-lg overflow-x-auto`} {...props}>
+                                                                                {children}
+                                                                            </code>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <code className={`${className} bg-zinc-500/10 rounded px-1 py-0.5`} {...props}>
+                                                                            {children}
+                                                                        </code>
+                                                                    )
+                                                                }
+                                                            }}
+                                                        >
+                                                            {m.content}
+                                                        </ReactMarkdown>
+                                                    </div>
+
+                                                    {/* Timestamp */}
+                                                    <div className={`text-[10px] mt-2 font-medium opacity-40 select-none ${isUser ? 'text-right' : 'text-left'}`}>
+                                                        {formatTime(m.timestamp || m.created_at)}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )
+                                    })}
+                                    {isChatEmpty && !isLanding && (
+                                        <div className="flex-1 flex flex-col items-center justify-center py-12 opacity-30">
+                                            <div className="p-4 rounded-full bg-zinc-900 border border-zinc-800 mb-4">
+                                                <Icon name="message" size={24} className="text-zinc-500" />
+                                            </div>
+                                            <p className="text-zinc-500 text-sm font-medium italic">No messages yet. Send one to start the conversation.</p>
+                                        </div>
+                                    )}
+                                    <div ref={chatEndRef} />
                                 </div>
                             )}
                         </>
@@ -303,38 +416,40 @@ export default function ChatView() {
                 </div>
             </div>
 
-            {/* Input Area - Fixed at bottom */}
-            <div className="flex-shrink-0 p-4 md:p-6 bg-[#0a0a0a]/80 border-t border-zinc-900/50 backdrop-blur-xl relative">
-                <div className="max-w-4xl mx-auto">
-                    {/* Command Autocomplete */}
-                    {showAutocomplete && (
-                        <CommandAutocomplete
-                            input={inputText}
-                            commands={commands}
-                            onSelect={handleAutocompleteSelect}
-                        />
-                    )}
+            {/* Input Area - Fixed at bottom - Only visible if not landing */}
+            {!isLanding && (
+                <div className="flex-shrink-0 p-3 md:p-4 lg:p-6 bg-[#0a0a0a]/80 border-t border-zinc-900/50 backdrop-blur-xl relative">
+                    <div className="max-w-4xl mx-auto">
+                        {/* Command Autocomplete */}
+                        {showAutocomplete && (
+                            <CommandAutocomplete
+                                input={inputText}
+                                commands={commands}
+                                onSelect={handleAutocompleteSelect}
+                            />
+                        )}
 
-                    <div className="relative flex items-center group">
-                        <input
-                            ref={inputRef}
-                            className="w-full bg-black border border-zinc-800/40 rounded-2xl pl-6 pr-14 py-4 text-sm text-zinc-100 outline-none focus:border-zinc-500 transition-all placeholder:text-zinc-700 shadow-inner group-hover:border-zinc-700/50 disabled:opacity-50"
-                            placeholder="Speak with Minus..."
-                            value={inputText}
-                            onChange={e => setInputText(e.target.value)}
-                            onKeyDown={handleKeyDown}
-                            disabled={!isConnected}
-                        />
-                        <button
-                            onClick={handleSend}
-                            disabled={!isConnected || !inputText.trim()}
-                            className="absolute right-2 p-3 bg-zinc-100 text-zinc-950 rounded-xl hover:bg-white transition-all active:scale-95 shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            <Icon name="send" size={18} />
-                        </button>
+                        <div className="relative flex items-center group">
+                            <input
+                                ref={inputRef}
+                                className="w-full bg-black border border-zinc-800/40 rounded-xl md:rounded-2xl pl-4 md:pl-6 pr-12 md:pr-14 py-3 md:py-4 text-xs md:text-sm text-zinc-100 outline-none focus:border-zinc-500 transition-all placeholder:text-zinc-700 shadow-inner group-hover:border-zinc-700/50 disabled:opacity-50"
+                                placeholder="Speak with Minus..."
+                                value={inputText}
+                                onChange={e => setInputText(e.target.value)}
+                                onKeyDown={handleKeyDown}
+                                disabled={!isConnected}
+                            />
+                            <button
+                                onClick={handleSend}
+                                disabled={!isConnected || !inputText.trim()}
+                                className="absolute right-2 p-2.5 md:p-3 bg-zinc-100 text-zinc-950 rounded-lg md:rounded-xl hover:bg-white transition-all active:scale-95 shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                <Icon name="send" size={16} className="md:w-[18px] md:h-[18px]" />
+                            </button>
+                        </div>
                     </div>
                 </div>
-            </div>
+            )}
         </div>
     );
 }

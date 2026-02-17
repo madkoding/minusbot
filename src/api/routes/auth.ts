@@ -15,8 +15,12 @@ router.post("/login", validate(LoginDTO), async (req, res) => {
     const { username, password } = req.body;
     const user = UserManager.getUserByUsername(username);
 
-    if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
-        return res.status(401).send("Invalid credentials");
+    if (!user) {
+        return res.status(401).json({ message: "User not found" });
+    }
+
+    if (!(await bcrypt.compare(password, user.passwordHash))) {
+        return res.status(401).json({ message: "Incorrect password" });
     }
 
     const sessionId = Math.random().toString(36).substring(2);

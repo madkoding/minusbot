@@ -46,30 +46,30 @@ export default function IntegrationsView({ apiPath = '/user/integrations' }: { a
     };
 
     return (
-        <div className="space-y-10 max-w-6xl mx-auto h-full">
-            <header className="flex justify-between items-end">
+        <div className="space-y-6 md:space-y-10 max-w-6xl mx-auto h-full p-4 md:p-0">
+            <header className="flex flex-col md:flex-row md:justify-between md:items-end gap-4">
                 <div>
                     <div className="flex items-center gap-3 mb-2">
-                        <h2 className="text-2xl font-bold tracking-tight text-zinc-100">Integrations</h2>
+                        <h2 className="text-xl md:text-2xl font-bold tracking-tight text-zinc-100">Integrations</h2>
                         <div className="h-px flex-1 bg-zinc-900 ml-4 opacity-50"></div>
                     </div>
-                    <p className="text-zinc-500 text-sm font-medium">Connect external services and neural interfaces.</p>
+                    <p className="text-zinc-500 text-xs md:text-sm font-medium">Connect external services and neural interfaces.</p>
                 </div>
             </header>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                 {available.map((integration) => {
                     const config = configs[integration.id];
                     const isConfigured = !!config;
 
                     return (
-                        <Card key={integration.id} className={`group border-zinc-900 hover:border-zinc-700 transition-all ${isConfigured ? 'bg-zinc-900/20' : 'bg-transparent border-dashed'}`}>
-                            <div className="flex items-start justify-between mb-6">
-                                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${isConfigured ? 'bg-zinc-100 text-zinc-950 shadow-xl' : 'bg-zinc-900 text-zinc-500'}`}>
-                                    <Icon name={integration.icon || 'terminal'} size={24} />
+                        <Card key={integration.id} className={`group border-zinc-900 hover:border-zinc-700 transition-all ${isConfigured ? 'bg-zinc-900/20' : 'bg-transparent border-dashed'} p-4 md:p-6`}>
+                            <div className="flex items-start justify-between mb-4 md:mb-6">
+                                <div className={`w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl flex items-center justify-center ${isConfigured ? 'bg-zinc-100 text-zinc-950 shadow-xl' : 'bg-zinc-900 text-zinc-500'}`}>
+                                    <Icon name={integration.icon || 'terminal'} size={20} className="md:w-6 md:h-6" />
                                 </div>
                                 {isConfigured && (
-                                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <div className="flex gap-1 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-opacity">
                                         <button onClick={() => handleEdit(integration)} className="p-2 text-zinc-500 hover:text-zinc-100">
                                             <Icon name="settings" size={16} />
                                         </button>
@@ -79,7 +79,7 @@ export default function IntegrationsView({ apiPath = '/user/integrations' }: { a
                                     </div>
                                 )}
                             </div>
-                            <h3 className="text-lg font-bold text-zinc-100 mb-1">{integration.name}</h3>
+                            <h3 className="text-base md:text-lg font-bold text-zinc-100 mb-1">{integration.name}</h3>
                             <p className="text-xs text-zinc-500 leading-relaxed mb-6 h-8 line-clamp-2">{integration.description}</p>
                             {!isConfigured ? (
                                 <Button className="w-full rounded-xl" variant="secondary" onClick={() => handleEdit(integration)}>Configure</Button>

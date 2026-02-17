@@ -68,17 +68,17 @@ export default function SkillsView({ apiPath = '/user/skills' }: { apiPath?: str
 
     if (isEditing) {
         return (
-            <div className="max-w-5xl mx-auto h-full">
-                <div className="flex items-center justify-between mb-8">
+            <div className="max-w-5xl mx-auto h-full p-4 md:p-0">
+                <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 md:mb-8 gap-4">
                     <div className="flex items-center gap-4">
                         <button onClick={() => setIsEditing(false)} className="p-2 text-zinc-500 hover:text-zinc-100 transition-colors">
                             <Icon name="logout" size={20} className="rotate-180" />
                         </button>
-                        <h2 className="text-2xl font-bold text-zinc-100">{selectedSkill?.id || "Neural Manifest"}</h2>
+                        <h2 className="text-xl md:text-2xl font-bold text-zinc-100 truncate">{selectedSkill?.id || "Neural Manifest"}</h2>
                     </div>
                     <div className="flex gap-3">
                         <Button variant="secondary" onClick={() => setIsEditing(false)}>Cancel</Button>
-                        <Button onClick={handleSave} loading={isLoading}>Publish Changes</Button>
+                        <Button onClick={handleSave} loading={isLoading}>Publish</Button>
                     </div>
                 </div>
 
@@ -144,17 +144,17 @@ export default function SkillsView({ apiPath = '/user/skills' }: { apiPath?: str
     }
 
     return (
-        <div className="space-y-10 max-w-6xl mx-auto h-full">
-            <header className="flex justify-between items-end">
+        <div className="space-y-6 md:space-y-10 max-w-6xl mx-auto h-full p-4 md:p-0">
+            <header className="flex flex-col md:flex-row md:justify-between md:items-end gap-4">
                 <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
-                        <h2 className="text-2xl font-bold tracking-tight text-zinc-100">Cognitive Skills</h2>
+                        <h2 className="text-xl md:text-2xl font-bold tracking-tight text-zinc-100">Cognitive Skills</h2>
                         <div className="h-px flex-1 bg-zinc-900 ml-4 opacity-50"></div>
                     </div>
-                    <p className="text-zinc-500 text-sm font-medium">Manage modular logic and automated behaviors.</p>
+                    <p className="text-zinc-500 text-xs md:text-sm font-medium">Manage modular logic and automated behaviors.</p>
                 </div>
-                <div className="ml-10">
-                    <Button onClick={() => { setIsEditing(true); setSelectedSkill(null); setEditData({ skillJson: {}, scriptPy: "" }); }} size="sm" className="rounded-xl">
+                <div className="md:ml-10">
+                    <Button onClick={() => { setIsEditing(true); setSelectedSkill(null); setEditData({ skillJson: {}, scriptPy: "" }); }} size="sm" className="rounded-xl w-full md:w-auto">
                         Deploy New Skill
                     </Button>
                 </div>
@@ -173,36 +173,36 @@ export default function SkillsView({ apiPath = '/user/skills' }: { apiPath?: str
                 ))}
             </div>
 
-            <div className="bg-[#080808] border border-zinc-900 rounded-[2.5rem] overflow-hidden shadow-2xl">
-                <table className="w-full text-left border-collapse">
+            <div className="bg-[#080808] border border-zinc-900 rounded-2xl md:rounded-[2.5rem] overflow-hidden shadow-2xl overflow-x-auto">
+                <table className="w-full text-left border-collapse min-w-[600px]">
                     <thead>
                         <tr className="border-b border-zinc-900/50 bg-zinc-900/10">
-                            <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-600 w-1/4">Identifier</th>
-                            <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-600 w-1/2">Purpose</th>
-                            <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-600 text-right">Actions</th>
+                            <th className="px-4 md:px-8 py-4 md:py-5 text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em] text-zinc-600 w-1/4">Identifier</th>
+                            <th className="px-4 md:px-8 py-4 md:py-5 text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em] text-zinc-600 w-1/2">Purpose</th>
+                            <th className="px-4 md:px-8 py-4 md:py-5 text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em] text-zinc-600 text-right">Actions</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-zinc-900/30">
                         {filteredSkills.map(s => (
                             <tr key={s.id} className="group hover:bg-zinc-900/20 transition-colors">
-                                <td className="px-8 py-5">
-                                    <div className="flex items-center gap-3">
+                                <td className="px-4 md:px-8 py-4 md:py-5">
+                                    <div className="flex items-center gap-2 md:gap-3">
                                         <div className={`w-2 h-2 rounded-full ${s.enabled ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.3)]' : 'bg-zinc-800'}`}></div>
-                                        <span className={`text-sm font-bold ${s.enabled ? 'text-zinc-200' : 'text-zinc-600'}`}>{s.id}</span>
+                                        <span className={`text-xs md:text-sm font-bold ${s.enabled ? 'text-zinc-200' : 'text-zinc-600'}`}>{s.id}</span>
                                         {s.isGlobal && (
                                             <span className="text-[8px] font-black uppercase bg-zinc-900 text-zinc-500 px-1.5 py-0.5 rounded border border-zinc-800">System</span>
                                         )}
                                     </div>
                                 </td>
-                                <td className="px-8 py-5">
+                                <td className="px-4 md:px-8 py-4 md:py-5">
                                     <p
-                                        className="text-[11px] text-zinc-500 font-medium truncate max-w-md cursor-pointer hover:text-zinc-300 transition-colors"
+                                        className="text-[10px] md:text-[11px] text-zinc-500 font-medium truncate max-w-md cursor-pointer hover:text-zinc-300 transition-colors"
                                         onClick={() => setDescModal(s)}
                                     >
                                         {(s.definition || s.skillJson)?.description || "No description provided."}
                                     </p>
                                 </td>
-                                <td className="px-8 py-5 text-right">
+                                <td className="px-4 md:px-8 py-4 md:py-5 text-right">
                                     <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                         <button onClick={() => handleToggleStatus(s)} className="p-2 text-zinc-600 hover:text-zinc-100" title={s.enabled ? "Deactivate" : "Activate"}>
                                             <Icon name={s.enabled ? "shield" : "plus"} size={16} />

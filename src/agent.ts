@@ -72,6 +72,7 @@ MISSION: Zero token waste. Call tools directly without pre-confirmation.`;
 
             if (!ephemeral) {
                 PubSub.publish(`chat:${this.chat.meta.id}`, { type: "message", message: userMsg, ...metadata });
+                await Storage.saveChat(this.chat);
             }
             await StatsManager.trackMessageSent(userId);
         }

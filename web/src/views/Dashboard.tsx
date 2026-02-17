@@ -17,17 +17,17 @@ export default function DashboardView() {
     );
 
     return (
-        <div className="h-full overflow-y-auto custom-scrollbar p-8">
-            <div className="space-y-12 max-w-6xl mx-auto">
+        <div className="h-full overflow-y-auto custom-scrollbar p-4 md:p-8">
+            <div className="space-y-8 md:space-y-12 max-w-6xl mx-auto">
                 <header>
                     <div className="flex items-center gap-3 mb-2">
-                        <h2 className="text-2xl font-bold tracking-tight text-zinc-100">Performance Telemetry</h2>
+                        <h2 className="text-xl md:text-2xl font-bold tracking-tight text-zinc-100">Activity Overview</h2>
                         <div className="h-px flex-1 bg-zinc-900 ml-4 opacity-50"></div>
                     </div>
-                    <p className="text-zinc-500 text-sm font-medium">Real-time heuristics and resource utilization of your neural network.</p>
+                    <p className="text-zinc-500 text-xs md:text-sm font-medium">Statistics and resource usage of your assistant.</p>
                 </header>
 
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
                     {[
                         { title: "Activity", desc: "Conversations", val: userStats?.chats_created, icon: "chat_alt", color: "text-zinc-700" },
                         { title: "Exchange", desc: "Messages", val: userStats?.messages_sent, icon: "send", color: "text-emerald-700/50" },
@@ -48,7 +48,7 @@ export default function DashboardView() {
                     ))}
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="grid grid-cols-1 gap-6 md:gap-8">
                     <Card title="Efficiency" description="Token Ratio">
                         {isLoading && !userStats ? (
                             <div className="space-y-4 pt-2">

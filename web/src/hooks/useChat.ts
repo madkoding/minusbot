@@ -9,6 +9,9 @@ export function useChat(chatId?: string) {
     const client = getChatClient();
 
     useEffect(() => {
+        // Clear messages when chat changes
+        setMessages([]);
+
         // Set initial connection state
         setIsConnected(client.isConnected());
 
@@ -69,9 +72,9 @@ export function useChat(chatId?: string) {
         };
     }, [chatId]);
 
-    const sendMessage = useCallback((content: string) => {
-        client.sendMessage(content);
-    }, []);
+    const sendMessage = useCallback((content: string, targetId?: string) => {
+        client.sendMessage(content, targetId || chatId);
+    }, [chatId]);
 
     return {
         messages,

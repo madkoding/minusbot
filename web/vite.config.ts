@@ -8,4 +8,12 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  server: {
+    allowedHosts: [
+      "localhost",
+      "fedora"
+    ],
+    host: '0.0.0.0',
+    port: 5173,
+  }
 })
