@@ -26,9 +26,13 @@ mock.module("@/commands", () => ({
     }
 }));
 
+import { EventEmitter } from "events";
+const pubsubEmitter = new EventEmitter();
 mock.module("@/pubsub", () => ({
     PubSub: {
-        publish: mock()
+        publish: mock((c, d) => pubsubEmitter.emit(c, d)),
+        subscribe: mock((c, l) => pubsubEmitter.on(c, l)),
+        unsubscribe: mock((c, l) => pubsubEmitter.off(c, l))
     }
 }));
 

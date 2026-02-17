@@ -1,20 +1,51 @@
 import { expect, test, describe, spyOn, mock, afterEach } from "bun:test";
-import { Agent } from "../../src/agent";
-import { Storage } from "../../src/data/storage";
+import { EventEmitter } from "events";
+
+import { Agent } from "@/agent";
+
+const mockAIChat = mock();
+const pubsubEmitter = new EventEmitter();
 
 // Mock all dependencies
-mock.module("../../src/data/storage", () => ({
+// Mock all dependencies
+mock.module("@/data/storage", () => ({
     Storage: {
         saveChat: mock(),
         getChatContentPath: mock(() => "/tmp/chat/content")
     },
     getUserSettings: mock(() => Promise.resolve({
-        ai_endpoint: "http://ai.test",
-        model_id: "test-model"
+        active_providers: { text: "test-provider" }
+    })),
+    getSystemSettings: mock(() => Promise.resolve({
+        system_prompt: "You are an assistant."
     }))
 }));
 
-mock.module("../../src/secrets", () => ({
+mock.module("@/data/providers", () => ({
+    ProviderManager: {
+        getProvider: mock(() => Promise.resolve({
+            id: "test-provider",
+            name: "Test Provider",
+            client: "openai",
+            config: {
+                model_id: "test-model",
+                max_tokens: 1000,
+                temperature: 0.7
+            }
+        })),
+        getProviderToken: mock(() => Promise.resolve("sk-test-key"))
+    }
+}));
+
+mock.module("@/ai/registry", () => ({
+    AIRegistry: {
+        getClient: mock(() => ({
+            chat: mockAIChat
+        }))
+    }
+}));
+
+mock.module("@/secrets", () => ({
     secrets: {
         vault: mock(() => Promise.resolve({
             get: mock(() => "sk-test-key")
@@ -22,49 +53,63 @@ mock.module("../../src/secrets", () => ({
     }
 }));
 
-mock.module("../../src/tools/index", () => ({
+mock.module("@/tools/index", () => ({
     toolManager: {
         getDefinitions: mock(() => []),
-        execute: mock(() => Promise.resolve("Tool Result"))
+        getToolsForAI: mock(() => []),
+        getDynamicTools: mock(() => Promise.resolve([])),
+        execute: mock(() => Promise.resolve("Tool Result")),
+        registerTool: mock(),
+        registerDynamicProvider: mock()
     }
 }));
 
-mock.module("../../src/data/statistics", () => ({
+mock.module("@/data/statistics", () => ({
     StatsManager: {
         trackMessageSent: mock(),
         trackTokens: mock()
     }
 }));
 
-mock.module("../../src/cli/colors", () => ({
+mock.module("@/cli/colors", () => ({
     Logger: {
-        tool: mock(),
-        skill: mock(),
-        task: mock(),
-        error: mock()
+        tool: mock((name, args) => console.log(`[TOOL] ${name}`)),
+        skill: mock((text) => console.log(`[SKILL] ${text}`)),
+        task: mock((text) => console.log(`[TASK] ${text}`)),
+        error: mock((text) => console.log(`[CRIT] ${text}`)),
+        info: mock((text) => console.log(`[INFO] ${text}`)),
+        warn: mock((text) => console.log(`[WARN] ${text}`)),
+        success: mock((text) => console.log(`[OK] ${text}`)),
+        banner: mock(),
+        bot: mock(),
+        system: mock(),
+        prompt: mock(),
+        stream: mock()
     }
 }));
 
-mock.module("../../src/pubsub", () => ({
+mock.module("@/pubsub", () => ({
     PubSub: {
-        publish: mock()
+        publish: mock((c, d) => pubsubEmitter.emit(c, d)),
+        subscribe: mock((c, l) => pubsubEmitter.on(c, l)),
+        unsubscribe: mock((c, l) => pubsubEmitter.off(c, l))
     }
 }));
 
-mock.module("../../src/channels", () => ({
+mock.module("@/channels", () => ({
     ChannelManager: {
         getToolsForUser: mock(() => Promise.resolve([])),
         getInstance: mock(() => null)
     }
 }));
 
-mock.module("../../src/data/skills", () => ({
+mock.module("@/data/skills", () => ({
     SkillManager: {
         getToolsForUser: mock(() => Promise.resolve([]))
     }
 }));
 
-mock.module("../../src/data/memory", () => ({
+mock.module("@/data/memory", () => ({
     KnowledgeManager: {
         getImportantMemos: mock(() => Promise.resolve({}))
     }
@@ -72,85 +117,64 @@ mock.module("../../src/data/memory", () => ({
 
 describe("Agent", () => {
     afterEach(() => {
+        // @ts-ignore
         global.fetch = undefined;
     });
 
     test("should run conversation loop", async () => {
         const chat = {
             meta: { owner: "user1", id: "chat1" } as any,
-            messages: []
+            messages: [] as any[]
         };
         const agent = new Agent(chat);
 
-        // Mock OpenAI Fetch (Single turn)
-        global.fetch = mock()
-            .mockResolvedValueOnce({
-                ok: true,
-                json: () => Promise.resolve({
-                    choices: [{
-                        message: {
-                            role: "assistant",
-                            content: "Hello World",
-                            tool_calls: []
-                        }
-                    }],
-                    usage: { prompt_tokens: 10, completion_tokens: 5 }
-                })
-            } as any);
+        // Mock AI Chat (Single turn)
+        mockAIChat.mockResolvedValueOnce({
+            content: "Hello World",
+            tool_calls: [],
+            usage: { prompt_tokens: 10, completion_tokens: 5 }
+        });
 
         const reply = await agent.run("Hi");
         expect(reply).toBe("Hello World");
 
         // Check message history: System + User + Assistant = 3 messages
-        // (System msg is added if empty)
         expect(chat.messages.length).toBe(3);
-        expect(chat.messages[0].role).toBe("system");
-        expect(chat.messages[1].role).toBe("user");
-        expect(chat.messages[2].role).toBe("assistant");
+        expect(chat.messages[0]!.role).toBe("system");
+        expect(chat.messages[1]!.role).toBe("user");
+        expect(chat.messages[2]!.role).toBe("assistant");
     });
 
     test("should execute tools", async () => {
         const chat = {
             meta: { owner: "user1", id: "chat1" } as any,
-            messages: []
+            messages: [] as any[]
         };
         const agent = new Agent(chat);
 
-        // Mock OpenAI Fetch (Multi turn: Tool Call -> Tool Result -> Final Answer)
+        // Mock AI Chat (Multi turn: Tool Call -> Tool Result -> Final Answer)
 
         // 1. Return Tool Call
         const toolCallMsg = {
-            role: "assistant",
             content: null,
             tool_calls: [{
                 id: "call_1",
                 type: "function",
                 function: { name: "test_tool", arguments: "{}" }
-            }]
+            }],
+            usage: { prompt_tokens: 5, completion_tokens: 5 }
         };
 
         // 2. Return Final Answer
         const finalAnswerMsg = {
-            role: "assistant",
             content: "Task Done",
-            tool_calls: []
+            tool_calls: [],
+            usage: { prompt_tokens: 5, completion_tokens: 5 }
         };
 
-        global.fetch = mock()
-            .mockResolvedValueOnce({
-                ok: true,
-                json: () => Promise.resolve({
-                    choices: [{ message: toolCallMsg }],
-                    usage: { prompt_tokens: 5, completion_tokens: 5 }
-                })
-            } as any)
-            .mockResolvedValueOnce({
-                ok: true,
-                json: () => Promise.resolve({
-                    choices: [{ message: finalAnswerMsg }],
-                    usage: { prompt_tokens: 5, completion_tokens: 5 }
-                })
-            } as any);
+        mockAIChat
+            .mockResolvedValueOnce(toolCallMsg)
+            .mockResolvedValueOnce(finalAnswerMsg);
 
         const reply = await agent.run("Do something");
 
@@ -158,8 +182,8 @@ describe("Agent", () => {
 
         // History: System + User + Assistant(Call) + Tool(Result) + Assistant(Final) = 5
         expect(chat.messages.length).toBe(5);
-        expect(chat.messages[2].role).toBe("assistant");
-        expect(chat.messages[3].role).toBe("tool");
-        expect(chat.messages[3].content).toBe("Tool Result");
+        expect(chat.messages[2]!.role).toBe("assistant");
+        expect(chat.messages[3]!.role).toBe("tool");
+        expect(chat.messages[3]!.content).toBe("Tool Result");
     });
 });
