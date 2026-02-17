@@ -30,6 +30,14 @@ export const Icon: React.FC<IconProps> = ({ name, size = 18, className = "", ...
         info: LucideIcons.Info,
         lock: LucideIcons.Lock,
         key: LucideIcons.Key,
+        cpu: LucideIcons.Cpu,
+        eye: LucideIcons.Eye,
+        image: LucideIcons.Image,
+        "volume-2": LucideIcons.Volume2,
+        mic: LucideIcons.Mic,
+        "edit-2": LucideIcons.Edit2,
+        "trash-2": LucideIcons.Trash2,
+        "message-square": LucideIcons.MessageSquare,
     };
 
     const LucideIcon = icons[name];

@@ -17,6 +17,7 @@ import StatsView from "./views/Stats";
 import IntegrationsView from "./views/Integrations.tsx";
 import ChannelsView from "./views/Channels.tsx";
 import UpdateView from "./views/Update.tsx";
+import ProvidersView from "./views/Providers.tsx";
 
 export default function App() {
     const { isAuthenticated, isInitializing, initialize } = useAuthStore();
@@ -59,6 +60,7 @@ export default function App() {
                     <Route path="/dashboard" element={<DashboardView />} />
                     <Route path="/chat" element={<ChatView />} />
                     <Route path="/chat/:id" element={<ChatView />} />
+                    <Route path="/providers" element={<ProvidersView />} />
                     <Route path="/skills" element={<SkillsView apiPath="/user/skills" />} />
                     <Route path="/integrations" element={<IntegrationsView apiPath="/user/integrations" />} />
                     <Route path="/channels" element={<ChannelsView />} />

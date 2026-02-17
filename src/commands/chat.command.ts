@@ -24,75 +24,68 @@ commandManager.register({
     usage: "/start",
     handler: async (args, { user }) => {
         const settings = await getUserSettings(user.id);
-        const vault = await secrets.vault(user.id, "agent");
-        const apiKey = vault.get("API_KEY");
+        const activeTextProviderId = settings.active_providers?.text;
 
-        let report = `Welcome to Minusbot, ${user.username}!\n\nSystem Check:\n`;
+        let report = `## Welcome to Minusbot, ${user.username}! 🐱🚀\n\n`;
+        report += `This command helps you verify your configuration.\n\n### 🤖 AI Configuration Status\n`;
 
-        // 1. API Key Check
-        if (apiKey && apiKey.length > 5) {
-            report += "  ✅ API Key configured\n";
+        if (activeTextProviderId) {
+            const { ProviderManager } = await import("../data/providers");
+            const provider = await ProviderManager.getProvider(activeTextProviderId, user.id);
+            if (provider) {
+                report += `✅ **Active Text Provider**: ${provider.name}\n`;
+                report += `✅ **Protocol**: \`${provider.client}\`\n`;
+                report += `✅ **Model ID**: \`${provider.config.model_id}\`\n`;
+
+                const token = await ProviderManager.getProviderToken(activeTextProviderId, user.id);
+                if (token) {
+                    report += `✅ **Credentials**: Securely Stored\n`;
+
+                    try {
+                        report += `\n> *Attempting to validate connection...*\n`;
+                        const { AIRegistry } = await import("../ai/registry");
+                        const client = AIRegistry.getClient(provider.client);
+                        if (client) {
+                            const result = await client.chat({
+                                apiKey: token,
+                                model: provider.config.model_id,
+                                messages: [{ role: "user", content: "hi" }],
+                                max_tokens: 5,
+                                extra: provider.config.extra
+                            });
+                            report += `✅ **Connection**: Successful!\n`;
+                        }
+                    } catch (e: any) {
+                        report += `❌ **Connection Failed**: ${e.message}\n`;
+                    }
+                } else {
+                    report += `❌ **Credentials**: Missing token (Edit the provider to add it)\n`;
+                }
+            } else {
+                report += `⚠️ **Provider ${activeTextProviderId}** was selected but no longer exists.\n`;
+            }
         } else {
-            report += "  ❌ API Key missing (Use /env set agent API_KEY ...)\n";
+            report += `❌ **No Active Provider**: Please visit **Settings > AI Providers** to register and activate one.\n`;
         }
 
-        // 2. Telegram Check (user specific)
+        report += `\n### 🔌 Integrations\n`;
         try {
             const tgConfigPath = getUserIntegrationConfigFile(user.id, 'telegram');
             const tgConfigContent = await fs.readFile(tgConfigPath, 'utf-8');
             const tgConfig = JSON.parse(tgConfigContent);
             if (tgConfig.user_id && tgConfig.chat_id) {
-                report += `  ✅ Telegram Configured (Chat: ${tgConfig.chat_id}, User: ${tgConfig.user_id})\n`;
+                report += `✅ **Telegram**: Connected (Chat: ${tgConfig.chat_id})\n`;
             } else {
-                report += "  ⚠️ Telegram config incomplete\n";
+                report += "⚠️ **Telegram**: Incomplete configuration\n";
             }
         } catch {
-            report += "  ℹ️ Telegram integration not setup\n";
+            report += "ℹ️ **Telegram**: Not configured\n";
         }
 
-        // 3. Settings Check
-        report += `  ✅ Model: ${settings.model_id}\n`;
-        report += `  ✅ Endpoint: ${settings.ai_endpoint}\n`;
-
-        // 4. Validate Endpoint & Model
-        if (apiKey) {
-            try {
-                report += "\nValidating LLM Connection...\n";
-                // Try to list models to validate key and endpoint accessibility
-                // Note: Not all endpoints support /models, but standard OpenAI compatible ones usually do
-                const response = await fetch(`${settings.ai_endpoint}/models`, {
-                    headers: {
-                        "Authorization": `Bearer ${apiKey}`
-                    }
-                });
-
-                if (response.ok) {
-                    const data: any = await response.json();
-                    report += "  ✅ Endpoint Reachable\n";
-
-                    // Simple check if model exists in list (if list is available)
-                    if (data && Array.isArray(data.data)) {
-                        const modelExists = data.data.some((m: any) => m.id === settings.model_id);
-                        if (modelExists) {
-                            report += "  ✅ Model ID found in provider list\n";
-                        } else {
-                            report += "  ⚠️ Model ID not found in matched list (might still work if alias)\n";
-                        }
-                    } else {
-                        report += "  ✅ Auth successful (Model list not returned standardly)\n";
-                    }
-
-                    report += "\n🎉 Everything looks good! You can start chatting now.\nTip: Type /help to see commands or just verify your AI by saying 'Hello'.";
-                } else {
-                    const errText = await response.text();
-                    report += `  ❌ Endpoint Validation Failed: ${response.status} - ${errText.substring(0, 100)}`;
-                }
-            } catch (e: any) {
-                report += `  ❌ Validation Error: ${e.message}`;
-            }
-        } else {
-            report += "\n❌ Cannot validate connection without API Key.";
-        }
+        report += `\n### 🚀 Getting Started\n`;
+        report += `• Type \`/help\` to see all slash commands.\n`;
+        report += `• Use \`/skills\` to manage your dynamic capabilities.\n`;
+        report += `• Simply type a message to start chatting!\n`;
 
         return report;
     }

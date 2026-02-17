@@ -34,6 +34,7 @@ import userVaultRoutes from "./routes/user/vault.routes";
 import userStatsRoutes from "./routes/user/stats.routes";
 import userIntegrationsRoutes from "./routes/user/integrations.routes";
 import userChannelsRoutes from "./routes/user/channels.routes";
+import providerRoutes from "./routes/providers.routes";
 
 // Middleware
 import { authenticate, adminOnly } from "./middleware/auth.middleware";
@@ -75,6 +76,7 @@ export async function startServer() {
     user.use("/stats", userStatsRoutes);
     user.use("/integrations", userIntegrationsRoutes);
     user.use("/channels", userChannelsRoutes);
+    user.use("/providers", providerRoutes);
     api.use("/user", user);
 
     // Admin Routes

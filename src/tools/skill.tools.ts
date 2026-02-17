@@ -71,3 +71,15 @@ toolManager.registerTool(
         return await SkillManager.runSkill(chat.meta.owner, args.id, args.actionName, args.inputs, args.workspaceId, chat.meta.id);
     }
 );
+
+// Register dynamic provider for Agent
+toolManager.registerDynamicProvider(async (userId) => {
+    const tools = await SkillManager.getToolsForUser(userId);
+
+    // Also register them in the main toolManager for execution
+    for (const tool of tools) {
+        toolManager.registerTool(tool.definition, tool.handler);
+    }
+
+    return tools;
+});

@@ -45,6 +45,7 @@ export const Sidebar = () => {
         { id: '/skills', label: 'Skills', icon: 'shield' },
         { id: '/integrations', label: 'Integrations', icon: 'globe' },
         { id: '/channels', label: 'Channels', icon: 'chat_alt' },
+        { id: '/providers', label: 'AI Providers', icon: 'cpu' },
         { id: '/tools', label: 'Tools', icon: 'chip' },
         { id: '/secrets', label: 'Vault', icon: 'vault' },
         { id: '/settings', label: 'Settings', icon: 'settings' },

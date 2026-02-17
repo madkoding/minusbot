@@ -1,8 +1,6 @@
 import { z } from "zod";
 
 export const UserSettingsDTO = z.object({
-    model_id: z.string().optional(),
-    ai_endpoint: z.string().url().optional(),
     colors: z.boolean().optional(),
     disabled_tools: z.array(z.string()).optional(),
     disabled_skills: z.array(z.string()).optional(),

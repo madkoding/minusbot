@@ -7,14 +7,15 @@ interface ModalProps {
     onClose: () => void;
     title: string;
     children: React.ReactNode;
+    className?: string;
 }
 
-export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
+export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, className = "max-w-lg" }) => {
     if (!isOpen) return null;
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-            <div className="bg-zinc-950 border border-zinc-900 w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl animate-fade-up">
+            <div className={`bg-zinc-950 border border-zinc-900 w-full rounded-3xl overflow-hidden shadow-2xl animate-fade-up ${className}`}>
                 <div className="flex items-center justify-between p-6 border-b border-zinc-900">
                     <h3 className="text-lg font-bold text-zinc-100">{title}</h3>
                     <button

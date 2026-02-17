@@ -17,6 +17,41 @@ export const skillsService = {
         const res = await apiClient.post(path, data);
         return res.data;
     },
+    // User Config
+    getConfig: async (path: string, id: string) => {
+        const res = await apiClient.get(`${path}/${id}/config`);
+        return res.data;
+    },
+    saveConfig: async (path: string, id: string, config: any) => {
+        const res = await apiClient.put(`${path}/${id}/config`, config);
+        return res.data;
+    },
+    // User Data (Files)
+    listData: async (path: string, id: string) => {
+        const res = await apiClient.get(`${path}/${id}/data`);
+        return res.data;
+    },
+    getFile: async (path: string, id: string, filename: string) => {
+        const res = await apiClient.get(`${path}/${id}/data/${filename}`);
+        return res.data;
+    },
+    saveFile: async (path: string, id: string, filename: string, content: string) => {
+        const res = await apiClient.put(`${path}/${id}/data/${filename}`, { content });
+        return res.data;
+    },
+    // Scripts
+    listScripts: async (path: string, id: string) => {
+        const res = await apiClient.get(`${path}/${id}/scripts`);
+        return res.data;
+    },
+    getScript: async (path: string, id: string, filename: string) => {
+        const res = await apiClient.get(`${path}/${id}/scripts/${filename}`);
+        return res.data;
+    },
+    saveScript: async (path: string, id: string, filename: string, content: string) => {
+        const res = await apiClient.put(`${path}/${id}/scripts/${filename}`, { content });
+        return res.data;
+    },
     toggleAdmin: async (id: string) => {
         const res = await apiClient.post(`/admin/skills/${id}/toggle`);
         return res.data;

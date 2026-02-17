@@ -14,6 +14,11 @@ export type ToolHandler = (args: any, context: { chat: Chat }) => Promise<string
 
 export class ToolManager {
     private tools: Map<string, { definition: ToolDefinition; handler: ToolHandler }> = new Map();
+    private dynamicProviders: ((userId: string) => Promise<any[]>)[] = [];
+
+    registerDynamicProvider(provider: (userId: string) => Promise<any[]>) {
+        this.dynamicProviders.push(provider);
+    }
 
     registerTool(definition: ToolDefinition, handler: ToolHandler) {
         this.tools.set(definition.function.name, { definition, handler });
@@ -27,6 +32,19 @@ export class ToolManager {
 
     getAllDefinitions(): ToolDefinition[] {
         return Array.from(this.tools.values()).map(t => t.definition);
+    }
+
+    getToolsForAI(chat: Chat, settings: any): ToolDefinition[] {
+        return this.getDefinitions(settings.disabled_tools || []);
+    }
+
+    async getDynamicTools(userId: string): Promise<any[]> {
+        const all: any[] = [];
+        for (const provider of this.dynamicProviders) {
+            const tools = await provider(userId);
+            all.push(...tools);
+        }
+        return all;
     }
 
     async execute(name: string, args: any, chat: Chat): Promise<string> {

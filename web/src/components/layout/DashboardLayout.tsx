@@ -37,6 +37,7 @@ export const DashboardLayout: React.FC = () => {
         if (path === '/skills') return 'Skills';
         if (path === '/integrations') return 'Integrations';
         if (path === '/channels') return 'Channels';
+        if (path === '/providers') return 'AI Providers';
         if (path === '/tools') return 'Settings';
         if (path === '/secrets') return 'Vault';
         if (path === '/settings') return 'Preferences';
@@ -55,8 +56,16 @@ export const DashboardLayout: React.FC = () => {
 
             <main className="flex-1 min-w-0 w-full lg:w-auto h-[100dvh] relative overflow-hidden flex flex-col">
                 {!location.pathname.startsWith('/chat') && <MobileHeader title={getTitle()} />}
-                <div className="flex-1 overflow-hidden">
-                    <Outlet />
+                <div className="flex-1 overflow-hidden h-full">
+                    {location.pathname.startsWith('/chat') ? (
+                        <Outlet />
+                    ) : (
+                        <div className="h-full overflow-y-auto custom-scrollbar p-6 md:p-8 lg:p-12">
+                            <div className="max-w-[1400px] mx-auto w-full">
+                                <Outlet />
+                            </div>
+                        </div>
+                    )}
                 </div>
             </main>
         </div>

@@ -21,13 +21,47 @@ export class SandboxManager {
         socketPath: "/var/run/docker.sock"
     });
 
-    public static async ensureImage(image: string) {
+    public static async imageExists(image: string): Promise<boolean> {
         try {
             await this.docker.getImage(image).inspect();
-            return;
-        } catch (e: any) {
-            if (e.statusCode !== 404) throw e;
+            return true;
+        } catch {
+            return false;
         }
+    }
+
+    public static async buildImage(dir: string, tag: string) {
+        Logger.info(`Building custom image ${tag} from ${dir}...`);
+
+        const { spawn } = await import("node:child_process");
+        const tar = spawn("tar", ["-C", dir, "-cf", "-", "."]);
+
+        if (!tar.stdout) {
+            throw new Error("Failed to create tar stream for build.");
+        }
+
+        return new Promise((resolve, reject) => {
+            this.docker.buildImage(tar.stdout as any, { t: tag }, (err, response) => {
+                if (err) return reject(err);
+                if (!response) return reject(new Error("No response from Docker build."));
+                this.docker.modem.followProgress(response, (err, output) => {
+                    if (err) return reject(err);
+                    Logger.info(`Image ${tag} built successfully.`);
+                    resolve(output);
+                }, (event) => {
+                    if (event.error) {
+                        Logger.error(`Build error: ${event.error}`);
+                    } else if (event.stream) {
+                        // Optional: log build progress
+                        // process.stdout.write(event.stream);
+                    }
+                });
+            });
+        });
+    }
+
+    public static async ensureImage(image: string) {
+        if (await this.imageExists(image)) return;
 
         Logger.info(`Pulling image ${image}...`);
         await new Promise((resolve, reject) => {

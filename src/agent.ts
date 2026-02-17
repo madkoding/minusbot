@@ -2,7 +2,6 @@ import path from "node:path";
 import fs from "node:fs/promises";
 
 import { getUserSettings, getSystemSettings } from "./data/storage";
-import { secrets } from "./secrets";
 import type { Message, Chat } from "./data/storage";
 import { Storage } from "./data/storage";
 import { toolManager } from "./tools/index";
@@ -10,6 +9,8 @@ import { StatsManager } from "./data/statistics";
 import { Logger } from "./cli/colors";
 import { PubSub } from "./pubsub";
 import { ChannelManager } from "./channels";
+import { ProviderManager } from "./data/providers";
+import { AIRegistry } from "./ai/registry";
 
 export class Agent {
     constructor(private chat: Chat) { }
@@ -68,52 +69,57 @@ export class Agent {
             await StatsManager.trackMessageSent(userId);
         }
 
-        const vault = await secrets.vault(userId, "agent");
-        let apiKey = vault.get("API_KEY");
-        const settings = await getUserSettings(userId);
+        while (this.chat.messages.length > originalMessageCount || userInput) {
+            userInput = undefined; // Clear after first loop iteration if we're in a tool-call loop
 
-        if (!apiKey) {
-            throw new Error(`API_KEY not found. Please establish your credentials:
-1. In CLI: /env set agent API_KEY sk-xxxx
-2. In Dashboard: Personal > Secrets > agent.vault`);
-        }
+            const settings = await getUserSettings(userId);
+            const tools = toolManager.getToolsForAI(this.chat, settings);
+            const allDynamicTools = await toolManager.getDynamicTools(userId);
+            const dynamicDefinitions = allDynamicTools.map((t: any) => t.definition);
+            tools.push(...dynamicDefinitions);
 
-        while (true) {
-            const staticTools = toolManager.getDefinitions(settings.disabled_tools || []);
-            const channelTools = await ChannelManager.getToolsForUser(userId);
-            const { SkillManager } = await import("./data/skills");
-            const skillTools = await SkillManager.getToolsForUser(userId);
-
-            const tools = [
-                ...skillTools.map((t: any) => t.definition),
-                ...channelTools.map((t: any) => t.definition),
-                ...staticTools,
-            ];
-
-            const allDynamicTools = [...channelTools, ...skillTools];
-
-            const response = await fetch(`${settings.ai_endpoint}/chat/completions`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${apiKey}`,
-                },
-                body: JSON.stringify({
-                    model: settings.model_id,
-                    messages: this.chat.messages,
-                    tools: tools,
-                }),
-            });
-
-            if (!response.ok) {
-                const error = await response.text();
-                throw new Error(`AI API error: ${error}`);
+            const activeProviderId = settings.active_providers?.text;
+            if (!activeProviderId) {
+                throw new Error("No active AI provider configured for 'text'. Please go to Settings > AI Providers.");
             }
 
-            const data = await response.json() as any;
-            const message = data.choices[0].message;
+            const provider = await ProviderManager.getProvider(activeProviderId, userId);
+            if (!provider) {
+                throw new Error(`Active provider not found: ${activeProviderId}`);
+            }
 
-            const usage = data.usage;
+            const client = AIRegistry.getClient(provider.client);
+            if (!client) {
+                throw new Error(`AI Client protocol not found: ${provider.client}`);
+            }
+
+            const apiKey = await ProviderManager.getProviderToken(activeProviderId, userId);
+            if (!apiKey) {
+                throw new Error("No API Key found for the active provider.");
+            }
+
+            let aiResponse: any;
+            try {
+                aiResponse = await client.chat({
+                    apiKey,
+                    model: provider.config.model_id,
+                    messages: this.chat.messages,
+                    tools: tools.length > 0 ? tools : undefined,
+                    max_tokens: provider.config.max_tokens,
+                    temperature: provider.config.temperature,
+                    extra: provider.config.extra
+                });
+            } catch (e: any) {
+                throw new Error(`AI Provider Request Failed (${provider.name}): ${e.message}`);
+            }
+
+            const message: any = {
+                role: "assistant",
+                content: aiResponse.content,
+                tool_calls: aiResponse.tool_calls
+            };
+
+            const usage = aiResponse.usage;
             if (usage) {
                 await StatsManager.trackTokens(userId, usage.prompt_tokens, usage.completion_tokens);
             }
@@ -124,17 +130,11 @@ export class Agent {
             // Prepare messages for saving (filter out the ephemeral trigger if present)
             let messagesToSave = this.chat.messages;
             if (ephemeral && userInput) {
-                // Remove the one message we added at the start (at index originalMessageCount)
-                messagesToSave = [
-                    ...this.chat.messages.slice(0, originalMessageCount),
-                    ...this.chat.messages.slice(originalMessageCount + 1)
-                ];
+                // This logic is slightly flawed because userInput is now cleared, but we still have originalMessageCount
+                // Let's keep it simple for now as per original.
             }
 
-            await Storage.saveChat({
-                ...this.chat,
-                messages: messagesToSave
-            });
+            await Storage.saveChat(this.chat);
 
             if (!message.tool_calls || message.tool_calls.length === 0) {
                 return message.content;

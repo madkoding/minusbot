@@ -67,12 +67,17 @@ export interface SystemSettings {
 }
 
 export interface Settings {
-    model_id: string;
-    ai_endpoint: string;
     colors: boolean;
     disabled_tools: string[];
     disabled_skills: string[];
     debug?: boolean;
+    active_providers?: {
+        text?: string;
+        vision?: string;
+        image?: string;
+        tts?: string;
+        stt?: string;
+    };
 }
 
 export type ChatType = "temporal" | "permanent";
@@ -104,11 +109,10 @@ export interface Chat {
 // --- Default Values ---
 
 export const DEFAULT_SETTINGS: Settings = {
-    model_id: "gpt-4o",
-    ai_endpoint: "https://api.openai.com/v1",
     colors: true,
     disabled_tools: [],
     disabled_skills: [],
+    active_providers: {},
     debug: false
 };
 
@@ -176,6 +180,14 @@ export function getUserIntegrationConfigFile(userId: string, integrationId: stri
     return path.join(getUserIntegrationsDir(userId), `${integrationId}.json`);
 }
 
+export function getUserSkillsDataDir(userId: string) {
+    return path.join(getUserDir(userId), "skills-data");
+}
+
+export function getUserSkillDataDir(userId: string, skillId: string) {
+    return path.join(getUserSkillsDataDir(userId), skillId);
+}
+
 export function getGlobalIntegrationConfigFile(integrationId: string) {
     return path.join(getGlobalIntegrationsDir(), `${integrationId}.json`);
 }
@@ -194,11 +206,10 @@ export async function getUserSettings(userId: string): Promise<Settings> {
         const content = await fs.readFile(getUserSettingsFile(userId), "utf-8");
         const userSettings = JSON.parse(content);
         return {
-            model_id: userSettings.model_id ?? global.model_id,
-            ai_endpoint: userSettings.ai_endpoint ?? global.ai_endpoint,
             colors: userSettings.colors ?? global.colors,
             disabled_tools: userSettings.disabled_tools ?? global.disabled_tools ?? [],
             disabled_skills: userSettings.disabled_skills ?? global.disabled_skills ?? [],
+            active_providers: userSettings.active_providers ?? global.active_providers ?? {},
             debug: userSettings.debug ?? global.debug ?? false
         };
     } catch {

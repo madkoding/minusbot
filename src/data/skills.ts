@@ -214,21 +214,37 @@ export class SkillManager {
         const workspaceDir = WorkspaceManager.resolveContentPath(userId, workspaceId, chatId);
         await fs.mkdir(workspaceDir, { recursive: true });
 
+        // Ensure and mount data directory
+        const { getUserSkillDataDir } = await import("./storage");
+        const dataDir = getUserSkillDataDir(userId, id);
+        await fs.mkdir(dataDir, { recursive: true });
+
         // Load Vault
         const vaultId = `skill_${id}`; // Matching user preference skill_(id)
         const vault = await secrets.vault(userId, vaultId);
         const envSecrets = vault.allValues();
 
         // Load Config
+        // Config can be global (in skill.json) or user-specific (overridden)
+        // For simplicity, we use getUserIntegrationConfigFile as the storage for custom user config
         const configPath = getUserIntegrationConfigFile(userId, vaultId);
         let configEnv: Record<string, string> = {};
+
+        // Load default config from definition
+        const defaultConfig = skill.definition.configSchema?.default || {};
+
         try {
             const configContent = await fs.readFile(configPath, "utf-8");
-            const config = JSON.parse(configContent);
-            for (const [key, value] of Object.entries(config)) {
+            const userConfig = JSON.parse(configContent);
+            const mergedConfig = { ...defaultConfig, ...userConfig };
+            for (const [key, value] of Object.entries(mergedConfig)) {
                 configEnv[`CONFIG_${key}`] = String(value);
             }
-        } catch { }
+        } catch {
+            for (const [key, value] of Object.entries(defaultConfig)) {
+                configEnv[`CONFIG_${key}`] = String(value);
+            }
+        }
 
         const env = {
             ...envSecrets,
@@ -236,7 +252,20 @@ export class SkillManager {
             PATH: `/skill/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin`
         };
 
-        const dockerImage = action.dockerImage || skill.definition.dockerImage || "python:3.11-slim";
+        let dockerImage = action.dockerImage || skill.definition.dockerImage || "python:3.11-slim";
+
+        // Handle custom Dockerfile
+        if (dockerImage === "custom") {
+            const sanitizedUserId = userId.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+            const tag = `minusbot_skill_${skill.isGlobal ? 'global' : sanitizedUserId}_${skill.id.toLowerCase()}`;
+
+            const exists = await SandboxManager.imageExists(tag);
+            if (!exists) {
+                await SandboxManager.buildImage(skillPath, tag);
+            }
+            dockerImage = tag;
+        }
+
         const scriptExt = path.extname(action._script).toLowerCase();
 
         let cmd: string[] = [];
@@ -265,7 +294,10 @@ export class SkillManager {
             cmd,
             env,
             {
-                extraVolumes: action.extraVolumes,
+                extraVolumes: [
+                    ...(action.extraVolumes || []),
+                    `${dataDir}:/skill/config:rw` // Mount user data as /skill/config
+                ],
                 enableNetwork: action.enableNetwork || skill.definition.enableNetwork,
                 entrypoint,
                 runtimeMountPoint: "/skill"
@@ -306,5 +338,34 @@ export class SkillManager {
         }
 
         return tools;
+    }
+
+    static async listSkillFiles(userId: string, id: string): Promise<string[]> {
+        const { getUserSkillDataDir } = await import("./storage");
+        const dataDir = getUserSkillDataDir(userId, id);
+        try {
+            return await fs.readdir(dataDir);
+        } catch {
+            return [];
+        }
+    }
+
+    static async getSkillFile(userId: string, id: string, filename: string): Promise<string> {
+        const { getUserSkillDataDir } = await import("./storage");
+        const dataDir = getUserSkillDataDir(userId, id);
+        const filePath = path.join(dataDir, filename);
+        try {
+            return await fs.readFile(filePath, "utf-8");
+        } catch {
+            return "";
+        }
+    }
+
+    static async saveSkillFile(userId: string, id: string, filename: string, content: string) {
+        const { getUserSkillDataDir } = await import("./storage");
+        const dataDir = getUserSkillDataDir(userId, id);
+        await fs.mkdir(dataDir, { recursive: true });
+        const filePath = path.join(dataDir, filename);
+        await fs.writeFile(filePath, content, "utf-8");
     }
 }

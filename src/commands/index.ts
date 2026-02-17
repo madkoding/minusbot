@@ -10,5 +10,6 @@ import "./chat.command";
 import "./users.command";
 import "./fs.command";
 import "./debug.command";
+import "./providers.command";
 
 export { commandManager, CommandManager, type CommandInfo } from "./command-manager";

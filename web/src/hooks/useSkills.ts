@@ -39,12 +39,85 @@ export function useSkills(apiPath: string) {
             setSelectedSkill(detail);
             setSkillVault(vault);
             setError(null);
+            return detail;
         } catch (err: any) {
             setError(err.message);
         } finally {
             setLoading(false);
         }
     }, [apiPath, setLoading, setSelectedSkill, setSkillVault, setError]);
+
+    const fetchConfig = async (id: string) => {
+        try {
+            return await skillsService.getConfig(apiPath, id);
+        } catch {
+            return {};
+        }
+    };
+
+    const saveConfig = async (id: string, config: any) => {
+        try {
+            await skillsService.saveConfig(apiPath, id, config);
+            return true;
+        } catch (err: any) {
+            setError(err.message);
+            return false;
+        }
+    };
+
+    const listDataFiles = async (id: string) => {
+        try {
+            return await skillsService.listData(apiPath, id);
+        } catch {
+            return [];
+        }
+    };
+
+    const getFileData = async (id: string, filename: string) => {
+        try {
+            const res = await skillsService.getFile(apiPath, id, filename);
+            return res.content;
+        } catch {
+            return "";
+        }
+    };
+
+    const saveFileData = async (id: string, filename: string, content: string) => {
+        try {
+            await skillsService.saveFile(apiPath, id, filename, content);
+            return true;
+        } catch (err: any) {
+            setError(err.message);
+            return false;
+        }
+    };
+
+    const listScripts = async (id: string) => {
+        try {
+            return await skillsService.listScripts(apiPath, id);
+        } catch {
+            return [];
+        }
+    };
+
+    const getScriptContent = async (id: string, filename: string) => {
+        try {
+            const res = await skillsService.getScript(apiPath, id, filename);
+            return res.content;
+        } catch {
+            return "";
+        }
+    };
+
+    const saveScriptContent = async (id: string, filename: string, content: string) => {
+        try {
+            await skillsService.saveScript(apiPath, id, filename, content);
+            return true;
+        } catch (err: any) {
+            setError(err.message);
+            return false;
+        }
+    };
 
     const saveSkill = async (id: string, editData: any) => {
         setLoading(true);
@@ -108,6 +181,14 @@ export function useSkills(apiPath: string) {
         error,
         fetchSkills,
         fetchSkillDetail,
+        fetchConfig,
+        saveConfig,
+        listDataFiles,
+        getFileData,
+        saveFileData,
+        listScripts,
+        getScriptContent,
+        saveScriptContent,
         saveSkill,
         toggleSkillStatus,
         deleteSkill,
