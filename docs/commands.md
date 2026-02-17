@@ -1,4 +1,4 @@
-# 📖 Usage Guide
+# 📖 Commands Reference
 
 Minusbot is primarily controlled via slash commands. The bot supports multiple interfaces (CLI, Telegram, Web), but the core logic remains the same.
 
@@ -85,22 +85,6 @@ Global versions of user commands for system-wide configuration.
 
 ---
 
-## 🔌 Integrations
+## 📡 Channels & Integrations
 
-### Telegram
-Connect your bot to Telegram for mobile access.
-
-1.  **Bot Setup**: Obtain a token from BotFather.
-2.  **Configure Token**:
-    ```bash
-    /env set integration-telegram BOT_TOKEN <your-token>
-    ```
-3.  **Link Account**:
-    Create a configuration file at `~/.config/minusbot/users/<username>/integrations/telegram.json`:
-    ```json
-    {
-        "chat_id": "main",
-        "user_id": "YOUR_TELEGRAM_USER_ID"
-    }
-    ```
-    *Replace `YOUR_TELEGRAM_USER_ID` with your numeric ID (get it from @userinfobot).*
+For configuration of specific channels (Telegram, Discord, Web) and external integrations (Google Search, etc.), please refer to the specific documentation in `docs/channels/` and `docs/integrations/`.

@@ -41,6 +41,21 @@ Stop sharing raw API keys with LLMs.
 
 ---
 
+## 🔌 Integrations
+
+Minusbot supports a variety of channels and external services:
+
+### Channels
+-   [**Telegram**](docs/channels/telegram.md): Chat with your agent on mobile.
+-   [**Discord**](docs/channels/discord.md): Full Discord bot with slash commands.
+-   [**Web Dashboard**](docs/channels/web.md): Rich web interface for management and chat.
+
+### External Services
+-   [**SerpApi**](docs/integrations/serpapi.md): Google Search capabilities.
+-   **More coming soon...**
+
+---
+
 ## 🚦 Quick Start
 
 ### ⚡ Automated Installation (Recommended)
@@ -75,9 +90,9 @@ Minusbot uses a rich CLI-style command system available in all channels:
 ## 🛠️ Tech Stack
 - **Runtime**: [Bun](https://bun.sh) (Ultra-fast JS runtime)
 - **Language**: TypeScript
-- **Frontend**: React + Vite (Vanilla CSS design system)
+- **Frontend**: React + TailwindCSS + Vite
 - **Sandboxing**: Docker Engine
-- **Communication**: WebSockets + PubSub
+- **Communication**: WebSockets/Socket.IO
 
 ## 📄 License
 MIT © sammwy

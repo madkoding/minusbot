@@ -7,11 +7,11 @@ import { runCLI } from "./cli/repl"; // This handles the CLI loop and cron jobs 
 import { Updater } from "./updater";
 
 async function main() {
-    console.log("Starting engine components...");
+    await Logger.info("Starting components...");
     await ensureDirs();
     await UserManager.init();
     await Updater.init();
-    console.log("Users module initialized.");
+    await Logger.info("Users module initialized.");
 
     const pkg = await Bun.file("package.json").json();
     await Logger.banner(pkg.version);

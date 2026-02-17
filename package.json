@@ -10,7 +10,8 @@
     "build": "bun run build:client",
     "start": "NODE_ENV=prod bun run src/index.ts",
     "skills:install": "bun run scripts/install-skills.ts",
-    "root:reset": "bun run scripts/regenerate-root.ts"
+    "root:reset": "bun run scripts/regenerate-root.ts",
+    "test": "bun test"
   },
   "private": true,
   "dependencies": {

@@ -1,6 +1,7 @@
 import Docker from "dockerode";
 import path from "node:path";
 import { Writable } from "node:stream";
+import { Logger } from "../cli/colors";
 
 class MemoryStream extends Writable {
     private chunks: Buffer[] = [];
@@ -28,7 +29,7 @@ export class SandboxManager {
             if (e.statusCode !== 404) throw e;
         }
 
-        console.log(`Pulling image ${image}...`);
+        Logger.info(`Pulling image ${image}...`);
         await new Promise((resolve, reject) => {
             this.docker.pull(image, (err: any, stream: any) => {
                 if (err) return reject(err);
@@ -38,7 +39,7 @@ export class SandboxManager {
                 });
             });
         });
-        console.log(`Image ${image} pulled successfully.`);
+        Logger.info(`Image ${image} pulled successfully.`);
     }
 
     static async runContainer(
