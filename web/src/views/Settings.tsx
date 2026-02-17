@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { Button, Input } from "../components/ui";
+import { Button, Input, Skeleton } from "../components/ui";
 import { Card } from "../components/cards";
 import { useSettings } from "../hooks/useSettings";
 
@@ -30,8 +30,6 @@ export default function SettingsView({ apiPath = '/user/settings' }: { apiPath?:
         }
     };
 
-    if (!settings && isLoading) return <div className="text-zinc-500 font-bold uppercase tracking-widest text-center py-20">Accessing Core...</div>;
-
     const title = isSystem ? "System" : isGlobal ? "Global" : "Personal";
     const subtitle = isSystem ? "Low-level server configuration." : isGlobal ? "Default fallback settings for all users." : "Your personal agent environment.";
 
@@ -46,27 +44,50 @@ export default function SettingsView({ apiPath = '/user/settings' }: { apiPath?:
             </header>
 
             <Card className="p-8">
-                <form onSubmit={handleUpdate} className="space-y-8">
-                    {isSystem ? (
-                        <div className="grid grid-cols-1 gap-6">
-                            <Input label="Web Interface Port" name="web_port" type="number" defaultValue={settings?.web_port} />
-                        </div>
-                    ) : (
-                        <>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <Input label="Neural Model ID" name="model_id" defaultValue={settings?.model_id} placeholder="e.g. gpt-4o" icon="terminal" />
+                {isLoading && !settings ? (
+                    <div className="space-y-8">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-2">
+                                <Skeleton className="h-4 w-24" />
+                                <Skeleton className="h-10 w-full" />
                             </div>
-                            <Input label="Gateway Endpoint" name="ai_endpoint" defaultValue={settings?.ai_endpoint} placeholder="https://api..." icon="globe" />
-                        </>
-                    )}
-
-                    <div className="pt-4 flex justify-between items-center border-t border-zinc-800/50">
-                        <p className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest">
-                            {isSystem ? "Requires server restart" : "Changes take effect immediately"}
-                        </p>
-                        <Button type="submit" className="rounded-xl px-8" loading={isLoading}>Save Configuration</Button>
+                            <div className="space-y-2">
+                                <Skeleton className="h-4 w-24" />
+                                <Skeleton className="h-10 w-full" />
+                            </div>
+                        </div>
+                        <div className="space-y-2 pt-4">
+                            <Skeleton className="h-4 w-32" />
+                            <Skeleton className="h-10 w-full" />
+                        </div>
+                        <div className="pt-8 flex justify-between items-center border-t border-zinc-800/50">
+                            <Skeleton className="h-3 w-32" />
+                            <Skeleton className="h-10 w-40 rounded-xl" />
+                        </div>
                     </div>
-                </form>
+                ) : (
+                    <form onSubmit={handleUpdate} className="space-y-8">
+                        {isSystem ? (
+                            <div className="grid grid-cols-1 gap-6">
+                                <Input label="Web Interface Port" name="web_port" type="number" defaultValue={settings?.web_port} />
+                            </div>
+                        ) : (
+                            <>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <Input label="Neural Model ID" name="model_id" defaultValue={settings?.model_id} placeholder="e.g. gpt-4o" icon="terminal" />
+                                </div>
+                                <Input label="Gateway Endpoint" name="ai_endpoint" defaultValue={settings?.ai_endpoint} placeholder="https://api..." icon="globe" />
+                            </>
+                        )}
+
+                        <div className="pt-4 flex justify-between items-center border-t border-zinc-800/50">
+                            <p className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest">
+                                {isSystem ? "Requires server restart" : "Changes take effect immediately"}
+                            </p>
+                            <Button type="submit" className="rounded-xl px-8" loading={isLoading}>Save Configuration</Button>
+                        </div>
+                    </form>
+                )}
             </Card>
         </div>
     );

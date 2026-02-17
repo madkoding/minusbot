@@ -42,6 +42,10 @@ export default function VaultView({ apiPath = '/user/vault' }: { apiPath?: strin
         if (k) handleUpdateKey(k);
     };
 
+    const Skeleton = ({ className = "" }: { className?: string }) => (
+        <div className={`animate-pulse bg-zinc-800/50 rounded-lg ${className}`}></div>
+    );
+
     return (
         <div className="space-y-8 max-w-6xl mx-auto h-full flex flex-col">
             <header>
@@ -59,19 +63,27 @@ export default function VaultView({ apiPath = '/user/vault' }: { apiPath?: strin
                         <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-600">Storage Units</h3>
                     </div>
                     <div className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
-                        {vaults.map(v => (
-                            <button
-                                key={v}
-                                onClick={() => fetchKeys(v)}
-                                className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-2xl transition-all duration-150 ${selectedVault === v
-                                    ? 'bg-zinc-100 text-zinc-950 font-bold shadow-lg'
-                                    : 'text-zinc-500 hover:text-zinc-200 hover:bg-zinc-900/40 font-medium'
-                                    }`}
-                            >
-                                <Icon name="vault" size={14} />
-                                <span className="text-xs truncate">{v}</span>
-                            </button>
-                        ))}
+                        {isLoading && vaults.length === 0 ? (
+                            [1, 2, 3].map(i => (
+                                <div key={i} className="px-4 py-2.5">
+                                    <Skeleton className="h-4 w-full" />
+                                </div>
+                            ))
+                        ) : (
+                            vaults.map(v => (
+                                <button
+                                    key={v}
+                                    onClick={() => fetchKeys(v)}
+                                    className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-2xl transition-all duration-150 ${selectedVault === v
+                                        ? 'bg-zinc-100 text-zinc-950 font-bold shadow-lg'
+                                        : 'text-zinc-500 hover:text-zinc-200 hover:bg-zinc-900/40 font-medium'
+                                        }`}
+                                >
+                                    <Icon name="vault" size={14} />
+                                    <span className="text-xs truncate">{v}</span>
+                                </button>
+                            ))
+                        )}
                     </div>
                 </aside>
 
@@ -103,42 +115,52 @@ export default function VaultView({ apiPath = '/user/vault' }: { apiPath?: strin
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-zinc-900/30">
-                                        {Object.entries(keys).map(([k, hasValue]) => (
-                                            <tr key={k} className="group hover:bg-zinc-900/20 transition-colors">
-                                                <td className="px-8 py-5">
-                                                    <div className="flex items-center gap-3">
-                                                        <Icon name="terminal" size={14} className="text-zinc-700" />
-                                                        <span className="text-xs font-bold text-zinc-300 font-mono tracking-tight">{k}</span>
-                                                    </div>
-                                                </td>
-                                                <td className="px-8 py-5">
-                                                    <div className="flex items-center gap-2">
-                                                        <div className={`w-1.5 h-1.5 rounded-full ${hasValue ? 'bg-emerald-500 shadow-[0_0_8px_#10b981]' : 'bg-zinc-800'}`}></div>
-                                                        <span className={`text-[10px] font-black uppercase tracking-widest ${hasValue ? 'text-zinc-100' : 'text-zinc-700'}`}>
-                                                            {hasValue ? 'Configured' : 'Missing'}
-                                                        </span>
-                                                    </div>
-                                                </td>
-                                                <td className="px-8 py-5 text-right">
-                                                    <div className="flex items-center justify-end gap-1 opacity-10 group-hover:opacity-100 transition-opacity">
-                                                        <button
-                                                            onClick={() => handleUpdateKey(k)}
-                                                            className="p-2 text-zinc-600 hover:text-zinc-100 rounded-lg hover:bg-zinc-800 transition-all"
-                                                            title="Overwrite"
-                                                        >
-                                                            <Icon name="settings" size={14} />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleRemoveKey(k)}
-                                                            className="p-2 text-zinc-600 hover:text-red-500 rounded-lg hover:bg-red-500/10 transition-all"
-                                                            title="Wipe"
-                                                        >
-                                                            <Icon name="trash" size={14} />
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))}
+                                        {isLoading && Object.keys(keys).length === 0 ? (
+                                            [1, 2, 3, 4, 5].map(i => (
+                                                <tr key={i}>
+                                                    <td className="px-8 py-5"><Skeleton className="h-4 w-3/4" /></td>
+                                                    <td className="px-8 py-5"><Skeleton className="h-4 w-24" /></td>
+                                                    <td className="px-8 py-5 text-right flex justify-end gap-2"><Skeleton className="h-8 w-8" /><Skeleton className="h-8 w-8" /></td>
+                                                </tr>
+                                            ))
+                                        ) : (
+                                            Object.entries(keys).map(([k, hasValue]) => (
+                                                <tr key={k} className="group hover:bg-zinc-900/20 transition-colors">
+                                                    <td className="px-8 py-5">
+                                                        <div className="flex items-center gap-3">
+                                                            <Icon name="terminal" size={14} className="text-zinc-700" />
+                                                            <span className="text-xs font-bold text-zinc-300 font-mono tracking-tight">{k}</span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-8 py-5">
+                                                        <div className="flex items-center gap-2">
+                                                            <div className={`w-1.5 h-1.5 rounded-full ${hasValue ? 'bg-emerald-500 shadow-[0_0_8px_#10b981]' : 'bg-zinc-800'}`}></div>
+                                                            <span className={`text-[10px] font-black uppercase tracking-widest ${hasValue ? 'text-zinc-100' : 'text-zinc-700'}`}>
+                                                                {hasValue ? 'Configured' : 'Missing'}
+                                                            </span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-8 py-5 text-right">
+                                                        <div className="flex items-center justify-end gap-1 opacity-10 group-hover:opacity-100 transition-opacity">
+                                                            <button
+                                                                onClick={() => handleUpdateKey(k)}
+                                                                className="p-2 text-zinc-600 hover:text-zinc-100 rounded-lg hover:bg-zinc-800 transition-all"
+                                                                title="Overwrite"
+                                                            >
+                                                                <Icon name="settings" size={14} />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleRemoveKey(k)}
+                                                                className="p-2 text-zinc-600 hover:text-red-500 rounded-lg hover:bg-red-500/10 transition-all"
+                                                                title="Wipe"
+                                                            >
+                                                                <Icon name="trash" size={14} />
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
                                         {Object.keys(keys).length === 0 && !isLoading && (
                                             <tr>
                                                 <td colSpan={3} className="py-20 text-center italic text-zinc-800 text-[10px] font-black uppercase tracking-widest">

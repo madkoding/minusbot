@@ -1,6 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 
 import { CONFIG_DIR } from "./storage";
 import { Logger } from "../cli/colors";

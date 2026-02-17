@@ -219,6 +219,14 @@ export class Storage {
                     } catch (e) { }
                 }
             }
+
+            // Sort by last_activity descending (newest first)
+            metas.sort((a, b) => {
+                const dateA = new Date(a.last_activity || 0).getTime();
+                const dateB = new Date(b.last_activity || 0).getTime();
+                return dateB - dateA;
+            });
+
             return metas;
         } catch (e) {
             return [];

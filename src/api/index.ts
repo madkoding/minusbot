@@ -1,6 +1,6 @@
 import express from "express";
 import cors from "cors";
-import { WebSocketServer, WebSocket } from "ws";
+import { Server as SocketIOServer } from "socket.io";
 import http from "node:http";
 import path from "node:path";
 import jwt from "jsonwebtoken";
@@ -9,12 +9,13 @@ import { getSystemSettings, getJWTSecret, getUserSettings } from "../data/storag
 import { Logger } from "../cli/colors";
 import { UserManager } from "../data/users";
 import { Storage } from "../data/storage";
-import { Agent } from "../agent";
 import { PubSub } from "../pubsub";
+import { ChannelManager, WebChannel } from "../channels";
 
 // Routes
 import authRoutes from "./routes/auth";
 import chatRoutes from "./routes/chat";
+import commandsRoutes from "./routes/commands";
 
 import userAdminRoutes from "./routes/admin/users.admin.routes";
 import statsAdminRoutes from "./routes/admin/stats.admin.routes";
@@ -41,9 +42,16 @@ export async function startServer() {
     const sys = await getSystemSettings();
     const app = express();
     const server = http.createServer(app);
-    const wss = new WebSocketServer({ server });
 
     const isDev = process.env.NODE_ENV === "dev";
+
+    // Socket.IO setup
+    const io = new SocketIOServer(server, {
+        cors: {
+            origin: isDev ? "http://localhost:5173" : true,
+            credentials: true
+        }
+    });
 
     app.use(cors({
         origin: isDev ? "http://localhost:5173" : true,
@@ -56,6 +64,7 @@ export async function startServer() {
 
     api.use("/auth", authRoutes);
     api.use("/", chatRoutes);
+    api.use("/", commandsRoutes);
 
     // User Routes
     const user = express.Router();
@@ -84,115 +93,45 @@ export async function startServer() {
 
     app.use("/api", api);
 
-    // --- WebSockets for Chat ---
-    wss.on("connection", (ws: WebSocket) => {
-        let currentAgent: Agent | null = null;
+    // --- Socket.IO for Chat ---
+    io.on("connection", async (socket) => {
         let authenticated = false;
         let userId = "";
-        let currentChatId: string | null = null;
-        let subscriptionHandler: ((data: any) => void) | null = null;
 
-        const close = () => {
-            if (currentChatId && subscriptionHandler) {
-                PubSub.unsubscribe(`chat:${currentChatId}`, subscriptionHandler);
-            }
-            ws.close();
-        };
-
-        ws.on("close", close);
-
-        let authPromise: Promise<void> | null = null;
-
-        ws.on("message", async (data) => {
+        socket.on("auth", async (data) => {
             try {
-                const msg = JSON.parse(data.toString());
+                const secret = await getJWTSecret();
+                const decoded = jwt.verify(data.token, secret) as any;
+                const session = UserManager.getSession(decoded.sessionId);
 
-                if (msg.type === "auth") {
-                    authPromise = (async () => {
-                        try {
-                            const secret = await getJWTSecret();
-                            const decoded = jwt.verify(msg.token, secret) as any;
-                            const session = UserManager.getSession(decoded.sessionId);
-                            if (session && session.userId === decoded.userId) {
-                                authenticated = true;
-                                userId = decoded.userId;
-                                ws.send(JSON.stringify({ type: "auth_success" }));
-                            } else {
-                                ws.send(JSON.stringify({ type: "error", message: "Session expired" }));
-                                close();
-                            }
-                        } catch {
-                            ws.send(JSON.stringify({ type: "error", message: "Authentication failed" }));
-                            close();
+                if (session && session.userId === decoded.userId) {
+                    authenticated = true;
+                    userId = decoded.userId;
+                    socket.emit("auth_success");
+
+                    // Hand over to WebChannel (System channel, always active)
+                    let webChannel = ChannelManager.getInstance(userId, "web") as WebChannel;
+                    if (!webChannel) {
+                        // Fallback in case it's not in userInstances for some reason
+                        const user = UserManager.getUserById(userId);
+                        if (user) {
+                            webChannel = new WebChannel(user, { enabled: true, settings: {}, secrets: {} });
+                            await webChannel.start();
                         }
-                    })();
-                    return;
-                }
-
-                // Wait for authentication to finish if it's in progress
-                if (authPromise) {
-                    await authPromise;
-                }
-
-                if (!authenticated) {
-                    return ws.send(JSON.stringify({ type: "error", message: "Not authenticated" }));
-                }
-
-                if (msg.type === "init_chat") {
-                    // Unsubscribe previous
-                    if (currentChatId && subscriptionHandler) {
-                        PubSub.unsubscribe(`chat:${currentChatId}`, subscriptionHandler);
                     }
 
-                    let chat = msg.chatId ? await Storage.getChat(userId, msg.chatId) : null;
-                    if (!chat) {
-                        const chatId = `web_${Math.random().toString(36).substring(7)}`;
-                        chat = {
-                            meta: { id: chatId, type: "temporal", last_activity: new Date().toISOString(), message_count: 0, owner: userId },
-                            messages: []
-                        };
-                        await Storage.saveChat(chat);
+                    if (webChannel) {
+                        webChannel.handleSocket(socket as any);
+                    } else {
+                        socket.emit("error", { message: "System failure: Web channel not found." });
                     }
-
-                    // Subscribe new
-                    currentChatId = chat.meta.id;
-                    subscriptionHandler = async (event: any) => {
-                        if (ws.readyState === WebSocket.OPEN) {
-                            const settings = await getUserSettings(userId);
-                            if (!settings.debug) {
-                                if (event.type === "message") {
-                                    if (event.message.role === "tool") return;
-                                    // Optional: Hide tool calls from assistant messages?
-                                    // For now, let's just hide the explicit tool outputs and maybe the tool calls if the UI renders them separately.
-                                    // But typically the assistant message with tool_calls is followed by tool outputs.
-                                }
-                            }
-                            ws.send(JSON.stringify(event));
-                        }
-                    };
-                    PubSub.subscribe(`chat:${currentChatId}`, subscriptionHandler);
-
-                    currentAgent = new Agent(chat);
-
-                    const settings = await getUserSettings(userId);
-                    let history = chat.messages;
-                    if (!settings.debug) {
-                        history = chat.messages.filter(m => m.role !== "tool");
-                    }
-
-                    ws.send(JSON.stringify({ type: "chat_ready", chatId: chat.meta.id, messages: history }));
+                } else {
+                    socket.emit("error", { message: "Session expired" });
+                    socket.disconnect();
                 }
-
-                if (msg.type === "message" && currentAgent) {
-                    try {
-                        // Response handled via PubSub events emitted by Agent
-                        await currentAgent.run(msg.content);
-                    } catch (e: any) {
-                        ws.send(JSON.stringify({ type: "error", message: e.message }));
-                    }
-                }
-            } catch (e: any) {
-                ws.send(JSON.stringify({ type: "error", message: "Invalid message format" }));
+            } catch (e) {
+                socket.emit("error", { message: "Authentication failed" });
+                socket.disconnect();
             }
         });
     });

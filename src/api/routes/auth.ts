@@ -1,6 +1,6 @@
 import express from "express";
 import jwt from "jsonwebtoken";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 
 import { UserManager } from "@/data/users";
 import { getJWTSecret } from "@/data/storage";

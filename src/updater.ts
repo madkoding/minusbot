@@ -1,4 +1,5 @@
 import fs from "node:fs/promises";
+import path from "node:path";
 import semver from "semver";
 import { exec } from "node:child_process";
 import { promisify } from "node:util";
@@ -51,19 +52,28 @@ export class Updater {
 
     static async getCurrentVersion(): Promise<string> {
         try {
-            const pkg = JSON.parse(await fs.readFile("package.json", "utf-8"));
-            return pkg.version;
-        } catch {
+            const pkgPath = path.join(process.cwd(), "package.json");
+            const pkg = JSON.parse(await fs.readFile(pkgPath, "utf-8"));
+            return pkg.version || "1.0.0";
+        } catch (e: any) {
+            await Logger.error(`[Updater] Failed to read version: ${e.message}`);
             return "0.0.0";
         }
     }
 
     static async getCurrentBranch(): Promise<string> {
         try {
-            const { stdout } = await execAsync("git branch --show-current");
-            return stdout.trim();
-        } catch {
-            return "unknown";
+            const { stdout } = await execAsync("git rev-parse --abbrev-ref HEAD");
+            const branch = stdout.trim();
+            return branch === "HEAD" ? "detached" : branch;
+        } catch (e: any) {
+            // Check if it's not a git repo
+            try {
+                const settings = await getSystemSettings();
+                return settings.updater_channel || "stable";
+            } catch {
+                return "unknown";
+            }
         }
     }
 

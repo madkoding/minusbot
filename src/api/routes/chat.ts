@@ -10,6 +10,14 @@ router.get("/user/chat", authenticate, async (req: any, res) => {
     res.json(chats);
 });
 
+router.get("/user/chat/:id", authenticate, async (req: any, res) => {
+    const chat = await Storage.getChat(req.user.id, req.params.id);
+    if (!chat) {
+        return res.status(404).send("Chat not found");
+    }
+    res.json(chat);
+});
+
 router.delete("/admin/chat/:userId/:id", authenticate, adminOnly, async (req, res) => {
     await Storage.deleteChat(req.params.userId, req.params.id);
     res.send("Chat deleted");

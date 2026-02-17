@@ -114,10 +114,11 @@ export class CommandManager {
 
             // If command has subcommands, add them as options
             if (cmd.subs && cmd.subs.length > 0) {
-                discordCmd.options = cmd.subs.map(sub => this.buildDiscordSubcommand(sub));
+                discordCmd.options = cmd.subs.map(sub => this.buildDiscordSubcommand(sub, cmd.args));
             } else if (cmd.args && cmd.args.length > 0) {
-                // If no subs but has args, add args as options
-                discordCmd.options = cmd.args.map(arg => this.buildDiscordOption(arg));
+                // Sort arguments: required first
+                const sortedArgs = [...cmd.args].sort((a, b) => (b.required ? 1 : 0) - (a.required ? 1 : 0));
+                discordCmd.options = sortedArgs.map(arg => this.buildDiscordOption(arg));
             }
 
             result.push(discordCmd);
@@ -126,24 +127,28 @@ export class CommandManager {
         return result;
     }
 
-    private buildDiscordSubcommand(cmd: CommandInfo): any {
+    private buildDiscordSubcommand(cmd: CommandInfo, parentArgs: CommandArg[] = []): any {
         const sub: any = {
             type: 1, // SUB_COMMAND
             name: cmd.name,
-            description: cmd.description.substring(0, 100),
+            description: (cmd.description || "No description").substring(0, 100),
         };
 
+        // Combine parent arguments (inherited) with local arguments
+        const allArgs = [...parentArgs, ...(cmd.args || [])];
+
         // Add arguments if present
-        if (cmd.args && cmd.args.length > 0) {
-            sub.options = cmd.args.map(arg => this.buildDiscordOption(arg));
+        if (allArgs.length > 0) {
+            // Sort arguments: required first
+            const sortedArgs = allArgs.sort((a, b) => (b.required ? 1 : 0) - (a.required ? 1 : 0));
+            sub.options = sortedArgs.map(arg => this.buildDiscordOption(arg));
         }
 
-        // Discord doesn't support nested subcommands beyond 1 level
-        // If there are subs, we'd need to flatten them differently
+        // Discord doesn't support nested subcommands beyond 1 level easily
+        // If there are subs, we use SUB_COMMAND_GROUP
         if (cmd.subs && cmd.subs.length > 0) {
-            // For now, we'll add them as a SUB_COMMAND_GROUP
             sub.type = 2; // SUB_COMMAND_GROUP
-            sub.options = cmd.subs.map(s => this.buildDiscordSubcommand(s));
+            sub.options = cmd.subs.map(s => this.buildDiscordSubcommand(s, allArgs));
         }
 
         return sub;

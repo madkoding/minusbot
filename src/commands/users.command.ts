@@ -1,6 +1,6 @@
 import { commandManager } from "./command-manager";
 import { UserManager, type Role } from "../data/users";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 
 commandManager.register({
     name: "users",

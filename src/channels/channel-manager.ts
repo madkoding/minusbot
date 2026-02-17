@@ -4,6 +4,7 @@ import type { User } from "../data/users";
 import { Channel, type ChannelConfig } from "./channel-base";
 import { TelegramChannel } from "./telegram/telegram.channel";
 import { DiscordChannel } from "./discord/discord.channel";
+import { WebChannel } from "./web/web.channel";
 import { getUserChannelsDir, getUserChannelConfigFile } from "../data/storage";
 import { Logger } from "../cli/colors";
 
@@ -12,7 +13,8 @@ export class ChannelManager {
 
     static readonly AVAILABLE_CHANNELS: any = [
         TelegramChannel,
-        DiscordChannel
+        DiscordChannel,
+        WebChannel
     ];
 
     static async init() {
@@ -37,8 +39,16 @@ export class ChannelManager {
 
         for (const ChannelClass of this.AVAILABLE_CHANNELS) {
             const channelId = (ChannelClass as any).ID || "unknown";
-            const configPath = getUserChannelConfigFile(user.id, channelId);
 
+            // Web channel is always active and doesn't need external config files
+            if (channelId === "web") {
+                const instance = new ChannelClass(user, { enabled: true, settings: {}, secrets: {} });
+                await instance.start();
+                userChannels.set(channelId, instance);
+                continue;
+            }
+
+            const configPath = getUserChannelConfigFile(user.id, channelId);
             let config: ChannelConfig = {
                 enabled: false,
                 settings: {},
@@ -153,18 +163,17 @@ export class ChannelManager {
         await fs.writeFile(configPath, JSON.stringify(config, null, 2), "utf-8");
     }
 
-    // Get all available channel schemas
+    // Get all available channel schemas (excluding system channels like 'web')
     static getAvailableChannels() {
-        return (this.AVAILABLE_CHANNELS as any[]).map(ChannelClass => {
-            // Need a dummy user and config to get schema instance property, 
-            // or better yet, make schema static?
-            // Since it's an instance property currently in base class, we create dummy instance.
-            const instance = new ChannelClass({ id: "temp", username: "temp", role: "user", passwordHash: "" } as User, {
-                enabled: false,
-                settings: {},
-                secrets: {}
+        return (this.AVAILABLE_CHANNELS as any[])
+            .filter(ChannelClass => (ChannelClass as any).ID !== "web")
+            .map(ChannelClass => {
+                const instance = new ChannelClass({ id: "temp", username: "temp", role: "user", passwordHash: "" } as User, {
+                    enabled: false,
+                    settings: {},
+                    secrets: {}
+                });
+                return instance.schema;
             });
-            return instance.schema;
-        });
     }
 }

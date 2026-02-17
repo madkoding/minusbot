@@ -34,28 +34,21 @@ commandManager.register({
             description: "Create a directory",
             args: [
                 {
-                    name: "workspace",
-                    description: "Workspace ID (default: chat)",
-                    type: "string",
-                    required: false
-                },
-                {
                     name: "path",
                     description: "Path to create",
                     type: "string",
                     required: true
+                },
+                {
+                    name: "workspace",
+                    description: "Workspace ID (default: chat)",
+                    type: "string",
+                    required: false
                 }
             ],
             handler: async (args, { user, chat }) => {
-                let workspaceId = "chat";
-                let pathArg = args[0];
-
-                // If 2 args, first is workspace
-                if (args.length >= 2) {
-                    workspaceId = args[0];
-                    pathArg = args[1];
-                }
-
+                const pathArg = args[0];
+                const workspaceId = args[1] || "chat";
                 if (!pathArg) return "Error: Missing path argument.";
                 return await FileSystem.mkdir(user.id, workspaceId, pathArg, chat.meta.id);
             }
@@ -65,27 +58,21 @@ commandManager.register({
             description: "Remove a file or directory",
             args: [
                 {
-                    name: "workspace",
-                    description: "Workspace ID (default: chat)",
-                    type: "string",
-                    required: false
-                },
-                {
                     name: "path",
                     description: "Path to remove",
                     type: "string",
                     required: true
+                },
+                {
+                    name: "workspace",
+                    description: "Workspace ID (default: chat)",
+                    type: "string",
+                    required: false
                 }
             ],
             handler: async (args, { user, chat }) => {
-                let workspaceId = "chat";
-                let pathArg = args[0];
-
-                if (args.length >= 2) {
-                    workspaceId = args[0];
-                    pathArg = args[1];
-                }
-
+                const pathArg = args[0];
+                const workspaceId = args[1] || "chat";
                 if (!pathArg) return "Error: Missing path argument.";
                 return await FileSystem.rm(user.id, workspaceId, pathArg, chat.meta.id);
             }
@@ -95,27 +82,21 @@ commandManager.register({
             description: "Read a file's contents",
             args: [
                 {
-                    name: "workspace",
-                    description: "Workspace ID (default: chat)",
-                    type: "string",
-                    required: false
-                },
-                {
                     name: "path",
                     description: "Path to read",
                     type: "string",
                     required: true
+                },
+                {
+                    name: "workspace",
+                    description: "Workspace ID (default: chat)",
+                    type: "string",
+                    required: false
                 }
             ],
             handler: async (args, { user, chat }) => {
-                let workspaceId = "chat";
-                let pathArg = args[0];
-
-                if (args.length >= 2) {
-                    workspaceId = args[0];
-                    pathArg = args[1];
-                }
-
+                const pathArg = args[0];
+                const workspaceId = args[1] || "chat";
                 if (!pathArg) return "Error: Missing path argument.";
                 return await FileSystem.read(user.id, workspaceId, pathArg, chat.meta.id);
             }
@@ -124,12 +105,6 @@ commandManager.register({
             name: "write",
             description: "Write content to a file",
             args: [
-                {
-                    name: "workspace",
-                    description: "Workspace ID (default: chat)",
-                    type: "string",
-                    required: false
-                },
                 {
                     name: "path",
                     description: "Path to write",
@@ -141,26 +116,20 @@ commandManager.register({
                     description: "Content to write",
                     type: "string",
                     required: true
+                },
+                {
+                    name: "workspace",
+                    description: "Workspace ID (default: chat)",
+                    type: "string",
+                    required: false
                 }
             ],
             handler: async (args, { user, chat }) => {
-                let workspaceId = "chat";
-                let pathArg: string;
-                let contentStartIdx: number;
+                const pathArg = args[0];
+                const content = args[1];
+                const workspaceId = args[2] || "chat";
 
-                // Detect if workspace was provided
-                if (args.length >= 3 && !args[0].includes("/") && !args[0].includes(".")) {
-                    workspaceId = args[0];
-                    pathArg = args[1];
-                    contentStartIdx = 2;
-                } else {
-                    pathArg = args[0];
-                    contentStartIdx = 1;
-                }
-
-                const content = args.slice(contentStartIdx).join(" ");
                 if (!pathArg || !content) return "Error: Missing path or content argument.";
-
                 return await FileSystem.write(user.id, workspaceId, pathArg, content, chat.meta.id);
             }
         },
@@ -169,27 +138,21 @@ commandManager.register({
             description: "Get file/directory information",
             args: [
                 {
-                    name: "workspace",
-                    description: "Workspace ID (default: chat)",
-                    type: "string",
-                    required: false
-                },
-                {
                     name: "path",
                     description: "Path to stat",
                     type: "string",
                     required: true
+                },
+                {
+                    name: "workspace",
+                    description: "Workspace ID (default: chat)",
+                    type: "string",
+                    required: false
                 }
             ],
             handler: async (args, { user, chat }) => {
-                let workspaceId = "chat";
-                let pathArg = args[0];
-
-                if (args.length >= 2) {
-                    workspaceId = args[0];
-                    pathArg = args[1];
-                }
-
+                const pathArg = args[0];
+                const workspaceId = args[1] || "chat";
                 if (!pathArg) return "Error: Missing path argument.";
                 return await FileSystem.stat(user.id, workspaceId, pathArg, chat.meta.id);
             }
@@ -199,28 +162,23 @@ commandManager.register({
             description: "Send a file to the active channel",
             args: [
                 {
-                    name: "workspace",
-                    description: "Workspace ID (default: chat)",
-                    type: "string",
-                    required: false
-                },
-                {
                     name: "path",
                     description: "Path to send",
                     type: "string",
                     required: true
+                },
+                {
+                    name: "workspace",
+                    description: "Workspace ID (default: chat)",
+                    type: "string",
+                    required: false
                 }
             ],
             handler: async (args, { user, chat }) => {
-                let workspaceId = "chat";
-                let pathArg = args[0];
-
-                if (args.length >= 2) {
-                    workspaceId = args[0];
-                    pathArg = args[1];
-                }
-
+                const pathArg = args[0];
+                const workspaceId = args[1] || "chat";
                 if (!pathArg) return "Error: Missing path argument.";
+                // ... rest of handler
 
                 const lastChannelId = chat.meta.last_channel;
                 if (!lastChannelId) {

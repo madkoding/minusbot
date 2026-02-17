@@ -1,5 +1,5 @@
 import express from "express";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 
 import { UserManager } from "@/data/users";
 import { validate } from "@/api/middleware/validate.middleware";
