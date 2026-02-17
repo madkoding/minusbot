@@ -78,15 +78,6 @@ bun run dev
 
 ---
 
-## 📚 Commands Overview
-Minusbot uses a rich CLI-style command system available in all channels:
-- `/fs`: File operations (`ls`, `read`, `write`, `mkdir`, `rm`).
-- `/channels`: Configure bridges to Discord/Telegram.
-- `/integrations`: Manage third-party service connections.
-- `/stats`: View performance and usage heuristics.
-- `/update`: Switch between Update Channels (Stable/Nightly/Dev).
-- `/vault`: Securely store per-user credentials.
-
 ## 🛠️ Tech Stack
 - **Runtime**: [Bun](https://bun.sh) (Ultra-fast JS runtime)
 - **Language**: TypeScript
