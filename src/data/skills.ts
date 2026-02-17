@@ -267,7 +267,8 @@ export class SkillManager {
             {
                 extraVolumes: action.extraVolumes,
                 enableNetwork: action.enableNetwork || skill.definition.enableNetwork,
-                entrypoint
+                entrypoint,
+                runtimeMountPoint: "/skill"
             }
         );
     }

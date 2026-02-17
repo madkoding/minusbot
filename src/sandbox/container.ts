@@ -51,6 +51,8 @@ export class SandboxManager {
             extraVolumes?: string[];
             enableNetwork?: boolean;
             entrypoint?: string[];
+            sourceReadOnly?: boolean;
+            runtimeMountPoint?: string;
         } = {}
     ): Promise<string> {
         const stream = new MemoryStream();
@@ -63,9 +65,10 @@ export class SandboxManager {
 
             // Convert env map to array ["KEY=VAL", ...]
             const envArray = Object.entries(env).map(([k, v]) => `${k}=${v}`);
+            const mountPoint = options.runtimeMountPoint || "/runtime";
 
             const binds = [
-                `${absSource}:/skill:ro`,
+                `${absSource}:${mountPoint}:${options.sourceReadOnly ?? true ? 'ro' : 'rw'}`,
                 `${absWorkspace}:/workspace:rw`
             ];
 

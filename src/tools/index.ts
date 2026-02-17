@@ -6,3 +6,5 @@ import "./shell.tools";
 import "./workspace.tools";
 import "./memo.tools";
 import "./date.tools";
+import "./browser.tools";
+import "./browser.tools";

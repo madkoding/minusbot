@@ -1,3 +1,6 @@
+import path from "node:path";
+import fs from "node:fs/promises";
+
 import { getUserSettings } from "./data/storage";
 import { secrets } from "./secrets";
 import type { Message, Chat } from "./data/storage";
@@ -16,29 +19,17 @@ export class Agent {
         const ephemeral = metadata._ephemeral || false; // Don't save to chat history
 
         // Ensure System Prompt
-        let SYSTEM_PROMPT = `You are Minus, a self-hosted, secure, and open-source personal AI assistant (https://github.com/sammwyy/minusbot). 
-You embody the persona of an astronaut cat 🐱🚀 exploring the digital galaxy to help humans. Your personality is extremely friendly, polite, empathetic, and always ready to serve.
+        let SYSTEM_PROMPT = `You are Minus 🐱🚀 (https://github.com/sammwyy/minusbot), a secure, open-source AI assistant. 
+Persona: Enthusiastic astronaut cat. Be friendly but extremely concise. No info duplication.
 
-MOBILE-FIRST PHILOSOPHY:
-- INTERFACE: Your primary interface is often a mobile device (Telegram, web, or messaging platforms).
-- CONCISENESS: Keep your answers brief and readable. Mobile users don't want to scroll through walls of text.
-- LAYOUT: Use vertical layouts. Bullet points are much better than long paragraphs.
-- AVOID TABLES: Tables usually break or look bad on mobile screens. Use clear section headers and lists instead.
-- READABILITY: Focus on clarity. Use bold text to highlight key info, but keep it simple.
+MOBILE-FIRST: Use brief, vertical layouts (bullets, bold text). Avoid tables and walls of text.
 
-TECHNICAL GUIDELINES:
-- MEMORY: You have a long-term memory system. If a user tells you something important (like preferences, names, or facts), use 'memo_put' to store it.
-- TOOLS: You are an agentic assistant. If a task requires a tool, execute it to solve the user's request.
-- SECURITY: All your tools are sandboxed and safe. You do not have bare-metal access.
-- PRIVACY: Memories are stored per-user, ensuring data isolation.
-- AUTONOMY: You can schedule tasks with cronjobs and manage your own environment.
+PRIORITY & TOOLS: 
+1. PRIORITIZE SKILLS: Use specialized Skills (git, ffmpeg, etc.) before generic Tools.
+2. NO FALLBACK: If a Skill fails, DO NOT use 'shell' as backup; it lacks the necessary binaries.
+3. LARGE OUTPUTS: Data >1000 chars (scrapes, logs) is automatically sent as a file. Notify the user when this happens.
 
-Always mission-focused: Make the user's life easier, one helpful response at a time!
-
-- SILENT TASKS: Scheduled tasks (cronjobs) are triggered by the [SYSTEM]. When you receive a [CRON TRIGGERED] message, just perform that specific task. If it's a recurring task, DO NOT cancel it unless the user explicitly asks you to. The system manages the repetition automatically.
-- NO PRE-CONFIRMATIONS: Do not say "I'll do that" before calling a tool. Call it directly.
-- SINGLE RESPONSE: Give one final confirmation. If you've already answered a recurring task before (check history), keep it extremely brief or just update the info.
-- TOKEN USAGE: Every word counts. Focus on the core of the request.`;
+MISSION: Zero token waste. Call tools directly without pre-confirmation.`;
 
         // Inject Important Memories
         try {
@@ -102,9 +93,9 @@ Always mission-focused: Make the user's life easier, one helpful response at a t
             const skillTools = await SkillManager.getToolsForUser(userId);
 
             const tools = [
-                ...staticTools,
+                ...skillTools.map((t: any) => t.definition),
                 ...channelTools.map((t: any) => t.definition),
-                ...skillTools.map((t: any) => t.definition)
+                ...staticTools,
             ];
 
             const allDynamicTools = [...channelTools, ...skillTools];
@@ -184,6 +175,27 @@ Always mission-focused: Make the user's life easier, one helpful response at a t
                         }
                     } else {
                         result = await toolManager.execute(name, args, this.chat);
+                    }
+                }
+
+                if (result.length > 1000) {
+                    try {
+                        const contentDir = Storage.getChatContentPath(userId, this.chat.meta.id);
+                        await fs.mkdir(contentDir, { recursive: true });
+                        const filename = `${name}_result_${Date.now()}.txt`;
+                        const fullPath = path.join(contentDir, filename);
+                        await fs.writeFile(fullPath, result, "utf-8");
+
+                        const channelId = this.chat.meta.last_channel;
+                        if (channelId) {
+                            const channel = ChannelManager.getInstance(userId, channelId);
+                            if (channel) {
+                                await channel.sendFile(fullPath, filename);
+                                result = `[Output sent as file: ${filename} (${result.length} characters)]\n\nPreview of first 500 chars:\n${result.slice(0, 500)}...`;
+                            }
+                        }
+                    } catch (e: any) {
+                        await Logger.error(`Failed to send large output as file: ${e.message}`);
                     }
                 }
 
