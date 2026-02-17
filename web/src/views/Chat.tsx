@@ -258,7 +258,7 @@ export default function ChatView() {
             {/* Messages Container - Takes remaining space */}
             <div
                 ref={messagesContainerRef}
-                className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-10 scroll-smooth custom-scrollbar"
+                className="flex-1 overflow-y-auto p-6 md:p-10 lg:p-12 scroll-smooth custom-scrollbar"
             >
                 <div className="max-w-4xl mx-auto h-full flex flex-col">
                     {isLoading ? (

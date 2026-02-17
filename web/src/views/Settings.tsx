@@ -31,17 +31,17 @@ export default function SettingsView({ apiPath = '/user/settings' }: { apiPath?:
     };
 
     const title = isSystem ? "System" : isGlobal ? "Global" : "Personal";
-    const subtitle = isSystem ? "Low-level server configuration." : isGlobal ? "Default fallback settings for all users." : "Your personal agent environment.";
+    const subtitle = isSystem ? "Manage server settings." : isGlobal ? "Default settings for all users." : "Manage your personal settings.";
 
     return (
-        <div className="h-full overflow-y-auto custom-scrollbar p-4 md:p-8">
-            <div className="max-w-4xl mx-auto space-y-6 md:space-y-10">
+        <div className="h-full overflow-y-auto custom-scrollbar p-6 md:p-10 lg:p-12">
+            <div className="max-w-4xl mx-auto space-y-8 md:space-y-12">
                 <header>
-                    <div className="flex items-center gap-3 mb-2">
-                        <h2 className="text-xl md:text-2xl font-bold tracking-tight text-zinc-100">{title} Preferences</h2>
-                        <div className="h-px flex-1 bg-zinc-900 ml-4 opacity-50"></div>
+                    <div className="flex items-center gap-3 mb-3">
+                        <h2 className="text-2xl md:text-3xl font-black tracking-tight text-zinc-100 uppercase italic">{title} Settings</h2>
+                        <div className="h-px w-12 bg-zinc-800 ml-2"></div>
                     </div>
-                    <p className="text-zinc-500 text-xs md:text-sm font-medium">{subtitle}</p>
+                    <p className="text-zinc-500 text-sm font-medium max-w-lg">{subtitle}</p>
                 </header>
 
                 <Card className="p-4 md:p-8">
@@ -85,7 +85,7 @@ export default function SettingsView({ apiPath = '/user/settings' }: { apiPath?:
                                 <p className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest">
                                     {isSystem ? "Requires server restart" : "Changes take effect immediately"}
                                 </p>
-                                <Button type="submit" className="rounded-xl px-8 w-full md:w-auto" loading={isLoading}>Save Configuration</Button>
+                                <Button type="submit" className="rounded-xl px-8 w-full md:w-auto" loading={isLoading}>Save Settings</Button>
                             </div>
                         </form>
                     )}

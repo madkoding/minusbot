@@ -47,26 +47,26 @@ export default function VaultView({ apiPath = '/user/vault' }: { apiPath?: strin
     );
 
     return (
-        <div className="h-full overflow-y-auto custom-scrollbar p-4 md:p-8">
+        <div className="h-full overflow-y-auto custom-scrollbar p-6 md:p-10 lg:p-12">
             <div className="space-y-6 md:space-y-8 max-w-6xl mx-auto flex flex-col min-h-full">
                 <header>
-                    <div className="flex items-center gap-3 mb-2">
-                        <h2 className="text-xl md:text-2xl font-bold tracking-tight text-zinc-100">{isGlobal ? 'Global' : 'Storage'} Vault</h2>
-                        <div className="h-px flex-1 bg-zinc-900 ml-4 opacity-50"></div>
+                    <div className="flex items-center gap-3 mb-3">
+                        <h2 className="text-2xl md:text-3xl font-black tracking-tight text-zinc-100 uppercase italic">{isGlobal ? 'Global' : 'Storage'} Vault</h2>
+                        <div className="h-px w-12 bg-zinc-800 ml-2"></div>
                     </div>
-                    <p className="text-zinc-500 text-xs md:text-sm font-medium">Protect your API keys, secrets and sensitive configuration.</p>
+                    <p className="text-zinc-500 text-sm font-medium max-w-lg">Securely store your API keys, secrets and sensitive configuration.</p>
                 </header>
 
-                <div className="flex-1 min-h-[500px] bg-[#080808] border border-zinc-900 rounded-3xl overflow-hidden flex flex-col md:flex-row shadow-2xl mb-8">
+                <div className="flex-1 min-h-[500px] bg-[#080808] border border-zinc-900 rounded-[2rem] overflow-hidden flex flex-col md:flex-row shadow-2xl mb-8">
                     {/* Sidebar / Unit Selector */}
-                    <aside className="w-full md:w-56 border-b md:border-b-0 md:border-r border-zinc-900 flex flex-col bg-zinc-900/10 shrink-0">
-                        <div className="p-5 border-b border-zinc-900/50">
-                            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-600">Storage Vaults</h3>
+                    <aside className="w-full md:w-64 border-b md:border-b-0 md:border-r border-zinc-900 flex flex-col bg-zinc-900/10 shrink-0">
+                        <div className="p-6 border-b border-zinc-900/50">
+                            <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500">Storage Units</h3>
                         </div>
-                        <div className="flex flex-row md:flex-col overflow-x-auto md:overflow-y-auto p-2 space-x-1 md:space-x-0 md:space-y-1 custom-scrollbar shrink-0">
+                        <div className="flex flex-row md:flex-col overflow-x-auto md:overflow-y-auto p-3 md:p-2 space-x-2 md:space-x-0 md:space-y-1 custom-scrollbar shrink-0">
                             {isLoading && vaults.length === 0 ? (
                                 [1, 2, 3].map(i => (
-                                    <div key={i} className="px-4 py-2.5">
+                                    <div key={i} className="px-4 py-3">
                                         <Skeleton className="h-4 w-full" />
                                     </div>
                                 ))
@@ -75,13 +75,13 @@ export default function VaultView({ apiPath = '/user/vault' }: { apiPath?: strin
                                     <button
                                         key={v}
                                         onClick={() => fetchKeys(v)}
-                                        className={`flex items-center gap-3 px-4 py-2.5 rounded-2xl transition-all duration-150 whitespace-nowrap ${selectedVault === v
-                                            ? 'bg-zinc-100 text-zinc-950 font-bold shadow-lg'
-                                            : 'text-zinc-500 hover:text-zinc-200 hover:bg-zinc-900/40 font-medium'
+                                        className={`flex items-center gap-3 px-4 md:px-5 py-3 md:py-3 rounded-2xl transition-all duration-200 whitespace-nowrap group ${selectedVault === v
+                                            ? 'bg-zinc-100 text-zinc-950 font-black shadow-xl scale-[1.02] z-10'
+                                            : 'text-zinc-500 hover:text-zinc-200 hover:bg-zinc-900/50 font-bold'
                                             }`}
                                     >
-                                        <Icon name="vault" size={14} />
-                                        <span className="text-xs truncate">{v}</span>
+                                        <Icon name="vault" size={14} className={selectedVault === v ? 'text-zinc-950' : 'text-zinc-700 group-hover:text-zinc-400'} />
+                                        <span className="text-xs tracking-tight">{v}</span>
                                     </button>
                                 ))
                             )}
@@ -89,73 +89,78 @@ export default function VaultView({ apiPath = '/user/vault' }: { apiPath?: strin
                     </aside>
 
                     {/* Content Table */}
-                    <main className="flex-1 flex flex-col min-w-0 bg-black/20">
+                    <main className="flex-1 flex flex-col min-w-0 bg-black/40">
                         {selectedVault ? (
                             <>
-                                <div className="p-5 border-b border-zinc-900 flex justify-between items-center bg-zinc-900/5">
+                                <div className="p-6 md:p-8 border-b border-zinc-900/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-zinc-900/5">
                                     <div>
-                                        <h3 className="text-sm font-bold text-zinc-200">{selectedVault}.vault</h3>
-                                        <p className="text-[10px] text-zinc-600 uppercase font-black tracking-widest">Decrypted key index</p>
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <h3 className="text-base md:text-lg font-black text-zinc-100 tracking-tight">{selectedVault}.vault</h3>
+                                            <span className="px-1.5 py-0.5 rounded-md bg-zinc-900 text-[8px] font-black uppercase tracking-widest text-zinc-600 border border-zinc-800">Decrypted</span>
+                                        </div>
+                                        <p className="text-[10px] text-zinc-600 uppercase font-black tracking-[0.2em]">Key index</p>
                                     </div>
                                     <button
                                         onClick={handleRegisterItem}
-                                        className="px-4 py-2 bg-zinc-100 hover:bg-white text-zinc-950 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all shadow-md active:scale-95 flex items-center gap-2"
+                                        className="w-full sm:w-auto px-5 py-3 bg-zinc-100 hover:bg-white text-zinc-950 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all shadow-[0_10px_20px_rgba(255,255,255,0.05)] active:scale-95 flex items-center justify-center gap-2 group"
                                     >
-                                        <Icon name="plus" size={12} />
+                                        <Icon name="plus" size={12} className="group-hover:rotate-90 transition-transform" />
                                         Register Item
                                     </button>
                                 </div>
 
                                 <div className="flex-1 overflow-x-auto custom-scrollbar">
-                                    <table className="w-full text-left border-collapse min-w-[500px]">
+                                    <table className="w-full text-left border-collapse min-w-[600px]">
                                         <thead>
-                                            <tr className="border-b border-zinc-900/50 text-zinc-500">
-                                                <th className="px-8 py-4 text-[10px] font-black uppercase tracking-widest w-1/2">Environment Variable</th>
-                                                <th className="px-8 py-4 text-[10px] font-black uppercase tracking-widest">Integrity Status</th>
-                                                <th className="px-8 py-4 text-[10px] font-black uppercase tracking-widest text-right">Actions</th>
+                                            <tr className="border-b border-zinc-900 text-zinc-600">
+                                                <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] w-[45%]">Resource Key</th>
+                                                <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em]">Status</th>
+                                                <th className="px-8 py-5 text-[10px] font-black uppercase tracking-[0.2em] text-right">Actions</th>
                                             </tr>
                                         </thead>
-                                        <tbody className="divide-y divide-zinc-900/30">
+                                        <tbody className="divide-y divide-zinc-900/50">
                                             {isLoading && Object.keys(keys).length === 0 ? (
                                                 [1, 2, 3, 4, 5].map(i => (
                                                     <tr key={i}>
-                                                        <td className="px-8 py-5"><Skeleton className="h-4 w-3/4" /></td>
-                                                        <td className="px-8 py-5"><Skeleton className="h-4 w-24" /></td>
-                                                        <td className="px-8 py-5 text-right flex justify-end gap-2"><Skeleton className="h-8 w-8" /><Skeleton className="h-8 w-8" /></td>
+                                                        <td className="px-8 py-6"><Skeleton className="h-4 w-3/4" /></td>
+                                                        <td className="px-8 py-6"><Skeleton className="h-4 w-24" /></td>
+                                                        <td className="px-8 py-6 text-right flex justify-end gap-2"><Skeleton className="h-8 w-8" /><Skeleton className="h-8 w-8" /></td>
                                                     </tr>
                                                 ))
                                             ) : (
                                                 Object.entries(keys).map(([k, hasValue]) => (
-                                                    <tr key={k} className="group hover:bg-zinc-900/20 transition-colors">
-                                                        <td className="px-8 py-5">
+                                                    <tr key={k} className="group hover:bg-zinc-900/30 transition-all duration-200">
+                                                        <td className="px-8 py-6">
                                                             <div className="flex items-center gap-3">
-                                                                <Icon name="terminal" size={14} className="text-zinc-700" />
+                                                                <div className="p-2 rounded-lg bg-zinc-900/50 border border-zinc-800/50 text-zinc-600 group-hover:text-zinc-400 group-hover:border-zinc-700 transition-colors">
+                                                                    <Icon name="terminal" size={14} />
+                                                                </div>
                                                                 <span className="text-xs font-bold text-zinc-300 font-mono tracking-tight">{k}</span>
                                                             </div>
                                                         </td>
-                                                        <td className="px-8 py-5">
-                                                            <div className="flex items-center gap-2">
-                                                                <div className={`w-1.5 h-1.5 rounded-full ${hasValue ? 'bg-emerald-500 shadow-[0_0_8px_#10b981]' : 'bg-zinc-800'}`}></div>
-                                                                <span className={`text-[10px] font-black uppercase tracking-widest ${hasValue ? 'text-zinc-100' : 'text-zinc-700'}`}>
-                                                                    {hasValue ? 'Configured' : 'Missing'}
+                                                        <td className="px-8 py-6">
+                                                            <div className="flex items-center gap-2.5">
+                                                                <div className={`w-2 h-2 rounded-full transition-all duration-500 ${hasValue ? 'bg-emerald-500 shadow-[0_0_12px_#10b981]' : 'bg-zinc-800 shadow-[0_0_12px_rgba(39,39,42,0.5)]'}`}></div>
+                                                                <span className={`text-[10px] font-black uppercase tracking-widest transition-colors ${hasValue ? 'text-zinc-100' : 'text-zinc-600'}`}>
+                                                                    {hasValue ? 'Configured' : 'Empty'}
                                                                 </span>
                                                             </div>
                                                         </td>
-                                                        <td className="px-8 py-5 text-right">
-                                                            <div className="flex items-center justify-end gap-1 opacity-10 LG:group-hover:opacity-100 transition-opacity">
+                                                        <td className="px-8 py-6 text-right">
+                                                            <div className="flex items-center justify-end gap-2 opacity-10 lg:opacity-0 lg:group-hover:opacity-100 transition-all transform lg:translate-x-2 lg:group-hover:translate-x-0">
                                                                 <button
                                                                     onClick={() => handleUpdateKey(k)}
-                                                                    className="p-2 text-zinc-600 hover:text-zinc-100 rounded-lg lg:hover:bg-zinc-800 transition-all"
-                                                                    title="Overwrite"
+                                                                    className="p-2.5 text-zinc-500 hover:text-zinc-100 rounded-xl hover:bg-zinc-800 transition-all border border-transparent hover:border-zinc-700/50"
+                                                                    title="Set Value"
                                                                 >
-                                                                    <Icon name="settings" size={14} />
+                                                                    <Icon name="settings" size={16} />
                                                                 </button>
                                                                 <button
                                                                     onClick={() => handleRemoveKey(k)}
-                                                                    className="p-2 text-zinc-600 hover:text-red-500 rounded-lg lg:hover:bg-red-500/10 transition-all"
-                                                                    title="Wipe"
+                                                                    className="p-2.5 text-zinc-500 hover:text-red-500 rounded-xl hover:bg-red-500/10 transition-all border border-transparent hover:border-red-500/20"
+                                                                    title="Wipe Data"
                                                                 >
-                                                                    <Icon name="trash" size={14} />
+                                                                    <Icon name="trash" size={16} />
                                                                 </button>
                                                             </div>
                                                         </td>
@@ -164,8 +169,11 @@ export default function VaultView({ apiPath = '/user/vault' }: { apiPath?: strin
                                             )}
                                             {Object.keys(keys).length === 0 && !isLoading && (
                                                 <tr>
-                                                    <td colSpan={3} className="py-20 text-center italic text-zinc-800 text-[10px] font-black uppercase tracking-widest">
-                                                        Empty Registry
+                                                    <td colSpan={3} className="py-24 text-center">
+                                                        <div className="flex flex-col items-center justify-center opacity-20">
+                                                            <Icon name="vault" size={40} className="mb-4" />
+                                                            <p className="text-[10px] font-black uppercase tracking-[0.3em]">No keys found</p>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             )}
@@ -174,9 +182,15 @@ export default function VaultView({ apiPath = '/user/vault' }: { apiPath?: strin
                                 </div>
                             </>
                         ) : (
-                            <div className="flex-1 flex flex-col items-center justify-center text-zinc-800 italic p-10">
-                                <Icon name="vault" size={48} className="mb-4 opacity-5" />
-                                <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-30 text-center">Lock engaged. Select unit.</p>
+                            <div className="flex-1 flex flex-col items-center justify-center p-12 text-center">
+                                <div className="relative mb-8">
+                                    <div className="absolute inset-0 bg-zinc-500/10 blur-3xl rounded-full scale-150 animate-pulse"></div>
+                                    <div className="relative p-6 rounded-3xl bg-zinc-900/50 border border-zinc-800 shadow-2xl">
+                                        <Icon name="vault" size={64} className="text-zinc-800" />
+                                    </div>
+                                </div>
+                                <h3 className="text-zinc-200 font-bold mb-2">Vault Locked</h3>
+                                <p className="text-[10px] font-black uppercase tracking-[0.3em] opacity-30 max-w-[200px] leading-loose">Select a storage unit to view your keys.</p>
                             </div>
                         )}
                     </main>

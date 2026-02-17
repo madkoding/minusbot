@@ -30,14 +30,17 @@ export default function UsersView() {
     };
 
     return (
-        <div className="h-full overflow-y-auto custom-scrollbar p-4 md:p-8">
-            <div className="space-y-6 md:space-y-8 max-w-5xl mx-auto">
-                <header className="flex justify-between items-end gap-4">
+        <div className="h-full overflow-y-auto custom-scrollbar p-6 md:p-10 lg:p-12">
+            <div className="space-y-8 md:space-y-12 max-w-6xl mx-auto">
+                <header className="flex flex-col md:flex-row md:justify-between md:items-end gap-6">
                     <div>
-                        <h2 className="text-2xl md:text-3xl font-black tracking-tight text-zinc-100">Users</h2>
-                        <p className="text-zinc-500 text-xs md:text-sm mt-1">Manage people who can access your assistant.</p>
+                        <div className="flex items-center gap-3 mb-3">
+                            <h2 className="text-2xl md:text-3xl font-black tracking-tight text-zinc-100 uppercase italic">Users</h2>
+                            <div className="h-px w-12 bg-zinc-800 ml-2"></div>
+                        </div>
+                        <p className="text-zinc-500 text-sm font-medium max-w-lg">Manage user access and permissions for your assistant.</p>
                     </div>
-                    <Button onClick={() => setIsAdding(!isAdding)} variant="secondary" size="sm" className="rounded-xl border-zinc-800 hidden md:flex">
+                    <Button onClick={() => setIsAdding(!isAdding)} variant="secondary" size="sm" className="rounded-xl border-zinc-800 w-full md:w-auto h-11 px-6 shadow-xl">
                         <Icon name="plus" size={16} /> <span className="ml-2">{isAdding ? 'Cancel' : 'Add User'}</span>
                     </Button>
                 </header>
@@ -66,7 +69,7 @@ export default function UsersView() {
                             <thead>
                                 <tr className="border-b border-zinc-800/50 text-zinc-500">
                                     <th className="text-left py-4 px-6 font-bold uppercase tracking-widest text-[10px]">User</th>
-                                    <th className="text-left py-4 px-6 font-bold uppercase tracking-widest text-[10px]">Privileges</th>
+                                    <th className="text-left py-4 px-6 font-bold uppercase tracking-widest text-[10px]">Role</th>
                                     <th className="text-right py-4 px-6 font-bold uppercase tracking-widest text-[10px]">Actions</th>
                                 </tr>
                             </thead>

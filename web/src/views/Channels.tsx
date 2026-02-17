@@ -110,40 +110,40 @@ export default function ChannelsView({ apiPath = "/user/channels" }: { apiPath?:
         await deleteChannel(id);
     };
 
-    if (!channels && isLoading) return <div className="text-zinc-500 font-bold uppercase tracking-widest px-8 py-20 text-center">Loading Platforms...</div>;
+    if (!channels && isLoading) return <div className="text-zinc-500 font-bold uppercase tracking-widest px-8 py-20 text-center">Loading...</div>;
 
     if (!selectedChannel) {
         return (
-            <div className="h-full overflow-y-auto custom-scrollbar p-4 md:p-8">
-                <div className="space-y-6 md:space-y-10 max-w-6xl mx-auto">
+            <div className="h-full overflow-y-auto custom-scrollbar p-6 md:p-10 lg:p-12">
+                <div className="space-y-8 md:space-y-12 max-w-6xl mx-auto">
                     <header>
-                        <div className="flex items-center gap-3 mb-2">
-                            <h2 className="text-xl md:text-2xl font-bold tracking-tight text-zinc-100">{isAdmin ? 'Global ' : ''}Connected Platforms</h2>
-                            <div className="h-px flex-1 bg-zinc-900 ml-4 opacity-50"></div>
+                        <div className="flex items-center gap-3 mb-3">
+                            <h2 className="text-2xl md:text-3xl font-black tracking-tight text-zinc-100 uppercase italic">{isAdmin ? 'Global ' : ''}Channels</h2>
+                            <div className="h-px w-12 bg-zinc-800 ml-2"></div>
                         </div>
-                        <p className="text-zinc-500 text-xs md:text-sm font-medium">
+                        <p className="text-zinc-500 text-sm font-medium max-w-lg">
                             {isAdmin
-                                ? 'Configure platform settings for all users.'
-                                : 'Connect your assistant to other apps like Discord or Telegram.'}
+                                ? 'Configure global settings for all users.'
+                                : 'Connect your assistant to services like Discord or Telegram.'}
                         </p>
                     </header>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-7">
                         {channels && channels.length > 0 ? channels.map((channel) => {
                             const isEnabled = isAdmin || channel.enabled;
                             const isConfigured = isAdmin || channel.configured;
                             return (
                                 <Card
                                     key={channel.id}
-                                    className={`p-4 md:p-6 transition-all border-2 ${isEnabled ? 'border-emerald-500/20 bg-emerald-950/10' : 'border-zinc-800/50 bg-zinc-950/50'}`}
+                                    className={`p-6 md:p-8 transition-all border-2 ${isEnabled ? 'border-emerald-500/20 bg-emerald-950/5' : 'border-zinc-800/50 bg-zinc-950/50 grayscale opacity-70 hover:grayscale-0 hover:opacity-100'}`}
                                 >
-                                    <div className="flex items-start justify-between mb-4">
+                                    <div className="flex items-start justify-between mb-6">
                                         <div className="flex items-center gap-4">
-                                            <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-100 shadow-inner group-hover:scale-105 transition-transform">
-                                                <Icon name={channel.icon || "globe"} size={20} className="md:w-6 md:h-6" />
+                                            <div className={`w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center transition-all ${isEnabled ? 'text-zinc-100 shadow-inner' : 'text-zinc-600'}`}>
+                                                <Icon name={channel.icon || "globe"} size={24} />
                                             </div>
                                             <div>
-                                                <h3 className="font-extrabold text-zinc-100 text-base md:text-lg tracking-tight">{channel.name}</h3>
+                                                <h3 className="font-black text-zinc-100 text-lg tracking-tight">{channel.name}</h3>
                                                 <div className="flex items-center gap-2">
                                                     <div className={`w-1.5 h-1.5 rounded-full ${isEnabled ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-zinc-700'}`}></div>
                                                     <span className={`text-[9px] font-black uppercase tracking-widest ${isEnabled ? 'text-emerald-500' : 'text-zinc-600'}`}>
@@ -153,19 +153,19 @@ export default function ChannelsView({ apiPath = "/user/channels" }: { apiPath?:
                                             </div>
                                         </div>
                                     </div>
-                                    <p className="text-xs text-zinc-500 leading-relaxed mb-6 font-medium italic min-h-[32px]">{channel.description}</p>
+                                    <p className="text-xs text-zinc-500 leading-relaxed mb-8 font-medium italic min-h-[40px] opacity-70">{channel.description}</p>
                                     <div className="flex gap-2">
                                         <Button
                                             onClick={() => handleConfigure(channel.id)}
-                                            className="flex-1 rounded-xl h-10 text-sm"
+                                            className="flex-1 rounded-xl h-11 text-sm font-bold"
                                             variant={isConfigured ? "secondary" : "primary"}
                                         >
-                                            {isAdmin ? "Global Secrets" : (isConfigured ? "Configure" : "Setup")}
+                                            {isAdmin ? "Global Settings" : (isConfigured ? "Reconfigure" : "Setup")}
                                         </Button>
                                         {!isAdmin && isConfigured && (
                                             <button
                                                 onClick={() => handleDelete(channel.id)}
-                                                className="px-3 text-zinc-700 hover:text-red-500 transition-colors rounded-xl border border-zinc-800 hover:border-red-500/20"
+                                                className="px-3.5 bg-zinc-900 text-zinc-600 hover:text-red-500 transition-colors rounded-xl border border-zinc-800 hover:border-red-500/20 active:scale-95"
                                             >
                                                 <Icon name="trash" size={16} />
                                             </button>
@@ -174,51 +174,53 @@ export default function ChannelsView({ apiPath = "/user/channels" }: { apiPath?:
                                 </Card>
                             );
                         }) : (
-                            <div className="col-span-full text-center py-12">
-                                <p className="text-zinc-600 text-sm font-medium">No channels available</p>
+                            <div className="col-span-full text-center py-20 bg-zinc-950/50 border border-zinc-900 border-dashed rounded-[2rem]">
+                                <p className="text-zinc-600 text-sm font-bold uppercase tracking-widest italic">No channels available</p>
                             </div>
                         )}
                     </div>
-                    {error && <p className="text-red-500 text-xs mt-4">{error}</p>}
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="h-full overflow-y-auto custom-scrollbar p-4 md:p-8">
+        <div className="h-full overflow-y-auto custom-scrollbar p-6 md:p-10 lg:p-12">
             <div className="max-w-3xl mx-auto">
-                <div className="mb-6 flex items-start gap-3 md:gap-4">
+                <div className="mb-10 flex items-start gap-4">
                     <button
                         onClick={() => setSelectedChannel(null)}
-                        className="p-2 text-zinc-500 hover:text-zinc-100 transition-colors mt-1"
+                        className="p-3 bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-zinc-100 rounded-2xl transition-all active:scale-95 shadow-xl mt-1"
                     >
                         <Icon name="logout" size={20} className="rotate-180" />
                     </button>
                     <div className="flex-1 min-w-0">
-                        <h2 className="text-xl md:text-2xl font-black tracking-tight text-zinc-100 truncate">{selectedChannel?.schema?.name}</h2>
-                        <p className="text-xs md:text-sm text-zinc-500 break-words">{selectedChannel?.schema?.description}</p>
+                        <div className="flex items-center gap-2 mb-1">
+                            <h2 className="text-2xl md:text-3xl font-black tracking-tight text-zinc-100 truncate italic uppercase">{selectedChannel?.schema?.name}</h2>
+                            <div className="px-2 py-0.5 rounded-full bg-zinc-900 border border-zinc-800 text-[8px] font-black uppercase tracking-widest text-zinc-500">Channel</div>
+                        </div>
+                        <p className="text-sm text-zinc-500 break-words font-medium">{selectedChannel?.schema?.description}</p>
                     </div>
                 </div>
 
                 {!isAdmin && (
-                    <Card className="border-zinc-800/80 bg-zinc-950/40 backdrop-blur-md mb-6 p-4 md:p-6">
-                        <div className="flex items-center justify-between gap-4">
+                    <Card className="border-emerald-500/10 bg-emerald-500/[0.02] backdrop-blur-md mb-8 p-6 md:p-8">
+                        <div className="flex items-center justify-between gap-6">
                             <div>
-                                <h3 className="text-sm font-bold text-zinc-100">Channel Status</h3>
-                                <p className="text-xs text-zinc-500">Enable or disable this communication channel</p>
+                                <h3 className="text-base font-black text-zinc-100 uppercase tracking-tight mb-1">Status</h3>
+                                <p className="text-xs text-zinc-500 font-medium italic">Enable or disable this channel.</p>
                             </div>
                             <button
                                 onClick={() => setEnabled(!enabled)}
-                                className={`relative flex-shrink-0 inline-flex h-6 w-11 items-center rounded-full transition-colors ${enabled ? 'bg-emerald-500' : 'bg-zinc-700'}`}
+                                className={`relative flex-shrink-0 inline-flex h-7 w-12 items-center rounded-full transition-all duration-300 shadow-inner ${enabled ? 'bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.3)]' : 'bg-zinc-800'}`}
                             >
-                                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${enabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                                <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-xl transition-all duration-300 ${enabled ? 'translate-x-6' : 'translate-x-1'}`} />
                             </button>
                         </div>
                     </Card>
                 )}
 
-                <Card className="border-zinc-800/80 bg-zinc-950/40 backdrop-blur-md p-4 md:p-8 mb-8">
+                <Card className="border-zinc-800/80 bg-zinc-950/40 backdrop-blur-md p-6 md:p-10 mb-8 rounded-[2rem]">
                     <form onSubmit={handleSave} className="space-y-6 md:space-y-8">
                         {!isAdmin && (
                             <div className="space-y-4">

@@ -17,14 +17,14 @@ export default function DashboardView() {
     );
 
     return (
-        <div className="h-full overflow-y-auto custom-scrollbar p-4 md:p-8">
+        <div className="h-full overflow-y-auto custom-scrollbar p-6 md:p-10 lg:p-12">
             <div className="space-y-8 md:space-y-12 max-w-6xl mx-auto">
                 <header>
-                    <div className="flex items-center gap-3 mb-2">
-                        <h2 className="text-xl md:text-2xl font-bold tracking-tight text-zinc-100">Activity Overview</h2>
-                        <div className="h-px flex-1 bg-zinc-900 ml-4 opacity-50"></div>
+                    <div className="flex items-center gap-3 mb-3">
+                        <h2 className="text-2xl md:text-3xl font-black tracking-tight text-zinc-100 uppercase italic">Activity Overview</h2>
+                        <div className="h-px w-12 bg-zinc-800 ml-2"></div>
                     </div>
-                    <p className="text-zinc-500 text-xs md:text-sm font-medium">Statistics and resource usage of your assistant.</p>
+                    <p className="text-zinc-500 text-sm font-medium max-w-lg">View statistics and usage data for your assistant.</p>
                 </header>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
