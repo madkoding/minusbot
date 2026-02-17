@@ -7,7 +7,13 @@ class MemoryStream extends Writable {
     private chunks: Buffer[] = [];
 
     override _write(chunk: any, encoding: BufferEncoding, callback: (error?: Error | null) => void) {
-        this.chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+        const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+        this.chunks.push(buffer);
+
+        if (process.env.DEBUG || process.env.MINUSBOT_DEBUG) {
+            process.stdout.write(buffer);
+        }
+
         callback();
     }
 
@@ -85,6 +91,7 @@ export class SandboxManager {
         options: {
             extraVolumes?: string[];
             enableNetwork?: boolean;
+            networkMode?: "bridge" | "host" | "none";
             entrypoint?: string[];
             sourceReadOnly?: boolean;
             runtimeMountPoint?: string;
@@ -127,7 +134,7 @@ export class SandboxManager {
                     HostConfig: {
                         Binds: binds,
                         AutoRemove: true,
-                        NetworkMode: options.enableNetwork ? "bridge" : "none"
+                        NetworkMode: options.networkMode || (options.enableNetwork ? "bridge" : "none")
                     },
                     WorkingDir: "/workspace",
                     Tty: false

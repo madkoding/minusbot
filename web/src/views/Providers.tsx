@@ -5,8 +5,12 @@ import { Card } from "../components/cards";
 import { Modal } from "../components/modals";
 import { useProviders } from "../hooks/useProviders";
 import { useSettings } from "../hooks/useSettings";
+import { useAuthStore } from "../stores/useAuthStore";
 
 export default function ProvidersView() {
+    const { user } = useAuthStore();
+    const isRoot = user?.role === "root";
+
     const {
         providers,
         clients,
@@ -17,7 +21,9 @@ export default function ProvidersView() {
         listModels,
         listModelsByConfig
     } = useProviders();
-    const { settings, fetchSettings } = useSettings("/user/settings");
+
+    // We fetch user settings to see personal active providers
+    const { settings: userSettings, fetchSettings: fetchUserSettings } = useSettings("/user/settings");
 
     const [isAdding, setIsAdding] = useState(false);
     const [editingProvider, setEditingProvider] = useState<any>(null);
@@ -332,6 +338,23 @@ export default function ProvidersView() {
                             </div>
                         </div>
 
+                        {/* Root checkbox removed to simplify. If needed, re-add logic later */}
+                        {isRoot && (
+                            <div className="flex items-center gap-2 p-4 rounded-xl bg-amber-500/5 border border-amber-500/10">
+                                <input
+                                    type="checkbox"
+                                    id="is_global"
+                                    checked={form.is_global}
+                                    onChange={e => setForm({ ...form, is_global: e.target.checked })}
+                                    className="w-4 h-4 accent-amber-500"
+                                />
+                                <div className="space-y-0.5">
+                                    <label htmlFor="is_global" className="text-[10px] font-black uppercase tracking-widest text-zinc-400 cursor-pointer">Global Provider</label>
+                                    <p className="text-[8px] text-zinc-600 font-medium">Available to all users. Only root/admin can manage this.</p>
+                                </div>
+                            </div>
+                        )}
+
                         <div className="flex items-center gap-4 pt-4 border-t border-white/5">
                             <Button type="submit" className="rounded-xl px-8 h-12 bg-zinc-100 text-black font-bold uppercase tracking-widest text-[10px] shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all">
                                 {editingProvider ? "Update Provider" : "Register Provider"}
@@ -346,29 +369,36 @@ export default function ProvidersView() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {providers.map(provider => {
                         const type = types.find(t => t.id === provider.type);
-                        const isActive = settings?.active_providers?.[provider.type] === provider.id;
+                        const isActive = userSettings?.active_providers?.[provider.type] === provider.id;
+
+                        // User can only edit their own providers
+                        const canEdit = isRoot || !provider.is_global;
 
                         return (
-                            <Card key={provider.id} className="p-6 border-white/5 bg-zinc-900/30 backdrop-blur-xl group hover:bg-zinc-900/50 transition-all duration-500 flex flex-col justify-between">
+                            <Card key={provider.id} className="p-6 border-white/5 bg-zinc-900/30 backdrop-blur-xl group hover:border-white/10 transition-all duration-500 flex flex-col justify-between">
                                 <div>
                                     <div className="flex items-start justify-between mb-6">
                                         <div className="p-3 rounded-2xl bg-white/5 border border-white/5 group-hover:scale-110 transition-transform duration-500">
                                             <Icon name={type?.icon || "cpu"} className="w-5 h-5 text-zinc-400" />
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            <button onClick={() => setEditingProvider(provider)} className="p-2 rounded-lg hover:bg-white/5 text-zinc-500 hover:text-white transition-colors">
-                                                <Icon name="edit-2" className="w-4 h-4" />
-                                            </button>
-                                            <button onClick={() => deleteProvider(provider.id)} className="p-2 rounded-lg hover:bg-red-500/10 text-zinc-500 hover:text-red-400 transition-colors">
-                                                <Icon name="trash-2" className="w-4 h-4" />
-                                            </button>
+                                            {canEdit && (
+                                                <>
+                                                    <button onClick={() => setEditingProvider(provider)} className="p-2 rounded-lg hover:bg-white/5 text-zinc-500 hover:text-white transition-colors">
+                                                        <Icon name="edit-2" className="w-4 h-4" />
+                                                    </button>
+                                                    <button onClick={() => deleteProvider(provider.id)} className="p-2 rounded-lg hover:bg-red-500/10 text-zinc-500 hover:text-red-400 transition-colors">
+                                                        <Icon name="trash-2" className="w-4 h-4" />
+                                                    </button>
+                                                </>
+                                            )}
                                         </div>
                                     </div>
 
                                     <div className="space-y-1 mb-6">
                                         <div className="flex items-center gap-2">
                                             <h3 className="text-lg font-bold text-zinc-100">{provider.name}</h3>
-                                            {provider.is_global && <span className="text-[8px] font-black uppercase tracking-widest bg-zinc-800 text-zinc-500 px-1.5 py-0.5 rounded">Global</span>}
+                                            {provider.is_global && <span className="text-[8px] font-black uppercase tracking-widest bg-amber-500/10 text-amber-500/80 px-1.5 py-0.5 rounded border border-amber-500/10">Global</span>}
                                         </div>
                                         <p className="text-xs font-black uppercase tracking-widest text-zinc-600">
                                             {provider.client} / {provider.config.model_id}
@@ -387,7 +417,7 @@ export default function ProvidersView() {
                                         <Button
                                             onClick={async () => {
                                                 await activateProvider(provider.id, provider.type);
-                                                fetchSettings();
+                                                fetchUserSettings();
                                             }}
                                             className="px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest bg-white/5 border-white/5 hover:bg-zinc-100 hover:text-black transition-all"
                                         >
@@ -398,7 +428,7 @@ export default function ProvidersView() {
                                         <Button
                                             onClick={async () => {
                                                 await activateProvider(null, provider.type);
-                                                fetchSettings();
+                                                fetchUserSettings();
                                             }}
                                             className="px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest bg-red-500/10 border-red-500/10 text-red-400 hover:bg-red-500/20"
                                         >
@@ -409,6 +439,7 @@ export default function ProvidersView() {
                             </Card>
                         );
                     })}
+
 
                     {providers.length === 0 && (
                         <div className="col-span-full py-20 text-center border-2 border-dashed border-white/5 rounded-3xl group hover:border-white/10 transition-colors">

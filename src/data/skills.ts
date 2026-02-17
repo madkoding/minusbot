@@ -22,6 +22,8 @@ export interface SkillAction {
     dockerImage?: string;
     extraVolumes?: string[];
     enableNetwork?: boolean;
+    networkMode?: "bridge" | "host" | "none";
+    args?: Record<string, any>;
 }
 
 export interface SkillDefinition {
@@ -33,6 +35,7 @@ export interface SkillDefinition {
     bins?: BinaryDefinition[];
     dockerImage?: string;
     enableNetwork?: boolean;
+    networkMode?: "bridge" | "host" | "none";
     actions: SkillAction[];
     enabled?: boolean;
 }
@@ -257,7 +260,7 @@ export class SkillManager {
         // Handle custom Dockerfile
         if (dockerImage === "custom") {
             const sanitizedUserId = userId.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-            const tag = `minusbot_skill_${skill.isGlobal ? 'global' : sanitizedUserId}_${skill.id.toLowerCase()}`;
+            const tag = `minusbot_skill_${skill.isGlobal ? 'global' : 'user_' + sanitizedUserId}_${skill.id.toLowerCase()}`;
 
             const exists = await SandboxManager.imageExists(tag);
             if (!exists) {
@@ -271,19 +274,21 @@ export class SkillManager {
         let cmd: string[] = [];
         let entrypoint: string[] | undefined = undefined;
 
+        const payload = JSON.stringify({ ...action.args, ...inputs, _action: actionName, _skillId: id });
+
         if (scriptExt === ".py") {
-            cmd = ["python", `/skill/scripts/${action._script}`, JSON.stringify({ ...inputs, _action: actionName, _skillId: id })];
+            cmd = ["python", `/skill/scripts/${action._script}`, payload];
         } else if (scriptExt === ".sh") {
             // If image is alpine/git or similar with custom entrypoints, override it
             if (dockerImage.includes("git")) {
                 entrypoint = ["/bin/sh"];
-                cmd = ["/skill/scripts/" + action._script, JSON.stringify({ ...inputs, _action: actionName, _skillId: id })];
+                cmd = ["/skill/scripts/" + action._script, payload];
             } else {
-                cmd = ["sh", `/skill/scripts/${action._script}`, JSON.stringify({ ...inputs, _action: actionName, _skillId: id })];
+                cmd = ["sh", `/skill/scripts/${action._script}`, payload];
             }
         } else {
             // Default to direct execution
-            cmd = [`/skill/scripts/${action._script}`, JSON.stringify({ ...inputs, _action: actionName, _skillId: id })];
+            cmd = [`/skill/scripts/${action._script}`, payload];
         }
 
         // Use SandboxManager
@@ -296,9 +301,10 @@ export class SkillManager {
             {
                 extraVolumes: [
                     ...(action.extraVolumes || []),
-                    `${dataDir}:/skill/config:rw` // Mount user data as /skill/config
+                    `${dataDir}:/data:rw` // Mount user data as /data
                 ],
                 enableNetwork: action.enableNetwork || skill.definition.enableNetwork,
+                networkMode: action.networkMode || skill.definition.networkMode,
                 entrypoint,
                 runtimeMountPoint: "/skill"
             }
