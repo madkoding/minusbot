@@ -17,7 +17,7 @@ interface Suggestion {
 
 export function CommandAutocomplete({ input, commands, onSelect }: CommandAutocompleteProps) {
     const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
-    const [selectedIndex, setSelectedIndex] = useState(0);
+    const [selectedIndex, setSelectedIndex] = useState(-1);
     const listRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -84,7 +84,7 @@ export function CommandAutocomplete({ input, commands, onSelect }: CommandAutoco
         }
 
         setSuggestions(newSuggestions);
-        setSelectedIndex(0);
+        setSelectedIndex(-1);
     }, [input, commands]);
 
     // Scroll selected item into view
@@ -101,40 +101,36 @@ export function CommandAutocomplete({ input, commands, onSelect }: CommandAutoco
         const handleKeyDown = (e: KeyboardEvent) => {
             if (suggestions.length === 0) return;
 
-            // If it's just an argument hint (info only), Enter/Tab shouldn't be blocked unless we are selecting something meaningful
-            // But user asked "Excepto el recomendacoin o tip de argumentos, ese se puede enviar"
-            const currentSuggestion = suggestions[selectedIndex];
+            const currentSuggestion = selectedIndex >= 0 ? suggestions[selectedIndex] : null;
             const isArgHint = currentSuggestion?.isArg;
+            const isNavKey = e.key === 'ArrowDown' || e.key === 'ArrowUp';
+            const isSelectKey = e.key === 'Tab' || e.key === 'Enter';
 
-            if (e.key === 'ArrowDown') {
+            if (isNavKey) {
                 e.preventDefault();
-                setSelectedIndex(prev => (prev + 1) % suggestions.length);
-            } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                setSelectedIndex(prev => (prev - 1 + suggestions.length) % suggestions.length);
-            } else if (e.key === 'Tab' || e.key === 'Enter') {
-                if (currentSuggestion) {
-                    // If it's an argument hint, we basically ignore it for "autocomplete" purposes and let the natural submit happen
-                    // UNLESS the user explicitly wants to "select" it? Usually arg hints are just visual.
-                    // The user said: "Excepto el recomendacoin o tip de argumentos, ese se puede enviar porque la recomendacion es siempre visible."
-
-                    if (!isArgHint) {
-                        e.preventDefault();
-                        onSelect(currentSuggestion.completion);
-                    }
-                    // If isArgHint is true, we do NOT preventDefault, so the event bubbles up to the input's onKeyDown handler (which sends the message)
+                e.stopPropagation();
+                if (e.key === 'ArrowDown') {
+                    setSelectedIndex(prev => prev === -1 ? 0 : (prev + 1) % suggestions.length);
+                } else {
+                    setSelectedIndex(prev => prev === -1 ? suggestions.length - 1 : (prev - 1 + suggestions.length) % suggestions.length);
+                }
+            } else if (isSelectKey) {
+                if (currentSuggestion && !isArgHint) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onSelect(currentSuggestion.completion);
                 }
             }
         };
 
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
+        window.addEventListener('keydown', handleKeyDown, { capture: true });
+        return () => window.removeEventListener('keydown', handleKeyDown, { capture: true });
     }, [suggestions, selectedIndex, onSelect]);
 
     if (suggestions.length === 0) return null;
 
     return (
-        <div className="absolute bottom-full left-0 right-0 mb-4 mx-4 md:mx-0 z-50">
+        <div className="absolute bottom-full left-0 right-0 mb-4 z-50">
             <div className="bg-zinc-900/95 border border-zinc-800/50 rounded-2xl shadow-2xl backdrop-blur-xl overflow-hidden flex flex-col max-h-[300px]">
                 <div ref={listRef} className="p-2 space-y-1 overflow-y-auto custom-scrollbar flex-1">
                     {suggestions.map((suggestion, index) => (

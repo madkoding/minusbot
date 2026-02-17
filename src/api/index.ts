@@ -32,6 +32,7 @@ import userSettingsRoutes from "./routes/user/settings.routes";
 import userVaultRoutes from "./routes/user/vault.routes";
 import userStatsRoutes from "./routes/user/stats.routes";
 import userChannelsRoutes from "./routes/user/channels.routes";
+import userFilesRoutes from "./routes/user/files.routes";
 import providerRoutes from "./routes/providers.routes";
 
 // Middleware
@@ -73,6 +74,7 @@ export async function startServer() {
     user.use("/vault", userVaultRoutes);
     user.use("/stats", userStatsRoutes);
     user.use("/channels", userChannelsRoutes);
+    user.use("/chats", userFilesRoutes);
     user.use("/providers", providerRoutes);
     api.use("/user", user);
 

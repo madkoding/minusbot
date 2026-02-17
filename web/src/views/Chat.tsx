@@ -5,6 +5,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
 import { Icon } from "../components/icons";
+import { ChatFilesModal } from "../components/modals/ChatFilesModal";
 import { Skeleton } from "../components/ui";
 import { CommandAutocomplete } from "../components/CommandAutocomplete";
 import { useChat } from "../hooks/useChat";
@@ -116,6 +117,7 @@ export default function ChatView() {
     const [isLoading, setIsLoading] = useState(true);
     const [showAutocomplete, setShowAutocomplete] = useState(false);
     const [hoveredMessageIndex, setHoveredMessageIndex] = useState<number | null>(null);
+    const [isFilesModalOpen, setIsFilesModalOpen] = useState(false);
 
     const intros = useMemo(() => [
         "How can I help you today?",
@@ -178,7 +180,7 @@ export default function ChatView() {
     const handleKeyDown = (e: React.KeyboardEvent) => {
         if (e.key === 'Escape') {
             setShowAutocomplete(false);
-        } else if (e.key === 'Enter' && !e.shiftKey && !showAutocomplete) {
+        } else if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             handleSend();
         }
@@ -418,8 +420,8 @@ export default function ChatView() {
 
             {/* Input Area - Fixed at bottom - Only visible if not landing */}
             {!isLanding && (
-                <div className="flex-shrink-0 p-3 md:p-4 lg:p-6 bg-[#0a0a0a]/80 border-t border-zinc-900/50 backdrop-blur-xl relative">
-                    <div className="max-w-4xl mx-auto">
+                <div className="flex-shrink-0 p-3 md:p-4 lg:p-6 z-20">
+                    <div className="max-w-4xl mx-auto relative">
                         {/* Command Autocomplete */}
                         {showAutocomplete && (
                             <CommandAutocomplete
@@ -430,9 +432,17 @@ export default function ChatView() {
                         )}
 
                         <div className="relative flex items-center group">
+                            <button
+                                onClick={() => setIsFilesModalOpen(true)}
+                                className="absolute left-2 p-1.5 md:p-2 text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 rounded-lg transition-all z-10"
+                                title="Manage Files"
+                                disabled={!isConnected}
+                            >
+                                <Icon name="paperclip" size={16} />
+                            </button>
                             <input
                                 ref={inputRef}
-                                className="w-full bg-black border border-zinc-800/40 rounded-xl md:rounded-2xl pl-4 md:pl-6 pr-12 md:pr-14 py-3 md:py-4 text-xs md:text-sm text-zinc-100 outline-none focus:border-zinc-500 transition-all placeholder:text-zinc-700 shadow-inner group-hover:border-zinc-700/50 disabled:opacity-50"
+                                className="w-full bg-black border border-zinc-800/40 rounded-xl md:rounded-2xl pl-10 md:pl-12 pr-12 md:pr-14 py-3 md:py-4 text-xs md:text-sm text-zinc-100 outline-none focus:border-zinc-500 transition-all placeholder:text-zinc-700 shadow-inner group-hover:border-zinc-700/50 disabled:opacity-50"
                                 placeholder="Speak with Minus..."
                                 value={inputText}
                                 onChange={e => setInputText(e.target.value)}
@@ -450,6 +460,8 @@ export default function ChatView() {
                     </div>
                 </div>
             )}
+
+            {id && <ChatFilesModal isOpen={isFilesModalOpen} onClose={() => setIsFilesModalOpen(false)} chatId={id} />}
         </div>
     );
 }

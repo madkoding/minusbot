@@ -1,6 +1,7 @@
 import type { Socket } from "socket.io";
+
 import { Channel } from "../channel-base";
-import type { ChannelSchema } from "../channel-base";
+import type { ChannelSchema } from "@shared/types";
 import { PubSub } from "@/pubsub";
 import { InputProcessor } from "@/processor";
 import { Storage, getUserSettings } from "@/data/storage";
@@ -45,6 +46,8 @@ export class WebChannel extends Channel {
      * Hand over a Socket.IO connection to this channel for management.
      */
     handleSocket(socket: Socket) {
+        if (this.sockets.has(socket)) return;
+
         const state: { chatId: string | null, listener: ((data: any) => void) | null } = {
             chatId: null,
             listener: null

@@ -1,7 +1,7 @@
 import type { User } from "../data/users";
 import { secrets } from "../secrets";
 import type { ToolDefinition, ToolHandler } from "../tools/tools";
-import type { ChannelField, ChannelSchema, ChannelConfig } from "@shared/types";
+import type { ChannelSchema, ChannelConfig } from "@shared/types";
 
 export abstract class Channel {
     // These must be implemented as instance properties and match static ones

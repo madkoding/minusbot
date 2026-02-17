@@ -97,7 +97,7 @@ export function useChat(chatId?: string) {
                     msg.timestamp = new Date().toISOString();
                 }
 
-                setMessages([...messages, msg]);
+                setMessages(prev => [...prev, msg]);
             }
         });
 
