@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { updateService } from "../services/updateService";
-import type { UpdateStatus, UpdateEntry } from "../types";
 import { Card } from "../components/cards";
 import { Icon } from "../components/icons";
+import type { UpdateEntry, UpdateStatus } from "@shared/types";
 
 export default function UpdateView() {
     const [status, setStatus] = useState<UpdateStatus | null>(null);

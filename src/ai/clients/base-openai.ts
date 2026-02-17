@@ -1,4 +1,5 @@
-import type { AIClient, AIModel, AIProviderType, AIChatParams, AIChatResponse, AIClientOption } from "../types";
+import type { AIClientOption, AIProviderType } from "@shared/types";
+import type { AIClient, AIModel, AIChatParams, AIChatResponse } from "../types";
 
 export class BaseOpenAI implements AIClient {
     public id: string = "openai-custom";

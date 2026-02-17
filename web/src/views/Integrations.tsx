@@ -175,10 +175,18 @@ export default function IntegrationsView({ mode = 'user' }: { mode?: 'user' | 'a
                     const isConfigured = !!config;
 
                     return (
-                        <Card key={integration.id} className={`group border-zinc-900 hover:border-zinc-700/50 transition-all ${isConfigured ? 'bg-zinc-900/10' : 'bg-transparent border-dashed'} p-6 md:p-8 flex flex-col h-full ${isLoading ? 'opacity-70' : ''}`}>
+                        <Card key={integration.id} className={`group border-zinc-900 hover:border-zinc-700/50 transition-all ${isConfigured ? 'bg-zinc-900/10' : 'bg-transparent border-dashed'} p-6 md:p-8 flex flex-col h-full ${isLoading ? 'opacity-80' : ''} relative overflow-hidden`}>
+                            {isLoading && (
+                                <div className="absolute top-0 left-0 w-full h-1 bg-emerald-500/20">
+                                    <div className="h-full bg-emerald-500/60 animate-[loading-bar_1.5s_infinite]"></div>
+                                </div>
+                            )}
                             <div className="flex items-start justify-between mb-6 md:mb-8">
-                                <div className={`w-12 h-12 md:w-14 md:h-14 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-105 ${isConfigured ? 'bg-zinc-100 text-zinc-950 shadow-[0_0_20px_rgba(255,255,255,0.1)]' : 'bg-zinc-900/50 text-zinc-600 border border-zinc-800/50'}`}>
+                                <div className={`w-12 h-12 md:w-14 md:h-14 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-105 ${isConfigured ? 'bg-zinc-100 text-zinc-950 shadow-[0_0_20px_rgba(255,255,255,0.1)]' : 'bg-zinc-900/50 text-zinc-600 border border-zinc-800/50'} relative`}>
                                     <Icon name={integration.icon || 'terminal'} size={24} className="md:w-7 md:h-7" />
+                                    {isLoading && (
+                                        <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div>
+                                    )}
                                 </div>
                                 {isConfigured && (
                                     <div className="flex gap-1.5 opacity-100 lg:opacity-0 group-hover:opacity-100 transition-opacity">
@@ -197,7 +205,7 @@ export default function IntegrationsView({ mode = 'user' }: { mode?: 'user' | 'a
                                 <Button className="w-full rounded-xl h-11 md:h-12 shadow-lg" variant="secondary" onClick={() => handleEdit(integration)}>Setup</Button>
                             ) : (
                                 <div className="flex items-center gap-3 py-1">
-                                    <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_10px_#10b981]"></div>
+                                    <div className={`w-2 h-2 rounded-full ${isLoading ? 'bg-emerald-400 rotate-180 scale-110' : 'bg-emerald-500'} shadow-[0_0_10px_#10b981] transition-all`}></div>
                                     <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Connected</span>
                                 </div>
                             )}
@@ -205,17 +213,17 @@ export default function IntegrationsView({ mode = 'user' }: { mode?: 'user' | 'a
                     );
                 })}
 
-                {isLoading && (
+                {isLoading && available.length === 0 && (
                     <>
                         {[1, 2, 3].map((i) => (
-                            <Card key={`skeleton-${i}`} className="p-6 md:p-8 flex flex-col h-full bg-zinc-900/20 border-zinc-900 border-dashed animate-pulse">
+                            <Card key={`skeleton-${i}`} className="p-6 md:p-8 flex flex-col h-[280px] bg-zinc-900/20 border-zinc-900 border-dashed animate-pulse">
                                 <div className="flex items-start justify-between mb-6 md:mb-8">
                                     <Skeleton className="w-12 h-12 md:w-14 md:h-14 rounded-2xl" />
                                 </div>
                                 <Skeleton className="h-6 w-3/4 mb-4" />
                                 <Skeleton className="h-4 w-full mb-2" />
                                 <Skeleton className="h-4 w-5/6 mb-8" />
-                                <Skeleton className="h-11 md:h-12 w-full rounded-xl" />
+                                <Skeleton className="h-11 md:h-12 w-full rounded-xl mt-auto" />
                             </Card>
                         ))}
                     </>

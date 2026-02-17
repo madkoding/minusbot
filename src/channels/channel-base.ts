@@ -1,30 +1,7 @@
 import type { User } from "../data/users";
 import { secrets } from "../secrets";
 import type { ToolDefinition, ToolHandler } from "../tools/tools";
-
-export interface ChannelField {
-    id: string;
-    label: string;
-    type: "string" | "number" | "boolean" | "string-array";
-    description?: string;
-    placeholder?: string;
-    secret?: boolean; // If true, this field is stored in vault
-}
-
-export interface ChannelSchema {
-    id: string;
-    name: string;
-    description: string;
-    icon?: string; // Icon for UI
-    fields: ChannelField[];
-    vaultKeys?: string[]; // Admin-only vault keys (global secrets)
-}
-
-export interface ChannelConfig {
-    enabled: boolean;
-    settings: Record<string, any>; // User settings (non-secret)
-    secrets: Record<string, any>; // User secret overrides
-}
+import type { ChannelField, ChannelSchema, ChannelConfig } from "@shared/types";
 
 export abstract class Channel {
     // These must be implemented as instance properties and match static ones

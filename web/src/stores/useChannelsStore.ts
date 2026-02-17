@@ -1,15 +1,15 @@
 import { create } from 'zustand';
-import type { Channel } from '../types';
+import type { ChannelStatus } from '@shared/types';
 
 interface ChannelsState {
-    userChannels: Channel[];
-    adminChannels: Channel[];
+    userChannels: ChannelStatus[];
+    adminChannels: ChannelStatus[];
     selectedChannel: any | null;
     setSelectedChannel: (channel: any | null) => void;
     isLoading: boolean;
     error: string | null;
-    setUserChannels: (channels: Channel[]) => void;
-    setAdminChannels: (channels: Channel[]) => void;
+    setUserChannels: (channels: ChannelStatus[]) => void;
+    setAdminChannels: (channels: ChannelStatus[]) => void;
     setLoading: (loading: boolean) => void;
     setError: (error: string | null) => void;
 }

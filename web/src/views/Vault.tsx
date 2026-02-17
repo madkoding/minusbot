@@ -90,11 +90,11 @@ export default function VaultView({ mode = 'user' }: { mode?: 'user' | 'admin' }
                                 <span className="text-xs tracking-tight">{v.name || v.id}</span>
                             </button>
                         ))}
-                        {isLoading && (
+                        {isLoading && vaults.length === 0 && (
                             <>
-                                {[1, 2].map(i => (
-                                    <div key={`skeleton-v-${i}`} className="px-4 py-3">
-                                        <Skeleton className="h-4 w-full" />
+                                {[1, 2, 3].map(i => (
+                                    <div key={`skeleton-v-${i}`} className="px-5 py-4">
+                                        <Skeleton className="h-6 w-full rounded-xl" />
                                     </div>
                                 ))}
                             </>
@@ -171,26 +171,26 @@ export default function VaultView({ mode = 'user' }: { mode?: 'user' | 'admin' }
                                                 </td>
                                             </tr>
                                         ))}
-                                        {isLoading && (
+                                        {isLoading && Object.keys(keys).length === 0 && (
                                             <>
-                                                {[1, 2, 3].map(i => (
+                                                {[1, 2, 3, 4, 5].map(i => (
                                                     <tr key={`skeleton-k-${i}`} className="animate-pulse">
                                                         <td className="px-8 py-6">
                                                             <div className="flex items-center gap-3">
-                                                                <Skeleton className="h-8 w-8 rounded-lg" />
-                                                                <Skeleton className="h-4 w-32" />
+                                                                <Skeleton className="h-9 w-9 rounded-xl" />
+                                                                <Skeleton className="h-4 w-40" />
                                                             </div>
                                                         </td>
                                                         <td className="px-8 py-6">
-                                                            <div className="flex items-center gap-2">
-                                                                <Skeleton className="h-2 w-2 rounded-full" />
+                                                            <div className="flex items-center gap-2.5">
+                                                                <Skeleton className="h-3 w-3 rounded-full" />
                                                                 <Skeleton className="h-3 w-20" />
                                                             </div>
                                                         </td>
                                                         <td className="px-8 py-6 text-right">
                                                             <div className="flex justify-end gap-2">
-                                                                <Skeleton className="h-8 w-8 rounded-xl" />
-                                                                <Skeleton className="h-8 w-8 rounded-xl" />
+                                                                <Skeleton className="h-9 w-9 rounded-xl" />
+                                                                <Skeleton className="h-9 w-9 rounded-xl" />
                                                             </div>
                                                         </td>
                                                     </tr>

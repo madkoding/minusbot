@@ -454,8 +454,11 @@ export default function SkillsView({ mode = 'user' }: { mode?: 'user' | 'admin' 
                     </thead>
                     <tbody className="divide-y divide-zinc-900/30">
                         {filteredSkills.map(s => (
-                            <tr key={s.id} className={`group hover:bg-zinc-900/20 transition-colors ${isLoading ? 'opacity-70 grayscale' : ''}`}>
-                                <td className="px-4 md:px-8 py-4 md:py-5">
+                            <tr key={s.id} className={`group hover:bg-zinc-900/10 transition-colors ${isLoading ? 'opacity-80' : ''}`}>
+                                <td className="px-4 md:px-8 py-4 md:py-5 relative">
+                                    {isLoading && (
+                                        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-4 bg-emerald-500/40 rounded-r animate-pulse"></div>
+                                    )}
                                     <div className="flex items-center gap-2 md:gap-3">
                                         <div className={`w-2 h-2 rounded-full ${s.enabled ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.3)]' : 'bg-zinc-800'}`}></div>
                                         <span className={`text-xs md:text-sm font-bold ${s.enabled ? 'text-zinc-200' : 'text-zinc-600'}`}>{s.id}</span>
@@ -463,7 +466,7 @@ export default function SkillsView({ mode = 'user' }: { mode?: 'user' | 'admin' 
                                             <span className="text-[8px] font-black uppercase bg-zinc-900 text-zinc-500 px-1.5 py-0.5 rounded border border-zinc-800">System</span>
                                         )}
                                         {isLoading && (
-                                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
+                                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500/50 animate-pulse"></div>
                                         )}
                                     </div>
                                 </td>
@@ -476,7 +479,7 @@ export default function SkillsView({ mode = 'user' }: { mode?: 'user' | 'admin' 
                                     </p>
                                 </td>
                                 <td className="px-4 md:px-8 py-4 md:py-5 text-right">
-                                    <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <div className="flex items-center justify-end gap-1 group-hover:opacity-100 transition-opacity">
                                         <button onClick={() => handleToggleStatus(s)} className="p-2 text-zinc-600 hover:text-zinc-100" title={s.enabled ? "Deactivate" : "Activate"}>
                                             <Icon name={s.enabled ? "shield" : "plus"} size={16} />
                                         </button>
@@ -493,9 +496,9 @@ export default function SkillsView({ mode = 'user' }: { mode?: 'user' | 'admin' 
                             </tr>
                         ))}
 
-                        {isLoading && (
+                        {isLoading && filteredSkills.length === 0 && (
                             <>
-                                {[1, 2, 3].map(i => (
+                                {[1, 2, 3, 4, 5].map(i => (
                                     <tr key={`skeleton-${i}`} className="animate-pulse">
                                         <td className="px-4 md:px-8 py-4 md:py-5">
                                             <div className="flex items-center gap-3">
@@ -508,9 +511,9 @@ export default function SkillsView({ mode = 'user' }: { mode?: 'user' | 'admin' 
                                         </td>
                                         <td className="px-4 md:px-8 py-4 md:py-5 text-right">
                                             <div className="flex justify-end gap-2">
-                                                <Skeleton className="h-6 w-6 rounded" />
-                                                <Skeleton className="h-6 w-6 rounded" />
-                                                <Skeleton className="h-6 w-6 rounded" />
+                                                <Skeleton className="h-6 w-6 rounded-lg" />
+                                                <Skeleton className="h-6 w-6 rounded-lg" />
+                                                <Skeleton className="h-6 w-6 rounded-lg" />
                                             </div>
                                         </td>
                                     </tr>

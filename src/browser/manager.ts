@@ -23,7 +23,7 @@ export class BrowserManager {
     private static readonly RUNTIME_PATH = path.join(process.cwd(), "src/browser/runtime");
 
     static getScriptsDir(userId: string) {
-        return path.join(getUserDir(userId), "browser_scripts");
+        return path.join(getUserDir(userId), "browser-scripts");
     }
 
     static async listScripts(userId: string): Promise<BrowserScript[]> {
@@ -68,7 +68,7 @@ export class BrowserManager {
 
         if (!targetUrl) throw new Error("A target URL is required for browser operations.");
 
-        const cacheDir = path.join(SHARED_DIR, "browser_cache/node_modules");
+        const cacheDir = path.join(SHARED_DIR, "browser-cache/node_modules");
         await fs.mkdir(cacheDir, { recursive: true });
 
         const cmd = [

@@ -1,5 +1,5 @@
+import type { UpdateEntry, UpdateStatus } from "@shared/types";
 import { apiClient } from "../lib/apiClient";
-import type { UpdateEntry, UpdateStatus } from "../types";
 
 export const updateService = {
     getStatusAsAdmin: async (): Promise<UpdateStatus> => {

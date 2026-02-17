@@ -75,13 +75,19 @@ export default function UsersView() {
                         </thead>
                         <tbody className="divide-y divide-zinc-800/30">
                             {users.map(u => (
-                                <tr key={u?.id || Math.random()} className={`group hover:bg-zinc-800/20 transition-colors ${isLoading ? 'opacity-70' : ''}`}>
-                                    <td className="py-4 px-6">
-                                        <div className="font-bold text-zinc-200 text-sm">{u?.username || "Unknown"}</div>
+                                <tr key={u?.id || Math.random()} className={`group hover:bg-zinc-800/10 transition-colors ${isLoading ? 'opacity-80' : ''}`}>
+                                    <td className="py-4 px-6 relative">
+                                        {isLoading && (
+                                            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-4 bg-emerald-500/40 rounded-r animate-pulse"></div>
+                                        )}
+                                        <div className="font-bold text-zinc-200 text-sm flex items-center gap-2">
+                                            {u?.username || "Unknown"}
+                                            {isLoading && <div className="w-1.5 h-1.5 rounded-full bg-emerald-500/50 animate-pulse"></div>}
+                                        </div>
                                         <div className="text-[10px] font-mono text-zinc-600 mt-0.5 uppercase tracking-tighter">REF: {u?.id || "N/A"}</div>
                                     </td>
                                     <td className="py-4 px-6">
-                                        <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest ${u?.role === 'root' ? 'bg-zinc-100 text-zinc-950' : 'bg-zinc-800 text-zinc-400'
+                                        <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest ${u?.role === 'root' ? 'bg-zinc-100 text-zinc-950 shadow-sm' : 'bg-zinc-800 text-zinc-400'
                                             }`}>
                                             {u?.role || "user"}
                                         </span>
@@ -90,7 +96,7 @@ export default function UsersView() {
                                         {u?.id !== 'root' && (
                                             <button
                                                 onClick={() => handleDeleteUser(u.id)}
-                                                className="p-2 text-zinc-700 hover:text-red-500 transition-colors"
+                                                className="p-2 text-zinc-700 hover:text-red-500 transition-colors rounded-lg hover:bg-red-500/5"
                                             >
                                                 <Icon name="trash" size={16} />
                                             </button>
@@ -99,19 +105,19 @@ export default function UsersView() {
                                 </tr>
                             ))}
 
-                            {isLoading && (
+                            {isLoading && users.length === 0 && (
                                 <>
-                                    {[1, 2, 3].map(i => (
+                                    {[1, 2, 3, 4, 5].map(i => (
                                         <tr key={`skeleton-${i}`} className="animate-pulse">
                                             <td className="py-4 px-6">
-                                                <Skeleton className="h-4 w-24 mb-1" />
-                                                <Skeleton className="h-2 w-16" />
+                                                <Skeleton className="h-4 w-32 mb-1" />
+                                                <Skeleton className="h-2 w-20" />
                                             </td>
                                             <td className="py-4 px-6">
-                                                <Skeleton className="h-4 w-12 rounded" />
+                                                <Skeleton className="h-5 w-16 rounded" />
                                             </td>
                                             <td className="py-4 px-6 text-right">
-                                                <Skeleton className="h-8 w-8 rounded-full ml-auto" />
+                                                <Skeleton className="h-8 w-8 rounded-lg ml-auto" />
                                             </td>
                                         </tr>
                                     ))}

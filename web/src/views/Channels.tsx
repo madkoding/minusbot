@@ -39,19 +39,19 @@ export default function ChannelsView({ mode = "user" }: { mode?: "user" | "admin
                 setEnabled(selectedChannel.enabled);
 
                 const initialSettings: any = {};
-                selectedChannel.schema.fields.forEach((f: any) => {
+                selectedChannel.schema?.fields?.forEach((f: any) => {
                     if (!f.secret) {
                         if (f.type === 'string-array') {
-                            initialSettings[f.id] = (selectedChannel.settings[f.id] || []).join(', ');
+                            initialSettings[f.id] = (selectedChannel.settings?.[f.id] || []).join(', ');
                         } else {
-                            initialSettings[f.id] = selectedChannel.settings[f.id] || "";
+                            initialSettings[f.id] = selectedChannel.settings?.[f.id] || "";
                         }
                     }
                 });
                 setSettingsForm(initialSettings);
 
                 const initialSecrets: any = {};
-                selectedChannel.schema.fields.forEach((f: any) => {
+                selectedChannel.schema?.fields?.forEach((f: any) => {
                     if (f.secret) {
                         initialSecrets[f.id] = "";
                     }
@@ -80,7 +80,7 @@ export default function ChannelsView({ mode = "user" }: { mode?: "user" | "admin
             const processedSettings: any = {};
             const processedSecrets: any = {};
 
-            selectedChannel.schema.fields.forEach((f: any) => {
+            selectedChannel.schema?.fields?.forEach((f: any) => {
                 if (f.secret) {
                     const val = secretsForm[f.id];
                     if (val && val.trim()) {
@@ -133,30 +133,34 @@ export default function ChannelsView({ mode = "user" }: { mode?: "user" | "admin
                         const isEnabled = isAdmin || channel.enabled;
                         const isConfigured = isAdmin || channel.configured;
                         return (
-                            <Card
-                                key={channel.id}
-                                className={`p-6 md:p-8 transition-all border-2 ${isLoading ? 'opacity-70 grayscale' : ''} ${isEnabled ? 'border-emerald-500/20 bg-emerald-950/5' : 'border-zinc-800/50 bg-zinc-950/50 grayscale opacity-70 hover:grayscale-0 hover:opacity-100'}`}
-                            >
-                                <div className="flex items-start justify-between mb-6">
-                                    <div className="flex items-center gap-4">
-                                        <div className={`w-12 h-12 md:w-14 md:h-14 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center transition-all ${isEnabled ? 'text-zinc-100 shadow-inner' : 'text-zinc-600'}`}>
-                                            <Icon name={channel.icon || "globe"} size={24} />
-                                        </div>
-                                        <div>
-                                            <h3 className="font-black text-zinc-100 text-lg tracking-tight">{channel.name}</h3>
-                                            <div className="flex items-center gap-2">
-                                                <div className={`w-1.5 h-1.5 rounded-full ${isEnabled ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-zinc-700'}`}></div>
-                                                <span className={`text-[9px] font-black uppercase tracking-widest ${isEnabled ? 'text-emerald-500' : 'text-zinc-600'}`}>
-                                                    {isAdmin ? 'System' : (isEnabled ? 'Active' : 'Inactive')}
-                                                </span>
-                                            </div>
+                            <Card key={channel.id} className={`group border-2 transition-all p-6 md:p-8 flex flex-col h-full bg-zinc-950/20 relative overflow-hidden ${channel.enabled
+                                ? 'border-zinc-800/50 hover:border-zinc-700/50'
+                                : 'border-zinc-900 border-dashed opacity-60 grayscale'
+                                }`}>
+                                {isLoading && (
+                                    <div className="absolute top-0 left-0 w-full h-1 bg-emerald-500/20">
+                                        <div className="h-full bg-emerald-500/60 animate-pulse"></div>
+                                    </div>
+                                )}
+                                <div className="flex items-center gap-4 mb-6">
+                                    <div className={`w-12 h-12 md:w-14 md:h-14 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-105 shadow-xl relative ${channel.enabled ? 'bg-zinc-100 text-zinc-950' : 'bg-zinc-900 text-zinc-600'}`}>
+                                        <Icon name={channel.icon || 'terminal'} size={24} className="md:w-7 md:h-7" />
+                                        {isLoading && (
+                                            <div className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div>
+                                        )}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <h3 className="text-lg font-black text-zinc-100 truncate tracking-tight">{channel.name}</h3>
+                                        <div className="flex items-center gap-1.5 mt-0.5">
+                                            <div className={`w-1.5 h-1.5 rounded-full ${channel.enabled ? 'bg-emerald-500 shadow-[0_0_8px_#10b981]' : 'bg-zinc-800'}`}></div>
+                                            <span className={`text-[9px] font-black uppercase tracking-widest ${channel.enabled ? 'text-zinc-400' : 'text-zinc-600'}`}>
+                                                {channel.enabled ? 'Active' : 'Disabled'}
+                                            </span>
                                         </div>
                                     </div>
-                                    {isLoading && (
-                                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
-                                    )}
                                 </div>
-                                <p className="text-xs text-zinc-500 leading-relaxed mb-8 font-medium italic min-h-[40px] opacity-70">{channel.description}</p>
+
+                                <p className="text-xs text-zinc-500 leading-relaxed mb-8 flex-1 font-medium italic opacity-70 line-clamp-2">{channel.description}</p>
                                 <div className="flex gap-2">
                                     <Button
                                         onClick={() => handleConfigure(channel.id)}
@@ -178,10 +182,10 @@ export default function ChannelsView({ mode = "user" }: { mode?: "user" | "admin
                         );
                     })}
 
-                    {isLoading && (
+                    {isLoading && channels.length === 0 && (
                         <>
                             {[1, 2].map(i => (
-                                <Card key={`skeleton-${i}`} className="p-6 md:p-8 border-2 border-zinc-800/50 bg-zinc-950/20 border-dashed animate-pulse">
+                                <Card key={`skeleton-${i}`} className="p-6 md:p-8 border-2 border-zinc-800/50 bg-zinc-950/20 border-dashed animate-pulse h-[260px]">
                                     <div className="flex items-center gap-4 mb-6">
                                         <Skeleton className="w-12 h-12 md:w-14 md:h-14 rounded-2xl" />
                                         <div className="space-y-2">
@@ -191,7 +195,7 @@ export default function ChannelsView({ mode = "user" }: { mode?: "user" | "admin
                                     </div>
                                     <Skeleton className="h-4 w-full mb-2" />
                                     <Skeleton className="h-4 w-2/3 mb-8" />
-                                    <Skeleton className="h-11 w-full rounded-xl" />
+                                    <Skeleton className="h-11 w-full rounded-xl mt-auto" />
                                 </Card>
                             ))}
                         </>

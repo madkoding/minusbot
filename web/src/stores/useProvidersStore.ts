@@ -1,15 +1,16 @@
 import { create } from 'zustand';
-import type { AIProvider, AIClient } from '../types';
+
+import type { AIProvider, BaseAIClient } from '@shared/types';
 
 interface ProvidersState {
     userProviders: AIProvider[];
     adminProviders: AIProvider[];
-    clients: AIClient[];
+    clients: BaseAIClient[];
     isLoading: boolean;
     error: string | null;
     setUserProviders: (providers: AIProvider[]) => void;
     setAdminProviders: (providers: AIProvider[]) => void;
-    setClients: (clients: AIClient[]) => void;
+    setClients: (clients: BaseAIClient[]) => void;
     setLoading: (loading: boolean) => void;
     setError: (error: string | null) => void;
 }

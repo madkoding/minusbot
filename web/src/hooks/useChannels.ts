@@ -28,11 +28,22 @@ export function useChannels() {
     }, [setLoading, setUserChannels, setError]);
 
     const fetchChannelConfig = async (id: string, isAdmin: boolean) => {
+        // Even if we have it in the list, we want the full config (settings, schema, etc)
+        // or at least we want to ensure the structure matches what the view expects.
+
         setLoading(true);
         try {
-            const data = isAdmin ? await channelsService.listAsAdmin() : await channelsService.list();
-            const channel = data.find((c: any) => c.id === id);
-            setSelectedChannel(channel);
+            // Admin list doesn't have a detail endpoint yet, but user does.
+            if (isAdmin) {
+                const data = await channelsService.listAsAdmin();
+                const channel = Array.isArray(data) ? data.find((c: any) => c.id === id) : null;
+                setSelectedChannel(channel);
+            } else {
+                const data = await channelsService.get(id);
+                setSelectedChannel(data);
+            }
+        } catch (err: any) {
+            setError(err.message);
         } finally {
             setLoading(false);
         }
@@ -101,9 +112,19 @@ export function useChannelsAsAdmin() {
     const fetchChannelConfig = async (id: string) => {
         setLoading(true);
         try {
-            const data = await channelsService.listAsAdmin();
-            const channel = data.find((c: any) => c.id === id);
-            setSelectedChannel(channel);
+            const channels = await channelsService.listAsAdmin();
+            const channel = channels.find((c: any) => c.id === id);
+
+            if (channel) {
+                const vault = await channelsService.getVault(id);
+                setSelectedChannel({
+                    ...channel,
+                    secrets: vault,
+                    schema: channel // For consistency with user view
+                });
+            }
+        } catch (err: any) {
+            setError(err.message);
         } finally {
             setLoading(false);
         }
@@ -122,7 +143,9 @@ export function useChannelsAsAdmin() {
 
     const saveChannel = async (id: string, data: any) => {
         try {
-            await channelsService.saveAsAdmin(id, data);
+            if (data.secrets) {
+                await channelsService.saveVault(id, data.secrets);
+            }
             await fetchChannels();
             return true;
         } catch (err: any) {

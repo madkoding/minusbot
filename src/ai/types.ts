@@ -1,4 +1,4 @@
-export type AIProviderType = "text" | "image" | "tts" | "stt" | "vision";
+import type { AIClientOption, AIProviderType, BaseAIClient } from "@shared/types";
 
 export interface AIModel {
     id: string;
@@ -8,7 +8,7 @@ export interface AIModel {
     max_output?: number;
 }
 
-export interface AIClient {
+export interface AIClient extends BaseAIClient {
     id: string;
     name: string;
     types: AIProviderType[];
@@ -64,14 +64,4 @@ export interface ActiveProviders {
     image?: string;
     tts?: string;
     stt?: string;
-}
-
-export interface AIClientOption {
-    id: string;
-    label: string;
-    type: "string" | "number" | "boolean" | "password";
-    placeholder?: string;
-    default?: any;
-    description?: string;
-    required?: boolean;
 }

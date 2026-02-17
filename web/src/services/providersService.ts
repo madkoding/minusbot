@@ -1,5 +1,6 @@
+import type { AIProvider, BaseAIClient } from "@shared/types";
+
 import { apiClient } from "../lib/apiClient";
-import type { AIProvider, AIClient } from "../types";
 
 export const providersService = {
     list: async (): Promise<AIProvider[]> => {
@@ -12,12 +13,12 @@ export const providersService = {
         return res.data;
     },
 
-    listClients: async (): Promise<AIClient[]> => {
+    listClients: async (): Promise<BaseAIClient[]> => {
         const res = await apiClient.get('/user/providers/clients');
         return res.data;
     },
 
-    listClientsAsAdmin: async (): Promise<AIClient[]> => {
+    listClientsAsAdmin: async (): Promise<BaseAIClient[]> => {
         const res = await apiClient.get('/admin/providers/clients');
         return res.data;
     },

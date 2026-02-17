@@ -28,6 +28,14 @@ export function useIntegrations() {
     }, [setLoading, setUserIntegrations, setError]);
 
     const fetchIntegrationConfig = async (id: string, isAdmin: boolean) => {
+        const currentList = isAdmin ? useIntegrationsStore.getState().adminIntegrations : useIntegrationsStore.getState().userIntegrations;
+        const existing = currentList?.available?.find((i: any) => i.id === id);
+
+        if (existing) {
+            setSelectedIntegration(existing);
+            return;
+        }
+
         setLoading(true);
         try {
             const data = isAdmin ? await integrationsService.listAsAdmin() : await integrationsService.list();
@@ -110,6 +118,12 @@ export function useIntegrationsAsAdmin() {
     }, [setLoading, setAdminIntegrations, setError]);
 
     const fetchIntegrationConfig = async (id: string) => {
+        const existing = useIntegrationsStore.getState().adminIntegrations?.available?.find((i: any) => i.id === id);
+        if (existing) {
+            setSelectedIntegration(existing);
+            return;
+        }
+
         setLoading(true);
         try {
             const data = await integrationsService.listAsAdmin();

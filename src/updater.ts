@@ -6,15 +6,9 @@ import { promisify } from "node:util";
 
 import { Logger } from "./cli/colors";
 import { getSystemSettings, SYSTEM_SETTINGS_FILE } from "./data/storage";
+import type { UpdateEntry } from "@shared/types";
 
 const execAsync = promisify(exec);
-
-export interface UpdateEntry {
-    version: string;
-    changes: string[];
-    name: string;
-    type: "update" | "securitypatch" | "hotfix";
-}
 
 export class Updater {
     static async init() {
