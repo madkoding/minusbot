@@ -97,6 +97,12 @@ export class Logger {
         console.log(`${tag}${sep}${await this.wrap(text, COLORS.fg.gray, true)}\n`);
     }
 
+    static async debug(title: string, text: string) {
+        const tag = await this.wrap(" 󱙺 DBUG ", COLORS.bg.pink + COLORS.fg.white + COLORS.bright);
+        const sep = await this.wrap(` (${title}) `, COLORS.fg.pink + COLORS.bright);
+        console.log(`${tag}${sep}${await this.wrap(text, COLORS.fg.pink)}`);
+    }
+
     static async task(text: string) {
         const tag = await this.wrap(" 󱙺 TASK ", COLORS.bg.pink + COLORS.fg.white + COLORS.bright);
         const sep = await this.wrap(" » ", COLORS.fg.pink + COLORS.bright);

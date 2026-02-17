@@ -78,19 +78,29 @@ export class BrowserManager {
 
         const output = await SandboxManager.runContainer(
             "mcr.microsoft.com/playwright:v1.41.0-jammy",
-            this.RUNTIME_PATH,
-            this.getScriptsDir(userId),
             cmd,
-            {},
             {
-                enableNetwork: true,
-                sourceReadOnly: false,
-                runtimeMountPoint: "/browser",
-                extraVolumes: [
-                    `${cacheDir}:/browser/node_modules:rw`
+                networkMode: "host",
+                workingDir: "/browser",
+                binds: [
+                    {
+                        host: this.RUNTIME_PATH,
+                        mount: "/browser",
+                        writable: true
+                    },
+                    {
+                        host: this.getScriptsDir(userId),
+                        mount: "/workspace",
+                        writable: true
+                    },
+                    {
+                        host: cacheDir,
+                        mount: "/browser/node_modules",
+                        writable: true
+                    }
                 ]
             }
-        );
+        ) as string;
 
         try {
             const jsonStart = output.lastIndexOf('{"success"');

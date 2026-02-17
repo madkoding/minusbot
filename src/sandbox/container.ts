@@ -2,7 +2,11 @@ import Docker from "dockerode";
 import path from "node:path";
 import { Writable } from "node:stream";
 import { Logger } from "../cli/colors";
+import { SandboxInstance } from "./instance";
 
+/**
+ * Simple MemoryStream for capturing output
+ */
 class MemoryStream extends Writable {
     private chunks: Buffer[] = [];
 
@@ -22,11 +26,41 @@ class MemoryStream extends Writable {
     }
 }
 
+/**
+ * Volume bind configuration
+ */
+export interface VolumeBinding {
+    host: string;
+    mount: string;
+    writable?: boolean;
+}
+
+/**
+ * Container run options
+ */
+export interface RunContainerOptions {
+    binds?: VolumeBinding[];
+    networkMode?: "bridge" | "host" | "none";
+    entrypoint?: string[];
+    workingDir?: string;
+    env?: Record<string, string>;
+    user?: string;
+    maxMemory?: number; // in MB
+    maxCpus?: number;
+    timeout?: number; // in ms
+}
+
+/**
+ * SandboxManager: Manages Docker containers for sandboxed execution
+ */
 export class SandboxManager {
     public static readonly docker = new Docker({
         socketPath: "/var/run/docker.sock"
     });
 
+    /**
+     * Check if a Docker image exists locally
+     */
     public static async imageExists(image: string): Promise<boolean> {
         try {
             await this.docker.getImage(image).inspect();
@@ -36,6 +70,9 @@ export class SandboxManager {
         }
     }
 
+    /**
+     * Build a Docker image from a directory
+     */
     public static async buildImage(dir: string, tag: string) {
         Logger.info(`Building custom image ${tag} from ${dir}...`);
 
@@ -57,15 +94,15 @@ export class SandboxManager {
                 }, (event) => {
                     if (event.error) {
                         Logger.error(`Build error: ${event.error}`);
-                    } else if (event.stream) {
-                        // Optional: log build progress
-                        // process.stdout.write(event.stream);
                     }
                 });
             });
         });
     }
 
+    /**
+     * Ensure a Docker image exists (pull if needed)
+     */
     public static async ensureImage(image: string) {
         if (await this.imageExists(image)) return;
 
@@ -82,77 +119,92 @@ export class SandboxManager {
         Logger.info(`Image ${image} pulled successfully.`);
     }
 
+    /**
+     * Run a container - handles BOTH one-shot execution AND interactive containers.
+     * 
+     * @param options.interactive - If true, returns SandboxInstance. If false, returns output string.
+     */
     static async runContainer(
         image: string,
-        sourceDir: string,
-        workspaceDir: string,
         command: string[],
-        env: Record<string, string> = {},
-        options: {
-            extraVolumes?: string[];
-            enableNetwork?: boolean;
-            networkMode?: "bridge" | "host" | "none";
-            entrypoint?: string[];
-            sourceReadOnly?: boolean;
-            runtimeMountPoint?: string;
+        options: RunContainerOptions & {
+            interactive?: boolean;
+            tty?: boolean;
+            openStdin?: boolean;
+            maxBufferSize?: number;
         } = {}
-    ): Promise<string> {
+    ): Promise<string | SandboxInstance> {
+        await this.ensureImage(image);
+
+        // Common configuration
+        const envArray = options.env
+            ? Object.entries(options.env).map(([k, v]) => `${k}=${v}`)
+            : [];
+
+        const binds = (options.binds || []).map(bind => {
+            const absHost = path.resolve(bind.host);
+            const mode = bind.writable ? 'rw' : 'ro';
+            return `${absHost}:${bind.mount}:${mode}`;
+        });
+
+        const uid = typeof process.getuid === "function" ? process.getuid() : undefined;
+        const gid = typeof process.getgid === "function" ? process.getgid() : undefined;
+        const userStr = options.user || (uid !== undefined ? `${uid}:${gid}` : undefined);
+
+        const hostConfig: any = {
+            Binds: binds,
+            AutoRemove: true,
+            NetworkMode: options.networkMode || "none"
+        };
+
+        if (options.maxMemory) hostConfig.Memory = options.maxMemory * 1024 * 1024;
+        if (options.maxCpus) hostConfig.NanoCpus = options.maxCpus * 1e9;
+
+        const createOptions = {
+            Image: image,
+            Cmd: command,
+            Tty: options.tty || false,
+            OpenStdin: options.openStdin || false,
+            StdinOnce: false,
+            Env: envArray,
+            Entrypoint: options.entrypoint,
+            User: userStr,
+            HostConfig: hostConfig,
+            WorkingDir: options.workingDir || "/workspace"
+        };
+
+        // --- INTERACTIVE MODE (BACKGROUND) ---
+        if (options.interactive) {
+            const container = await this.docker.createContainer(createOptions);
+            const instance = new SandboxInstance(container, {
+                maxBufferSize: options.maxBufferSize
+            });
+
+            // Start container first
+            await container.start();
+
+            // Start background capture (non-blocking)
+            instance.startBackgroundHandlers({
+                tty: options.tty ?? false
+            }).catch(err => Logger.error(`Background handlers failed: ${err.message}`));
+
+            return instance;
+        }
+
+        // --- ONE-SHOT MODE (POWRED BY DOCKER.RUN) ---
         const stream = new MemoryStream();
-
         try {
-            await this.ensureImage(image);
-
-            const absSource = path.resolve(sourceDir);
-            const absWorkspace = path.resolve(workspaceDir);
-
-            // Convert env map to array ["KEY=VAL", ...]
-            const envArray = Object.entries(env).map(([k, v]) => `${k}=${v}`);
-            const mountPoint = options.runtimeMountPoint || "/runtime";
-
-            const binds = [
-                `${absSource}:${mountPoint}:${options.sourceReadOnly ?? true ? 'ro' : 'rw'}`,
-                `${absWorkspace}:/workspace:rw`
-            ];
-
-            if (options.extraVolumes) {
-                binds.push(...options.extraVolumes);
-            }
-
-            const uid = typeof process.getuid === "function" ? process.getuid() : undefined;
-            const gid = typeof process.getgid === "function" ? process.getgid() : undefined;
-            const userStr = uid !== undefined ? `${uid}:${gid}` : undefined;
-
-            // Using dockerode run helper
-            const [data] = await this.docker.run(
-                image,
-                command,
-                stream,
-                {
-                    Env: envArray,
-                    Entrypoint: options.entrypoint,
-                    User: userStr,
-                    HostConfig: {
-                        Binds: binds,
-                        AutoRemove: true,
-                        NetworkMode: options.networkMode || (options.enableNetwork ? "bridge" : "none")
-                    },
-                    WorkingDir: "/workspace",
-                    Tty: false
-                }
-            );
+            // docker.run handles create -> attach -> start -> wait automatically
+            const [data] = await this.docker.run(image, command, stream, createOptions);
 
             const output = stream.toString();
-
             if (data && data.StatusCode !== 0) {
-                // If container failed, we still want the output (stderr)
-                // We'll throw an error but include the output message
-                throw new Error(`Container exited with code ${data.StatusCode}.\nOutput:\n${output}`);
+                throw new Error(`Exited with code ${data.StatusCode}. Output: ${output}`);
             }
 
             return output;
         } catch (e: any) {
-            // Rethrow specific errors to keep context
-            if (e.message.includes("Container exited")) throw e;
+            if (e.message.includes("Exited with code")) throw e;
             throw new Error(`Sandbox Execution Failed: ${e.message}`);
         }
     }

@@ -26,7 +26,7 @@ commandManager.register({
 commandManager.register({
     name: "shell",
     description: "Manage interactive shells.",
-    usage: "/shell exec [workspaceId] <cmd> | execbg [workspaceId] <cmd> | read <id> [wait] | write <id> <input> | kill <id> | ls [workspaceId]",
+    usage: "/shell exec [workspaceId] <cmd> | execbg [workspaceId] <cmd> | read <id> [wait] | readbuf <id> <bytes> | write <id> <input> | kill <id> | ls [workspaceId]",
     handler: async (args, { user, chat }) => {
         const sub = args[0];
 
@@ -57,6 +57,15 @@ commandManager.register({
                 const out = await ShellManager.stdout(user.id, args[1], wait);
                 return out || "(No output)";
             }
+            if (sub === "readbuf" && args[1] && args[2]) {
+                const id = args[1];
+                const bytes = parseInt(args[2]);
+                if (isNaN(bytes) || bytes <= 0) {
+                    return "Usage: /shell readbuf <id> <bytes> - bytes must be a positive number";
+                }
+                const out = await ShellManager.stdout(user.id, id, 0, bytes);
+                return out || "(No output)";
+            }
             if (sub === "write" && args[1]) {
                 const id = args[1];
                 const input = args.slice(2).join(" ");
@@ -75,7 +84,7 @@ commandManager.register({
             return `Shell Error: ${e.message}`;
         }
 
-        return "Usage: /shell exec [workspaceId] <cmd> | execbg [workspaceId] <cmd> | read <id> [wait] | write <id> <input> | kill <id> | ls [workspaceId]";
+        return "Usage: /shell exec [workspaceId] <cmd> | execbg [workspaceId] <cmd> | read <id> [wait] | readbuf <id> <bytes> | write <id> <input> | kill <id> | ls [workspaceId]";
     }
 });
 
@@ -86,13 +95,13 @@ toolManager.registerTool({
     type: "function",
     function: {
         name: "shell_create",
-        description: "Create a new shell session. If bg=false, waits for output. Use workspaceId='chat' to use the current chat space.",
+        description: "Create a new shell session. If bg=false, waits for output. Use workspaceId='chat' to use the current chat space. IMPORTANT: For interactive commands (ssh, python, node, etc) requiring input or long running, use bg=true and interact via shell_stdout/shell_stdin.",
         parameters: {
             type: "object",
             properties: {
                 workspaceId: { type: "string" },
                 command: { type: "string" },
-                bg: { type: "boolean", description: "Run in background? Default false." },
+                bg: { type: "boolean", description: "Run in background? Default false for oneshot commands, true for tty/stdin based commands like ssh and TUIs." },
                 timeout: { type: "number", description: "Timeout in ms if bg=false. Default 30000." }
             },
             required: ["command"]
@@ -116,14 +125,15 @@ toolManager.registerTool({
             type: "object",
             properties: {
                 id: { type: "string" },
-                wait: { type: "number", description: "Wait seconds for new output. Default 0." }
+                wait: { type: "number", description: "Wait seconds for new output. Default 0." },
+                tail: { type: "number", description: "Read last N characters from history. Ignored if wait > 0." }
             },
             required: ["id"]
         }
     }
-}, async ({ id, wait }, { chat }) => {
+}, async ({ id, wait, tail }, { chat }) => {
     try {
-        return await ShellManager.stdout(chat.meta.owner, id, wait);
+        return await ShellManager.stdout(chat.meta.owner, id, wait, tail);
     } catch (e: any) {
         return `Error: ${e.message}`;
     }

@@ -384,23 +384,57 @@ export class SkillManager {
             cmd = [`/skill/scripts/${action._script}`, payload];
         }
 
+        // Prepare volume bindings
+        const binds = [
+            {
+                host: skill.path,
+                mount: "/skill",
+                writable: false
+            },
+            {
+                host: workspaceDir,
+                mount: "/workspace",
+                writable: true
+            },
+            {
+                host: dataDir,
+                mount: "/data",
+                writable: true
+            }
+        ];
+
+        // Add extra volumes from action configuration
+        if (action.extraVolumes) {
+            for (const vol of action.extraVolumes) {
+                const parts = vol.split(":");
+                const hostPath = parts[0] || "";
+                const mountPath = parts[1] || "";
+                const mode = parts[2];
+
+                if (hostPath && mountPath) {
+                    binds.push({
+                        host: hostPath,
+                        mount: mountPath,
+                        writable: mode === "rw"
+                    });
+                }
+            }
+        }
+
         return await SandboxManager.runContainer(
             dockerImage,
-            skill.path,
-            workspaceDir,
             cmd,
-            env,
             {
-                extraVolumes: [
-                    ...(action.extraVolumes || []),
-                    `${dataDir}:/data:rw`
-                ],
-                enableNetwork: action.enableNetwork || skill.definition.enableNetwork,
-                networkMode: action.networkMode || skill.definition.networkMode,
+                binds,
+                networkMode: action.networkMode || skill.definition.networkMode || "none",
                 entrypoint,
-                runtimeMountPoint: "/skill"
+                workingDir: "/workspace",
+                env,
+                maxMemory: 512, // 512MB limit
+                maxCpus: 1, // 1 CPU limit
+                timeout: 300000 // 5 minutes timeout
             }
-        );
+        ) as string;
     }
 
     static async getToolsForUser(userId: string): Promise<any[]> {
