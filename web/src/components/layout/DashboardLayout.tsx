@@ -4,6 +4,7 @@ import { Sidebar } from "../navigation/Sidebar";
 import { MobileHeader } from "../navigation/MobileHeader";
 import { useAuthStore } from "../../stores/useAuthStore";
 import { useLocation } from "react-router-dom";
+import { OnboardingModal } from "../modals";
 
 export const DashboardLayout: React.FC = () => {
     const { isAuthenticated, isInitializing } = useAuthStore();
@@ -44,6 +45,7 @@ export const DashboardLayout: React.FC = () => {
         if (path.includes('admin/skills')) return 'Admin Skills';
         if (path.includes('admin/secrets')) return 'Admin Vault';
         if (path.includes('admin/settings')) return 'Admin Settings';
+        if (path.includes('admin/providers')) return 'Global AI Providers';
         if (path.includes('admin/users')) return 'Users';
         if (path.includes('admin/stats')) return 'System Stats';
         if (path.includes('system/update')) return 'Update';
@@ -53,6 +55,8 @@ export const DashboardLayout: React.FC = () => {
     return (
         <div className="min-h-[100dvh] bg-[#070707] lg:flex overflow-hidden relative">
             <Sidebar />
+
+            <OnboardingModal />
 
             <main className="flex-1 min-w-0 w-full lg:w-auto h-[100dvh] relative overflow-hidden flex flex-col">
                 {!location.pathname.startsWith('/chat') && <MobileHeader title={getTitle()} />}

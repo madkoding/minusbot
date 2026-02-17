@@ -56,6 +56,7 @@ export const Sidebar = () => {
         { id: '/admin/skills', label: 'Global Skills', icon: 'shield' },
         { id: '/admin/integrations', label: 'Global Integrations', icon: 'globe' },
         { id: '/admin/channels', label: 'Global Channels', icon: 'chat_alt' },
+        { id: '/admin/providers', label: 'Global AI Providers', icon: 'cpu' },
         { id: '/admin/secrets', label: 'Global Vault', icon: 'vault' },
         { id: '/admin/settings', label: 'Global Config', icon: 'settings' },
         { id: '/admin/users', label: 'User Directory', icon: 'users' },

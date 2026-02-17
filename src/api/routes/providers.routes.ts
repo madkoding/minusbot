@@ -4,6 +4,7 @@ import { AIRegistry } from "@/ai/registry";
 import { v4 as uuid } from "uuid";
 import { getGlobalSettings, getUserSettings, getUserSettingsFile, GLOBAL_SETTINGS_FILE } from "@/data/storage";
 import fs from "node:fs/promises";
+import path from "node:path";
 
 const router = express.Router();
 
@@ -112,16 +113,26 @@ router.post("/activate", async (req: any, res) => {
         return res.status(403).send("Only root can change global active providers");
     }
 
-    const settings = is_global_setting ? await getGlobalSettings() : await getUserSettings(req.user.id);
+    // Load existing settings without merging
+    let settings: any;
+    const file = is_global_setting ? GLOBAL_SETTINGS_FILE : getUserSettingsFile(req.user.id);
+
+    try {
+        const content = await fs.readFile(file, "utf-8");
+        settings = JSON.parse(content);
+    } catch {
+        settings = {};
+    }
+
     if (!settings.active_providers) settings.active_providers = {};
 
     if (id === null) {
-        delete settings.active_providers[type as keyof typeof settings.active_providers];
+        delete settings.active_providers[type as string];
     } else {
-        settings.active_providers[type as keyof typeof settings.active_providers] = id;
+        settings.active_providers[type as string] = id;
     }
 
-    const file = is_global_setting ? GLOBAL_SETTINGS_FILE : getUserSettingsFile(req.user.id);
+    await fs.mkdir(path.dirname(file), { recursive: true });
     await fs.writeFile(file, JSON.stringify(settings, null, 4), "utf-8");
 
     res.json(settings);

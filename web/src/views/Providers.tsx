@@ -7,9 +7,14 @@ import { useProviders } from "../hooks/useProviders";
 import { useSettings } from "../hooks/useSettings";
 import { useAuthStore } from "../stores/useAuthStore";
 
-export default function ProvidersView() {
+interface ProvidersViewProps {
+    mode?: "personal" | "admin";
+}
+
+export default function ProvidersView({ mode = "personal" }: ProvidersViewProps) {
     const { user } = useAuthStore();
     const isRoot = user?.role === "root";
+    const isAdminMode = mode === "admin";
 
     const {
         providers,
@@ -25,6 +30,10 @@ export default function ProvidersView() {
     // We fetch user settings to see personal active providers
     const { settings: userSettings, fetchSettings: fetchUserSettings } = useSettings("/user/settings");
 
+    useEffect(() => {
+        fetchUserSettings();
+    }, [fetchUserSettings]);
+
     const [isAdding, setIsAdding] = useState(false);
     const [editingProvider, setEditingProvider] = useState<any>(null);
     const [isFetchingModels, setIsFetchingModels] = useState(false);
@@ -35,8 +44,13 @@ export default function ProvidersView() {
         client: "openai",
         config: { model_id: "", max_tokens: 4096, temperature: 0.7, extra: {} },
         token: "",
-        is_global: false
+        is_global: isAdminMode
     });
+
+    // Forced global/personal based on mode
+    useEffect(() => {
+        setForm((f: any) => ({ ...f, is_global: isAdminMode }));
+    }, [isAdminMode, isAdding]);
 
     const [availableModels, setAvailableModels] = useState<any[]>([]);
     const [searchTerm, setSearchTerm] = useState("");
@@ -128,7 +142,7 @@ export default function ProvidersView() {
             client: "openai",
             config: { model_id: "", max_tokens: 4096, temperature: 0.7, extra: {} },
             token: "",
-            is_global: false
+            is_global: isAdminMode
         });
     };
 
@@ -138,6 +152,13 @@ export default function ProvidersView() {
             (m.name && m.name.toLowerCase().includes(searchTerm.toLowerCase()))
         );
     }, [availableModels, searchTerm]);
+
+    const filteredProviders = useMemo(() => {
+        if (isAdminMode) {
+            return providers.filter(p => p.is_global);
+        }
+        return providers;
+    }, [providers, isAdminMode]);
 
     const types = [
         { id: "text", name: "Text", icon: "message-square" },
@@ -154,18 +175,40 @@ export default function ProvidersView() {
         setSearchTerm("");
     };
 
+    if (isSystemLoading || !userSettings) {
+        return (
+            <div className="flex flex-col items-center justify-center py-32 space-y-4 animate-in fade-in duration-500">
+                <div className="w-12 h-12 border-2 border-zinc-800 border-t-zinc-400 rounded-full animate-spin"></div>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-600">Loading Configuration...</p>
+            </div>
+        );
+    }
+
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                 <div className="space-y-2">
-                    <h2 className="text-2xl md:text-3xl font-black tracking-tight text-zinc-100 uppercase italic">AI Providers</h2>
-                    <p className="text-zinc-500 text-sm font-medium max-w-lg">Manage your AI backends and active clients for different tasks.</p>
+                    <h2 className="text-2xl md:text-3xl font-black tracking-tight text-zinc-100 uppercase italic">
+                        {isAdminMode ? "Global AI Providers" : "AI Providers"}
+                    </h2>
+                    <p className="text-zinc-500 text-sm font-medium max-w-lg">
+                        {isAdminMode
+                            ? "Manage shared AI backends available to all users."
+                            : "Manage your AI backends and active clients for different tasks."}
+                    </p>
                 </div>
 
-                {!isAdding && (
+                {!isAdding && (isAdminMode && (isRoot || user?.role === 'admin')) && (
                     <Button onClick={() => setIsAdding(true)} className="rounded-xl px-6 py-2 h-auto text-[10px] font-black uppercase tracking-widest border-white/5 bg-white/5 hover:bg-white/10 text-white transition-all duration-300">
                         <Icon name="plus" className="w-4 h-4 mr-2" />
-                        Add Provider
+                        Add Global Provider
+                    </Button>
+                )}
+
+                {!isAdding && !isAdminMode && (
+                    <Button onClick={() => setIsAdding(true)} className="rounded-xl px-6 py-2 h-auto text-[10px] font-black uppercase tracking-widest border-white/5 bg-white/5 hover:bg-white/10 text-white transition-all duration-300">
+                        <Icon name="plus" className="w-4 h-4 mr-2" />
+                        Add Personal Provider
                     </Button>
                 )}
             </div>
@@ -338,8 +381,7 @@ export default function ProvidersView() {
                             </div>
                         </div>
 
-                        {/* Root checkbox removed to simplify. If needed, re-add logic later */}
-                        {isRoot && (
+                        {isRoot && !isAdminMode && (
                             <div className="flex items-center gap-2 p-4 rounded-xl bg-amber-500/5 border border-amber-500/10">
                                 <input
                                     type="checkbox"
@@ -357,7 +399,7 @@ export default function ProvidersView() {
 
                         <div className="flex items-center gap-4 pt-4 border-t border-white/5">
                             <Button type="submit" className="rounded-xl px-8 h-12 bg-zinc-100 text-black font-bold uppercase tracking-widest text-[10px] shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all">
-                                {editingProvider ? "Update Provider" : "Register Provider"}
+                                {editingProvider ? "Update Provider" : (isAdminMode ? "Create Global Provider" : "Register Provider")}
                             </Button>
                             <Button type="button" onClick={resetForm} className="rounded-xl px-8 h-12 border-white/5 bg-white/5 text-white font-bold uppercase tracking-widest text-[10px] hover:bg-white/10 transition-all">
                                 Cancel
@@ -367,12 +409,14 @@ export default function ProvidersView() {
                 </Card>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {providers.map(provider => {
+                    {filteredProviders.map(provider => {
                         const type = types.find(t => t.id === provider.type);
                         const isActive = userSettings?.active_providers?.[provider.type] === provider.id;
 
-                        // User can only edit their own providers
-                        const canEdit = isRoot || !provider.is_global;
+                        // User can only edit their own providers, or global if they are admin/root and in admin mode
+                        const canEdit = isAdminMode ? (isRoot || user?.role === 'admin') : (!provider.is_global && (isRoot || user?.role === 'admin' || true));
+                        // Actually, in personal mode, if it's global, it's read-only.
+                        const isReadOnly = !isAdminMode && provider.is_global;
 
                         return (
                             <Card key={provider.id} className="p-6 border-white/5 bg-zinc-900/30 backdrop-blur-xl group hover:border-white/10 transition-all duration-500 flex flex-col justify-between">
@@ -382,7 +426,7 @@ export default function ProvidersView() {
                                             <Icon name={type?.icon || "cpu"} className="w-5 h-5 text-zinc-400" />
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            {canEdit && (
+                                            {!isReadOnly && canEdit && (
                                                 <>
                                                     <button onClick={() => setEditingProvider(provider)} className="p-2 rounded-lg hover:bg-white/5 text-zinc-500 hover:text-white transition-colors">
                                                         <Icon name="edit-2" className="w-4 h-4" />
@@ -391,6 +435,9 @@ export default function ProvidersView() {
                                                         <Icon name="trash-2" className="w-4 h-4" />
                                                     </button>
                                                 </>
+                                            )}
+                                            {isReadOnly && (
+                                                <div className="p-2 text-[8px] font-black uppercase tracking-widest text-zinc-600 border border-zinc-800 rounded-lg">Read Only</div>
                                             )}
                                         </div>
                                     </div>
@@ -416,7 +463,7 @@ export default function ProvidersView() {
                                     {!isActive && (
                                         <Button
                                             onClick={async () => {
-                                                await activateProvider(provider.id, provider.type);
+                                                await activateProvider(provider.id, provider.type, isAdminMode);
                                                 fetchUserSettings();
                                             }}
                                             className="px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest bg-white/5 border-white/5 hover:bg-zinc-100 hover:text-black transition-all"
@@ -427,7 +474,7 @@ export default function ProvidersView() {
                                     {isActive && (
                                         <Button
                                             onClick={async () => {
-                                                await activateProvider(null, provider.type);
+                                                await activateProvider(null, provider.type, isAdminMode);
                                                 fetchUserSettings();
                                             }}
                                             className="px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest bg-red-500/10 border-red-500/10 text-red-400 hover:bg-red-500/20"
@@ -441,15 +488,22 @@ export default function ProvidersView() {
                     })}
 
 
-                    {providers.length === 0 && (
+                    {filteredProviders.length === 0 && (
                         <div className="col-span-full py-20 text-center border-2 border-dashed border-white/5 rounded-3xl group hover:border-white/10 transition-colors">
                             <div className="mb-4 inline-flex p-4 rounded-full bg-white/5 border border-white/5 group-hover:scale-110 transition-transform duration-500">
                                 <Icon name="cpu" className="w-8 h-8 text-zinc-700" />
                             </div>
                             <h3 className="text-zinc-500 font-bold uppercase tracking-widest text-[10px]">No providers configured</h3>
-                            <button onClick={() => setIsAdding(true)} className="mt-4 text-zinc-600 text-[10px] font-black uppercase tracking-widest hover:text-white transition-colors underline underline-offset-4 decoration-zinc-800 hover:decoration-white">
-                                Add your first AI client
-                            </button>
+                            {(isAdminMode && (isRoot || user?.role === 'admin')) && (
+                                <button onClick={() => setIsAdding(true)} className="mt-4 text-zinc-600 text-[10px] font-black uppercase tracking-widest hover:text-white transition-colors underline underline-offset-4 decoration-zinc-800 hover:decoration-white">
+                                    Add your first global AI client
+                                </button>
+                            )}
+                            {!isAdminMode && (
+                                <button onClick={() => setIsAdding(true)} className="mt-4 text-zinc-600 text-[10px] font-black uppercase tracking-widest hover:text-white transition-colors underline underline-offset-4 decoration-zinc-800 hover:decoration-white">
+                                    Add your first personal AI client
+                                </button>
+                            )}
                         </div>
                     )}
                 </div>

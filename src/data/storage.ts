@@ -209,7 +209,10 @@ export async function getUserSettings(userId: string): Promise<Settings> {
             colors: userSettings.colors ?? global.colors,
             disabled_tools: userSettings.disabled_tools ?? global.disabled_tools ?? [],
             disabled_skills: userSettings.disabled_skills ?? global.disabled_skills ?? [],
-            active_providers: userSettings.active_providers ?? global.active_providers ?? {},
+            active_providers: {
+                ...global.active_providers,
+                ...(userSettings.active_providers || {})
+            },
             debug: userSettings.debug ?? global.debug ?? false
         };
     } catch {

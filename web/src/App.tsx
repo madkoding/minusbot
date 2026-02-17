@@ -76,6 +76,7 @@ export default function App() {
                     <Route path="/admin/stats" element={<StatsView apiPath="/admin/stats" />} />
                     <Route path="/admin/integrations" element={<IntegrationsView apiPath="/admin/integrations" />} />
                     <Route path="/admin/channels" element={<ChannelsView apiPath="/admin/channels" />} />
+                    <Route path="/admin/providers" element={<ProvidersView mode="admin" />} />
 
                     {/* System Routes */}
                     <Route path="/system/update" element={<UpdateView />} />
