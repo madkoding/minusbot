@@ -66,7 +66,8 @@ DOCKER_CMD="docker"
 if ! docker ps >/dev/null 2>&1; then
     echo -e "${YELLOW}Warning: Current user ($USER) does not have permission to access the Docker socket.${NC}"
     echo -e "This is required to manage Minusbot without 'sudo'."
-    read -p "$(echo -e ${CYAN}"Would you like to add $USER to the 'docker' group? (y/N): "${NC})" ADD_TO_DOCKER
+    echo -ne "${CYAN}Would you like to add $USER to the 'docker' group? (y/N): ${NC}"
+    read ADD_TO_DOCKER < /dev/tty
     ADD_TO_DOCKER=${ADD_TO_DOCKER:-N}
     
     if [[ "$ADD_TO_DOCKER" =~ ^[Yy]$ ]]; then
@@ -85,7 +86,8 @@ fi
 
 # 3. Interactive Configuration
 echo -e "${BOLD}Setup Configuration:${NC}"
-read -p "$(echo -e ${CYAN}"Container name [${DEFAULT_CONTAINER_NAME}]: "${NC})" CONTAINER_NAME
+echo -ne "${CYAN}Container name [${DEFAULT_CONTAINER_NAME}]: ${NC}"
+read CONTAINER_NAME < /dev/tty
 CONTAINER_NAME=${CONTAINER_NAME:-$DEFAULT_CONTAINER_NAME}
 
 # 4. Check for local installation
@@ -125,7 +127,8 @@ print_success "System is running in detached mode"
 # 7. Skills Installation
 echo ""
 echo -e "${BOLD}Post-Installation:${NC}"
-read -p "$(echo -e ${YELLOW}"Would you like to install additional skills? (Y/n): "${NC})" INSTALL_SKILLS
+echo -ne "${YELLOW}Would you like to install additional skills? (Y/n): ${NC}"
+read INSTALL_SKILLS < /dev/tty
 INSTALL_SKILLS=${INSTALL_SKILLS:-Y}
 
 if [[ "$INSTALL_SKILLS" =~ ^[Yy]$ ]]; then
