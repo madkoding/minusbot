@@ -5,6 +5,12 @@ import { useAuthStore } from "./stores/useAuthStore";
 import { DashboardLayout } from "./components/layout";
 import { LoginForm } from "./components/auth";
 
+// Hooks for initialization
+import { useUser } from "./hooks/useUsers";
+import { useSettings } from "./hooks/useSettings";
+import { useProviders } from "./hooks/useProviders";
+import { useChannels } from "./hooks/useChannels";
+
 // Views
 import DashboardView from "./views/Dashboard.tsx";
 import ChatView from "./views/Chat.tsx";
@@ -19,12 +25,25 @@ import ChannelsView from "./views/Channels.tsx";
 import UpdateView from "./views/Update.tsx";
 import ProvidersView from "./views/Providers.tsx";
 
-export default function App() {
+function Initializer({ children }: { children: React.ReactNode }) {
     const { isAuthenticated, isInitializing, initialize } = useAuthStore();
+    const { fetchMe } = useUser();
+    const { fetchSettings } = useSettings();
+    const { fetchProviders } = useProviders();
+    const { fetchChannels } = useChannels();
 
     useEffect(() => {
         initialize();
     }, [initialize]);
+
+    useEffect(() => {
+        if (isAuthenticated) {
+            fetchMe();
+            fetchSettings();
+            fetchProviders();
+            fetchChannels();
+        }
+    }, [isAuthenticated, fetchMe, fetchSettings, fetchProviders, fetchChannels]);
 
     if (isInitializing) {
         return (
@@ -43,49 +62,57 @@ export default function App() {
         );
     }
 
+    return <>{children}</>;
+}
+
+export default function App() {
+    const { isAuthenticated } = useAuthStore();
+
     return (
         <BrowserRouter>
-            <Routes>
-                {/* Auth Routes */}
-                <Route
-                    path="/login"
-                    element={!isAuthenticated ? <LoginForm /> : <Navigate to="/" replace />}
-                />
+            <Initializer>
+                <Routes>
+                    {/* Auth Routes */}
+                    <Route
+                        path="/login"
+                        element={!isAuthenticated ? <LoginForm /> : <Navigate to="/" replace />}
+                    />
 
-                {/* Protected Dashboard Routes */}
-                <Route element={<DashboardLayout />}>
-                    <Route path="/" element={<Navigate to="/chat" replace />} />
+                    {/* Protected Dashboard Routes */}
+                    <Route element={<DashboardLayout />}>
+                        <Route path="/" element={<Navigate to="/chat" replace />} />
 
-                    {/* Personal Routes */}
-                    <Route path="/dashboard" element={<DashboardView />} />
-                    <Route path="/chat" element={<ChatView />} />
-                    <Route path="/chat/:id" element={<ChatView />} />
-                    <Route path="/providers" element={<ProvidersView />} />
-                    <Route path="/skills" element={<SkillsView apiPath="/user/skills" />} />
-                    <Route path="/integrations" element={<IntegrationsView apiPath="/user/integrations" />} />
-                    <Route path="/channels" element={<ChannelsView />} />
-                    <Route path="/tools" element={<ToolsView apiPath="/user/settings" />} />
-                    <Route path="/secrets" element={<VaultView apiPath="/user/vault" />} />
-                    <Route path="/settings" element={<SettingsView apiPath="/user/settings" />} />
+                        {/* Personal Routes */}
+                        <Route path="/dashboard" element={<DashboardView />} />
+                        <Route path="/chat" element={<ChatView />} />
+                        <Route path="/chat/:id" element={<ChatView />} />
+                        <Route path="/providers" element={<ProvidersView />} />
+                        <Route path="/skills" element={<SkillsView mode="user" />} />
+                        <Route path="/integrations" element={<IntegrationsView mode="user" />} />
+                        <Route path="/channels" element={<ChannelsView mode="user" />} />
+                        <Route path="/tools" element={<ToolsView mode="user" />} />
+                        <Route path="/secrets" element={<VaultView mode="user" />} />
+                        <Route path="/settings" element={<SettingsView mode="user" />} />
 
-                    {/* Global Admin Routes */}
-                    <Route path="/admin/skills" element={<SkillsView apiPath="/admin/skills" />} />
-                    <Route path="/admin/secrets" element={<VaultView apiPath="/admin/vault" />} />
-                    <Route path="/admin/settings" element={<SettingsView apiPath="/admin/settings/global" />} />
-                    <Route path="/admin/users" element={<UsersView />} />
-                    <Route path="/admin/stats" element={<StatsView apiPath="/admin/stats" />} />
-                    <Route path="/admin/integrations" element={<IntegrationsView apiPath="/admin/integrations" />} />
-                    <Route path="/admin/channels" element={<ChannelsView apiPath="/admin/channels" />} />
-                    <Route path="/admin/providers" element={<ProvidersView mode="admin" />} />
+                        {/* Global Admin Routes */}
+                        <Route path="/admin/skills" element={<SkillsView mode="admin" />} />
+                        <Route path="/admin/secrets" element={<VaultView mode="admin" />} />
+                        <Route path="/admin/settings" element={<SettingsView mode="admin" />} />
+                        <Route path="/admin/users" element={<UsersView />} />
+                        <Route path="/admin/stats" element={<StatsView mode="admin" />} />
+                        <Route path="/admin/integrations" element={<IntegrationsView mode="admin" />} />
+                        <Route path="/admin/channels" element={<ChannelsView mode="admin" />} />
+                        <Route path="/admin/providers" element={<ProvidersView mode="admin" />} />
 
-                    {/* System Routes */}
-                    <Route path="/system/update" element={<UpdateView />} />
-                    <Route path="/system/config" element={<SettingsView apiPath="/admin/settings/system" />} />
-                </Route>
+                        {/* System Routes */}
+                        <Route path="/system/update" element={<UpdateView />} />
+                        <Route path="/system/config" element={<SettingsView mode="system" />} />
+                    </Route>
 
-                {/* Fallback */}
-                <Route path="*" element={<Navigate to={isAuthenticated ? "/" : "/login"} replace />} />
-            </Routes>
+                    {/* Fallback */}
+                    <Route path="*" element={<Navigate to={isAuthenticated ? "/" : "/login"} replace />} />
+                </Routes>
+            </Initializer>
         </BrowserRouter>
     );
 }

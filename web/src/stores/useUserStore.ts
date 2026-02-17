@@ -1,10 +1,11 @@
 import { create } from 'zustand';
+import type { User } from '../types';
 
 interface UserState {
-    users: any[];
+    users: User[];
     isLoading: boolean;
     error: string | null;
-    setUsers: (users: any[]) => void;
+    setUsers: (users: User[]) => void;
     setLoading: (loading: boolean) => void;
     setError: (error: string | null) => void;
 }

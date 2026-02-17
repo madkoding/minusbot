@@ -5,19 +5,17 @@ import { useStatsStore } from '../stores/useStatsStore';
 export function useStats() {
     const {
         userStats,
-        adminStats,
         isLoading,
         error,
         setUserStats,
-        setAdminStats,
         setLoading,
         setError
     } = useStatsStore();
 
-    const fetchUserStats = useCallback(async () => {
+    const fetchStats = useCallback(async () => {
         setLoading(true);
         try {
-            const data = await statsService.getUserStats();
+            const data = await statsService.get();
             setUserStats(data);
             setError(null);
         } catch (err: any) {
@@ -27,10 +25,28 @@ export function useStats() {
         }
     }, [setLoading, setUserStats, setError]);
 
-    const fetchAdminStats = useCallback(async () => {
+    return {
+        stats: userStats,
+        isLoading,
+        error,
+        fetchStats
+    };
+}
+
+export function useStatsAsAdmin() {
+    const {
+        adminStats,
+        isLoading,
+        error,
+        setAdminStats,
+        setLoading,
+        setError
+    } = useStatsStore();
+
+    const fetchStats = useCallback(async () => {
         setLoading(true);
         try {
-            const data = await statsService.getAdminStats();
+            const data = await statsService.getAsAdmin();
             setAdminStats(data);
             setError(null);
         } catch (err: any) {
@@ -41,11 +57,9 @@ export function useStats() {
     }, [setLoading, setAdminStats, setError]);
 
     return {
-        userStats,
-        adminStats,
+        stats: adminStats,
         isLoading,
         error,
-        fetchUserStats,
-        fetchAdminStats
+        fetchStats
     };
 }

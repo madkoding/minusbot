@@ -1,36 +1,23 @@
 import { apiClient } from "../lib/apiClient";
-
-export interface UpdateEntry {
-    version: string;
-    changes: string[];
-    name: string;
-    type: "update" | "securitypatch" | "hotfix";
-}
-
-export interface UpdateStatus {
-    currentVersion: string;
-    currentBranch: string;
-    channel: string;
-    updates: UpdateEntry[];
-}
+import type { UpdateEntry, UpdateStatus } from "../types";
 
 export const updateService = {
-    getStatus: async (): Promise<UpdateStatus> => {
+    getStatusAsAdmin: async (): Promise<UpdateStatus> => {
         const response = await apiClient.get("/admin/update/status");
         return response.data;
     },
 
-    check: async (): Promise<{ updates: UpdateEntry[] }> => {
+    checkAsAdmin: async (): Promise<{ updates: UpdateEntry[] }> => {
         const response = await apiClient.post("/admin/update/check");
         return response.data;
     },
 
-    performUpdate: async (): Promise<{ stdout: string; stderr: string }> => {
+    performUpdateAsAdmin: async (): Promise<{ stdout: string; stderr: string }> => {
         const response = await apiClient.post("/admin/update/now");
         return response.data;
     },
 
-    switchChannel: async (branch: string): Promise<{ success: boolean; branch: string }> => {
+    switchChannelAsAdmin: async (branch: string): Promise<{ success: boolean; branch: string }> => {
         const response = await apiClient.post("/admin/update/switch", { branch });
         return response.data;
     }

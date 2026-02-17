@@ -2,28 +2,32 @@ import React, { useState, useEffect } from "react";
 import { Button, Input } from "../components/ui";
 import { Icon } from "../components/icons";
 import { Card } from "../components/cards";
-import { useChannels } from "../hooks/useChannels";
+import { Skeleton } from "../components/ui";
+import { useChannels, useChannelsAsAdmin } from "../hooks/useChannels";
 
-export default function ChannelsView({ apiPath = "/user/channels" }: { apiPath?: string }) {
+export default function ChannelsView({ mode = "user" }: { mode?: "user" | "admin" }) {
+    const isAdmin = mode === "admin";
+    const userHook = useChannels();
+    const adminHook = useChannelsAsAdmin();
+
     const {
         channels,
         selectedChannel,
         isLoading,
-        error,
         fetchChannels,
         fetchChannelConfig,
+        toggleChannel,
         saveChannel,
-        deleteChannel,
         setSelectedChannel
-    } = useChannels(apiPath);
+    } = isAdmin ? adminHook : userHook;
 
     const [settingsForm, setSettingsForm] = useState<any>({});
     const [secretsForm, setSecretsForm] = useState<any>({});
     const [enabled, setEnabled] = useState(false);
 
-    const isAdmin = apiPath.startsWith('/admin');
-
-    useEffect(() => { fetchChannels(); }, [apiPath, fetchChannels]);
+    useEffect(() => {
+        fetchChannels();
+    }, [fetchChannels]);
 
     useEffect(() => {
         if (selectedChannel) {
@@ -58,7 +62,11 @@ export default function ChannelsView({ apiPath = "/user/channels" }: { apiPath?:
     }, [selectedChannel, isAdmin]);
 
     const handleConfigure = (id: string) => {
-        fetchChannelConfig(id, isAdmin);
+        if (isAdmin) {
+            adminHook.fetchChannelConfig(id);
+        } else {
+            userHook.fetchChannelConfig(id, false);
+        }
     };
 
     const handleSave = async (e: React.FormEvent) => {
@@ -97,20 +105,13 @@ export default function ChannelsView({ apiPath = "/user/channels" }: { apiPath?:
             data.secrets = processedSecrets;
         }
 
-        const success = await saveChannel(selectedChannel.schema?.id || selectedChannel.id, data, isAdmin);
+        const success = await saveChannel(selectedChannel.schema?.id || selectedChannel.id, data);
         if (success) {
             alert("Channel configuration saved successfully!");
             setSelectedChannel(null);
         }
     };
 
-    const handleDelete = async (id: string) => {
-        if (isAdmin) return;
-        if (!confirm("Are you sure you want to disable this channel?")) return;
-        await deleteChannel(id);
-    };
-
-    if (!channels && isLoading) return <div className="text-zinc-500 font-bold uppercase tracking-widest px-8 py-20 text-center">Loading...</div>;
 
     if (!selectedChannel) {
         return (
@@ -128,13 +129,13 @@ export default function ChannelsView({ apiPath = "/user/channels" }: { apiPath?:
                 </header>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 md:gap-7">
-                    {channels && channels.length > 0 ? channels.map((channel) => {
+                    {channels && channels.length > 0 && channels.map((channel) => {
                         const isEnabled = isAdmin || channel.enabled;
                         const isConfigured = isAdmin || channel.configured;
                         return (
                             <Card
                                 key={channel.id}
-                                className={`p-6 md:p-8 transition-all border-2 ${isEnabled ? 'border-emerald-500/20 bg-emerald-950/5' : 'border-zinc-800/50 bg-zinc-950/50 grayscale opacity-70 hover:grayscale-0 hover:opacity-100'}`}
+                                className={`p-6 md:p-8 transition-all border-2 ${isLoading ? 'opacity-70 grayscale' : ''} ${isEnabled ? 'border-emerald-500/20 bg-emerald-950/5' : 'border-zinc-800/50 bg-zinc-950/50 grayscale opacity-70 hover:grayscale-0 hover:opacity-100'}`}
                             >
                                 <div className="flex items-start justify-between mb-6">
                                     <div className="flex items-center gap-4">
@@ -151,6 +152,9 @@ export default function ChannelsView({ apiPath = "/user/channels" }: { apiPath?:
                                             </div>
                                         </div>
                                     </div>
+                                    {isLoading && (
+                                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
+                                    )}
                                 </div>
                                 <p className="text-xs text-zinc-500 leading-relaxed mb-8 font-medium italic min-h-[40px] opacity-70">{channel.description}</p>
                                 <div className="flex gap-2">
@@ -163,7 +167,7 @@ export default function ChannelsView({ apiPath = "/user/channels" }: { apiPath?:
                                     </Button>
                                     {!isAdmin && isConfigured && (
                                         <button
-                                            onClick={() => handleDelete(channel.id)}
+                                            onClick={() => { }}
                                             className="px-3.5 bg-zinc-900 text-zinc-600 hover:text-red-500 transition-colors rounded-xl border border-zinc-800 hover:border-red-500/20 active:scale-95"
                                         >
                                             <Icon name="trash" size={16} />
@@ -172,7 +176,28 @@ export default function ChannelsView({ apiPath = "/user/channels" }: { apiPath?:
                                 </div>
                             </Card>
                         );
-                    }) : (
+                    })}
+
+                    {isLoading && (
+                        <>
+                            {[1, 2].map(i => (
+                                <Card key={`skeleton-${i}`} className="p-6 md:p-8 border-2 border-zinc-800/50 bg-zinc-950/20 border-dashed animate-pulse">
+                                    <div className="flex items-center gap-4 mb-6">
+                                        <Skeleton className="w-12 h-12 md:w-14 md:h-14 rounded-2xl" />
+                                        <div className="space-y-2">
+                                            <Skeleton className="h-5 w-24" />
+                                            <Skeleton className="h-3 w-16" />
+                                        </div>
+                                    </div>
+                                    <Skeleton className="h-4 w-full mb-2" />
+                                    <Skeleton className="h-4 w-2/3 mb-8" />
+                                    <Skeleton className="h-11 w-full rounded-xl" />
+                                </Card>
+                            ))}
+                        </>
+                    )}
+
+                    {!isLoading && (!channels || channels.length === 0) && (
                         <div className="col-span-full text-center py-20 bg-zinc-950/50 border border-zinc-900 border-dashed rounded-[2rem]">
                             <p className="text-zinc-600 text-sm font-bold uppercase tracking-widest italic">No channels available</p>
                         </div>

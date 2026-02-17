@@ -1,12 +1,13 @@
 import { create } from 'zustand';
+import type { Stat } from '../types';
 
 interface StatsState {
-    userStats: any | null;
-    adminStats: any | null;
+    userStats: Stat | null;
+    adminStats: Stat | null;
     isLoading: boolean;
     error: string | null;
-    setUserStats: (stats: any) => void;
-    setAdminStats: (stats: any) => void;
+    setUserStats: (stats: Stat | null) => void;
+    setAdminStats: (stats: Stat | null) => void;
     setLoading: (loading: boolean) => void;
     setError: (error: string | null) => void;
 }

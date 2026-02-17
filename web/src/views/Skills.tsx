@@ -2,9 +2,14 @@ import React, { useState, useEffect } from "react";
 import { Button } from "../components/ui";
 import { Icon } from "../components/icons";
 import { Modal } from "../components/modals";
-import { useSkills } from "../hooks/useSkills";
+import { Skeleton } from "../components/ui";
+import { useSkills, useSkillsAsAdmin } from "../hooks/useSkills";
 
-export default function SkillsView({ apiPath = '/user/skills' }: { apiPath?: string }) {
+export default function SkillsView({ mode = 'user' }: { mode?: 'user' | 'admin' }) {
+    const isAdmin = mode === 'admin';
+    const userHook = useSkills();
+    const adminHook = useSkillsAsAdmin();
+
     const {
         skills,
         selectedSkill,
@@ -25,7 +30,7 @@ export default function SkillsView({ apiPath = '/user/skills' }: { apiPath?: str
         deleteSkill,
         updateSkillVault,
         setSelectedSkill
-    } = useSkills(apiPath);
+    } = isAdmin ? adminHook : userHook;
 
     const [isEditing, setIsEditing] = useState(false);
     const [editTab, setEditTab] = useState<'config' | 'data' | 'secrets' | 'definition' | 'source'>('config');
@@ -44,7 +49,7 @@ export default function SkillsView({ apiPath = '/user/skills' }: { apiPath?: str
 
     const [definitionJson, setDefinitionJson] = useState<string>("{}");
 
-    useEffect(() => { fetchSkills(); }, [apiPath, fetchSkills]);
+    useEffect(() => { fetchSkills(); }, [fetchSkills]);
 
     const handleLoadDetail = async (id: string) => {
         const detail = await fetchSkillDetail(id);
@@ -52,31 +57,37 @@ export default function SkillsView({ apiPath = '/user/skills' }: { apiPath?: str
             setDefinitionJson(JSON.stringify(detail.skillJson, null, 4));
 
             // Load Config
-            const config = await fetchConfig(id);
-            setSkillConfig(config);
+            if (fetchConfig) {
+                const config = await fetchConfig(id);
+                setSkillConfig(config);
+            }
 
             // Load Data Files
-            const files = await listDataFiles(id);
-            setDataFiles(files);
-            if (files.length > 0) {
-                setSelectedDataFile(files[0]);
-                const content = await getFileData(id, files[0]);
-                setDataFileContent(content);
-            } else {
-                setSelectedDataFile(null);
-                setDataFileContent("");
+            if (listDataFiles) {
+                const files = await listDataFiles(id);
+                setDataFiles(files);
+                if (files.length > 0) {
+                    setSelectedDataFile(files[0]);
+                    const content = await getFileData!(id, files[0]);
+                    setDataFileContent(content);
+                } else {
+                    setSelectedDataFile(null);
+                    setDataFileContent("");
+                }
             }
 
             // Load Scripts
-            const scripts = await listScripts(id);
-            setScriptFiles(scripts);
-            if (scripts.length > 0) {
-                setSelectedScript(scripts[0]);
-                const content = await getScriptContent(id, scripts[0]);
-                setScriptContent(content);
-            } else {
-                setSelectedScript(null);
-                setScriptContent("");
+            if (listScripts) {
+                const scripts = await listScripts(id);
+                setScriptFiles(scripts);
+                if (scripts.length > 0) {
+                    setSelectedScript(scripts[0]);
+                    const content = await getScriptContent!(id, scripts[0]);
+                    setScriptContent(content);
+                } else {
+                    setSelectedScript(null);
+                    setScriptContent("");
+                }
             }
 
             setIsEditing(true);
@@ -86,26 +97,32 @@ export default function SkillsView({ apiPath = '/user/skills' }: { apiPath?: str
 
     const handleSaveConfig = async () => {
         if (!selectedSkill) return;
-        await saveConfig(selectedSkill.id, skillConfig);
-        alert("Configuration saved.");
+        if (saveConfig) {
+            await saveConfig(selectedSkill.id, skillConfig);
+            alert("Configuration saved.");
+        }
     };
 
     const handleSaveData = async () => {
         if (!selectedSkill || !selectedDataFile) return;
-        await saveFileData(selectedSkill.id, selectedDataFile, dataFileContent);
-        alert("Data file saved.");
+        if (saveFileData) {
+            await saveFileData(selectedSkill.id, selectedDataFile, dataFileContent);
+            alert("Data file saved.");
+        }
     };
 
     const handleSaveScript = async () => {
         if (!selectedSkill || !selectedScript) return;
-        if (selectedSkill.isGlobal) return;
-        await saveScriptContent(selectedSkill.id, selectedScript, scriptContent);
-        alert("Script saved.");
+        if (selectedSkill.isGlobal && !isAdmin) return;
+        if (saveScriptContent) {
+            await saveScriptContent(selectedSkill.id, selectedScript, scriptContent);
+            alert("Script saved.");
+        }
     };
 
     const handleSaveDefinition = async () => {
         if (!selectedSkill) return;
-        if (selectedSkill.isGlobal) return;
+        if (selectedSkill.isGlobal && !isAdmin) return;
         try {
             const json = JSON.parse(definitionJson);
             await saveSkill(selectedSkill.id, { skillJson: json });
@@ -158,10 +175,10 @@ export default function SkillsView({ apiPath = '/user/skills' }: { apiPath?: str
 
                 <div className="flex gap-4 mb-8 border-b border-zinc-900 overflow-x-auto scrollbar-none">
                     <button onClick={() => setEditTab('config')} className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${editTab === 'config' ? 'text-zinc-100 border-b-2 border-zinc-100' : 'text-zinc-500'}`}>Settings</button>
-                    <button onClick={() => setEditTab('data')} className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${editTab === 'data' ? 'text-zinc-100 border-b-2 border-zinc-100' : 'text-zinc-500'}`}>Data Storage</button>
+                    {!isAdmin && <button onClick={() => setEditTab('data')} className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${editTab === 'data' ? 'text-zinc-100 border-b-2 border-zinc-100' : 'text-zinc-500'}`}>Data Storage</button>}
                     <button onClick={() => setEditTab('secrets')} className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${editTab === 'secrets' ? 'text-zinc-100 border-b-2 border-zinc-100' : 'text-zinc-500'}`}>Environments</button>
                     <button onClick={() => setEditTab('definition')} className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${editTab === 'definition' ? 'text-zinc-100 border-b-2 border-zinc-100' : 'text-zinc-500'}`}>Definition</button>
-                    <button onClick={() => setEditTab('source')} className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${editTab === 'source' ? 'text-zinc-100 border-b-2 border-zinc-100' : 'text-zinc-500'}`}>Source Code</button>
+                    {!isAdmin && <button onClick={() => setEditTab('source')} className={`px-4 py-2 text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${editTab === 'source' ? 'text-zinc-100 border-b-2 border-zinc-100' : 'text-zinc-500'}`}>Source Code</button>}
                 </div>
 
                 <div className="min-h-[500px]">
@@ -204,7 +221,7 @@ export default function SkillsView({ apiPath = '/user/skills' }: { apiPath?: str
                         </div>
                     )}
 
-                    {editTab === 'data' && (
+                    {editTab === 'data' && !isAdmin && (
                         <div className="flex flex-col md:flex-row gap-6 animate-in fade-in slide-in-from-bottom-2 duration-300 h-[600px]">
                             <div className="w-full md:w-64 bg-zinc-950 border border-zinc-900 rounded-3xl p-6 overflow-y-auto">
                                 <div className="flex items-center justify-between mb-6">
@@ -212,7 +229,7 @@ export default function SkillsView({ apiPath = '/user/skills' }: { apiPath?: str
                                     <button onClick={async () => {
                                         const name = prompt("Filename (e.g. data.json):");
                                         if (name && !dataFiles.includes(name)) {
-                                            await saveFileData(skill!.id, name, "{}");
+                                            await saveFileData!(skill!.id, name, "{}");
                                             setDataFiles([...dataFiles, name]);
                                             setSelectedDataFile(name);
                                             setDataFileContent("{}");
@@ -227,7 +244,7 @@ export default function SkillsView({ apiPath = '/user/skills' }: { apiPath?: str
                                             key={file}
                                             onClick={async () => {
                                                 setSelectedDataFile(file);
-                                                const content = await getFileData(skill!.id, file);
+                                                const content = await getFileData!(skill!.id, file);
                                                 setDataFileContent(content);
                                             }}
                                             className={`w-full text-left px-4 py-2.5 rounded-xl text-[11px] font-bold transition-all truncate ${selectedDataFile === file ? 'bg-zinc-100 text-zinc-950' : 'text-zinc-500 hover:bg-zinc-900/50'}`}
@@ -270,7 +287,7 @@ export default function SkillsView({ apiPath = '/user/skills' }: { apiPath?: str
                                 <Icon name="shield" size={16} />
                                 Secrets Vault
                             </h3>
-                            {Object.entries(skillVault).length > 0 ? Object.entries(skillVault).map(([k, hasValue]: [string, any]) => (
+                            {skillVault && Object.entries(skillVault).length > 0 ? Object.entries(skillVault).map(([k, hasValue]: [string, any]) => (
                                 <div key={k} className="py-6 flex items-center justify-between group">
                                     <div className="flex-1 mr-10">
                                         <div className="flex items-center gap-2 mb-1">
@@ -308,21 +325,21 @@ export default function SkillsView({ apiPath = '/user/skills' }: { apiPath?: str
                             <div className="px-6 py-4 border-b border-zinc-900 flex justify-between items-center">
                                 <div className="flex items-center gap-2">
                                     <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">skill.json</span>
-                                    {isGlobal && <span className="text-[8px] font-bold text-red-500 bg-red-500/10 px-1.5 py-0.5 rounded">READONLY</span>}
+                                    {isGlobal && !isAdmin && <span className="text-[8px] font-bold text-red-500 bg-red-500/10 px-1.5 py-0.5 rounded">READONLY</span>}
                                 </div>
-                                {!isGlobal && <Button onClick={handleSaveDefinition} size="sm" className="rounded-lg h-7 px-3 text-[9px] font-black uppercase tracking-widest">Save</Button>}
+                                {(!isGlobal || isAdmin) && <Button onClick={handleSaveDefinition} size="sm" className="rounded-lg h-7 px-3 text-[9px] font-black uppercase tracking-widest">Save</Button>}
                             </div>
                             <textarea
                                 value={definitionJson}
-                                readOnly={isGlobal}
+                                readOnly={isGlobal && !isAdmin}
                                 onChange={(e) => setDefinitionJson(e.target.value)}
-                                className={`flex-1 w-full p-8 bg-transparent text-zinc-500 font-mono text-xs outline-none resize-none custom-scrollbar ${isGlobal ? 'opacity-50' : ''}`}
+                                className={`flex-1 w-full p-8 bg-transparent text-zinc-500 font-mono text-xs outline-none resize-none custom-scrollbar ${isGlobal && !isAdmin ? 'opacity-50' : ''}`}
                                 placeholder="Skill definition JSON..."
                             />
                         </div>
                     )}
 
-                    {editTab === 'source' && (
+                    {editTab === 'source' && !isAdmin && (
                         <div className="flex flex-col md:flex-row gap-6 animate-in fade-in slide-in-from-bottom-2 duration-300 h-[600px]">
                             <div className="w-full md:w-64 bg-zinc-950 border border-zinc-900 rounded-3xl p-6 overflow-y-auto">
                                 <div className="flex items-center justify-between mb-6">
@@ -330,7 +347,7 @@ export default function SkillsView({ apiPath = '/user/skills' }: { apiPath?: str
                                     {!isGlobal && <button onClick={async () => {
                                         const name = prompt("Filename (e.g. main.py):");
                                         if (name && !scriptFiles.includes(name)) {
-                                            await saveScriptContent(selectedSkill!.id, name, "");
+                                            await saveScriptContent!(selectedSkill!.id, name, "");
                                             setScriptFiles([...scriptFiles, name]);
                                             setSelectedScript(name);
                                             setScriptContent("");
@@ -345,7 +362,7 @@ export default function SkillsView({ apiPath = '/user/skills' }: { apiPath?: str
                                             key={file}
                                             onClick={async () => {
                                                 setSelectedScript(file);
-                                                const content = await getScriptContent(skill!.id, file);
+                                                const content = await getScriptContent!(skill!.id, file);
                                                 setScriptContent(content);
                                             }}
                                             className={`w-full text-left px-4 py-2.5 rounded-xl text-[11px] font-bold transition-all truncate ${selectedScript === file ? 'bg-zinc-100 text-zinc-950' : 'text-zinc-500 hover:bg-zinc-900/50'}`}
@@ -395,16 +412,22 @@ export default function SkillsView({ apiPath = '/user/skills' }: { apiPath?: str
             <header className="flex flex-col md:flex-row md:justify-between md:items-end gap-6">
                 <div className="flex-1">
                     <div className="flex items-center gap-3 mb-3">
-                        <h2 className="text-2xl md:text-3xl font-black tracking-tight text-zinc-100 uppercase italic">Skills</h2>
+                        <h2 className="text-2xl md:text-3xl font-black tracking-tight text-zinc-100 uppercase italic">{isAdmin ? 'Global ' : ''}Skills</h2>
                         <div className="h-px w-12 bg-zinc-800 ml-2"></div>
                     </div>
-                    <p className="text-zinc-500 text-sm font-medium max-w-lg">Manage custom logic and skills to expand your assistant's capabilities.</p>
+                    <p className="text-zinc-500 text-sm font-medium max-w-lg">
+                        {isAdmin
+                            ? "Configure global skills provided by the system."
+                            : "Manage custom logic and skills to expand your assistant's capabilities."}
+                    </p>
                 </div>
-                <div className="md:ml-10">
-                    <Button onClick={() => { setIsEditing(true); setSelectedSkill(null); }} size="sm" className="rounded-xl w-full md:w-auto h-11 px-6 shadow-xl">
-                        Create New Skill
-                    </Button>
-                </div>
+                {!isAdmin && (
+                    <div className="md:ml-10">
+                        <Button onClick={() => { setIsEditing(true); setSelectedSkill(null); }} size="sm" className="rounded-xl w-full md:w-auto h-11 px-6 shadow-xl">
+                            Create New Skill
+                        </Button>
+                    </div>
+                )}
             </header>
 
             <div className="flex gap-6 overflow-x-auto pb-4 scrollbar-none border-b border-zinc-900/50">
@@ -431,13 +454,16 @@ export default function SkillsView({ apiPath = '/user/skills' }: { apiPath?: str
                     </thead>
                     <tbody className="divide-y divide-zinc-900/30">
                         {filteredSkills.map(s => (
-                            <tr key={s.id} className="group hover:bg-zinc-900/20 transition-colors">
+                            <tr key={s.id} className={`group hover:bg-zinc-900/20 transition-colors ${isLoading ? 'opacity-70 grayscale' : ''}`}>
                                 <td className="px-4 md:px-8 py-4 md:py-5">
                                     <div className="flex items-center gap-2 md:gap-3">
                                         <div className={`w-2 h-2 rounded-full ${s.enabled ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.3)]' : 'bg-zinc-800'}`}></div>
                                         <span className={`text-xs md:text-sm font-bold ${s.enabled ? 'text-zinc-200' : 'text-zinc-600'}`}>{s.id}</span>
                                         {s.isGlobal && (
                                             <span className="text-[8px] font-black uppercase bg-zinc-900 text-zinc-500 px-1.5 py-0.5 rounded border border-zinc-800">System</span>
+                                        )}
+                                        {isLoading && (
+                                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
                                         )}
                                     </div>
                                 </td>
@@ -457,7 +483,7 @@ export default function SkillsView({ apiPath = '/user/skills' }: { apiPath?: str
                                         <button onClick={() => handleLoadDetail(s.id)} className="p-2 text-zinc-600 hover:text-zinc-100" title="Manage Skill">
                                             <Icon name="terminal" size={16} />
                                         </button>
-                                        {(!s.isGlobal || apiPath.includes('admin')) && (
+                                        {(isAdmin || !s.isGlobal) && (
                                             <button onClick={() => handleDelete(s.id)} className="p-2 text-zinc-600 hover:text-red-500" title="Delete">
                                                 <Icon name="trash" size={16} />
                                             </button>
@@ -466,9 +492,34 @@ export default function SkillsView({ apiPath = '/user/skills' }: { apiPath?: str
                                 </td>
                             </tr>
                         ))}
+
+                        {isLoading && (
+                            <>
+                                {[1, 2, 3].map(i => (
+                                    <tr key={`skeleton-${i}`} className="animate-pulse">
+                                        <td className="px-4 md:px-8 py-4 md:py-5">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-2 h-2 rounded-full bg-zinc-800"></div>
+                                                <Skeleton className="h-4 w-32" />
+                                            </div>
+                                        </td>
+                                        <td className="px-4 md:px-8 py-4 md:py-5">
+                                            <Skeleton className="h-3 w-full" />
+                                        </td>
+                                        <td className="px-4 md:px-8 py-4 md:py-5 text-right">
+                                            <div className="flex justify-end gap-2">
+                                                <Skeleton className="h-6 w-6 rounded" />
+                                                <Skeleton className="h-6 w-6 rounded" />
+                                                <Skeleton className="h-6 w-6 rounded" />
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </>
+                        )}
                     </tbody>
                 </table>
-                {filteredSkills.length === 0 && (
+                {filteredSkills.length === 0 && !isLoading && (
                     <div className="py-20 text-center text-zinc-800 italic uppercase text-[10px] font-black tracking-widest">
                         No skills found
                     </div>

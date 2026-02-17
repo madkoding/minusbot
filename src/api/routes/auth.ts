@@ -11,6 +11,14 @@ import { LoginDTO } from "../dto/auth.dto";
 
 const router = express.Router();
 
+router.get("/me", authenticate, async (req: any, res) => {
+    const user = UserManager.getUserById(req.user.id);
+    if (!user) {
+        return res.status(404).json({ message: "User not found" });
+    }
+    res.json({ id: user.id, username: user.username, role: user.role });
+});
+
 router.post("/login", validate(LoginDTO), async (req, res) => {
     const { username, password } = req.body;
     const user = UserManager.getUserByUsername(username);

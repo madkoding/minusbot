@@ -2,54 +2,42 @@ import { useCallback } from 'react';
 import { vaultService } from '../services/vaultService';
 import { useVaultStore } from '../stores/useVaultStore';
 
-export function useVault(apiPath: string) {
+export function useVault() {
     const {
-        vaults,
-        selectedVault,
-        keys,
+        userSecrets,
         isLoading,
         error,
-        setVaults,
-        setSelectedVault,
-        setKeys,
+        setUserSecrets,
         setLoading,
         setError
     } = useVaultStore();
 
-    const fetchVaults = useCallback(async () => {
+    const fetchSecrets = useCallback(async () => {
         setLoading(true);
         try {
-            const data = await vaultService.list(apiPath);
-            setVaults(data);
-            setError(null);
-            return data;
-        } catch (err: any) {
-            setError(err.message);
-            setVaults([]);
-            return [];
-        } finally {
-            setLoading(false);
-        }
-    }, [apiPath, setLoading, setVaults, setError]);
-
-    const fetchKeys = useCallback(async (id: string) => {
-        setLoading(true);
-        try {
-            const data = await vaultService.getKeys(apiPath, id);
-            setKeys(data);
-            setSelectedVault(id);
+            const data = await vaultService.list();
+            setUserSecrets(data);
             setError(null);
         } catch (err: any) {
             setError(err.message);
         } finally {
             setLoading(false);
         }
-    }, [apiPath, setLoading, setKeys, setSelectedVault, setError]);
+    }, [setLoading, setUserSecrets, setError]);
 
-    const updateVaultKey = async (id: string, key: string, value: string) => {
+    const getKeys = async (id: string) => {
         try {
-            await vaultService.updateKey(apiPath, id, key, value);
-            await fetchKeys(id);
+            return await vaultService.getKeys(id);
+        } catch (err: any) {
+            setError(err.message);
+            return {};
+        }
+    };
+
+    const updateKey = async (id: string, key: string, value: string) => {
+        try {
+            await vaultService.updateKey(id, key, value);
+            await fetchSecrets();
             return true;
         } catch (err: any) {
             setError(err.message);
@@ -57,10 +45,10 @@ export function useVault(apiPath: string) {
         }
     };
 
-    const deleteVaultKey = async (id: string, key: string) => {
+    const deleteKey = async (id: string, key: string) => {
         try {
-            await vaultService.deleteKey(apiPath, id, key);
-            await fetchKeys(id);
+            await vaultService.deleteKey(id, key);
+            await fetchSecrets();
             return true;
         } catch (err: any) {
             setError(err.message);
@@ -69,14 +57,77 @@ export function useVault(apiPath: string) {
     };
 
     return {
-        vaults,
-        selectedVault,
-        keys,
+        secrets: userSecrets,
         isLoading,
         error,
-        fetchVaults,
-        fetchKeys,
-        updateVaultKey,
-        deleteVaultKey
+        fetchSecrets,
+        getKeys,
+        updateKey,
+        deleteKey
+    };
+}
+
+export function useVaultAsAdmin() {
+    const {
+        adminSecrets,
+        isLoading,
+        error,
+        setAdminSecrets,
+        setLoading,
+        setError
+    } = useVaultStore();
+
+    const fetchSecrets = useCallback(async () => {
+        setLoading(true);
+        try {
+            const data = await vaultService.listAsAdmin();
+            setAdminSecrets(data);
+            setError(null);
+        } catch (err: any) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    }, [setLoading, setAdminSecrets, setError]);
+
+    const getKeys = async (id: string) => {
+        try {
+            return await vaultService.getKeysAsAdmin(id);
+        } catch (err: any) {
+            setError(err.message);
+            return {};
+        }
+    };
+
+    const updateKey = async (id: string, key: string, value: string) => {
+        try {
+            await vaultService.updateKeyAsAdmin(id, key, value);
+            await fetchSecrets();
+            return true;
+        } catch (err: any) {
+            setError(err.message);
+            return false;
+        }
+    };
+
+    const deleteKey = async (id: string, key: string) => {
+        try {
+            await vaultService.deleteKeyAsAdmin(id, key);
+            await fetchSecrets();
+            return true;
+        } catch (err: any) {
+            setError(err.message);
+            return false;
+        }
+    };
+
+    return {
+        secrets: adminSecrets,
+        isLoading,
+        error,
+        fetchSecrets,
+        getKeys,
+        updateKey,
+        deleteKey
     };
 }

@@ -1,23 +1,28 @@
 import { create } from 'zustand';
+import type { Channel } from '../types';
 
 interface ChannelsState {
-    channels: any[] | null;
+    userChannels: Channel[];
+    adminChannels: Channel[];
     selectedChannel: any | null;
+    setSelectedChannel: (channel: any | null) => void;
     isLoading: boolean;
     error: string | null;
-    setChannels: (channels: any[] | null) => void;
-    setSelectedChannel: (channel: any | null) => void;
+    setUserChannels: (channels: Channel[]) => void;
+    setAdminChannels: (channels: Channel[]) => void;
     setLoading: (loading: boolean) => void;
     setError: (error: string | null) => void;
 }
 
 export const useChannelsStore = create<ChannelsState>((set) => ({
-    channels: null,
+    userChannels: [],
+    adminChannels: [],
     selectedChannel: null,
+    setSelectedChannel: (selectedChannel) => set({ selectedChannel }),
     isLoading: false,
     error: null,
-    setChannels: (channels) => set({ channels }),
-    setSelectedChannel: (selectedChannel) => set({ selectedChannel }),
+    setUserChannels: (userChannels) => set({ userChannels }),
+    setAdminChannels: (adminChannels) => set({ adminChannels }),
     setLoading: (isLoading) => set({ isLoading }),
     setError: (error) => set({ error }),
 }));

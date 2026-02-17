@@ -1,10 +1,10 @@
 import React, { useEffect } from "react";
 import { Card } from "../components/cards";
 import { Icon } from "../components/icons";
-import { useAdminChats } from "../hooks/useAdminChats";
+import { useChatsAsAdmin } from "../hooks/useChat";
 
 export default function ManageChatsView() {
-    const { adminChats, fetchAdminChats, deleteChat, isLoading } = useAdminChats();
+    const { adminChats, fetchAdminChats, deleteChat, isLoading } = useChatsAsAdmin();
 
     useEffect(() => { fetchAdminChats(); }, [fetchAdminChats]);
 

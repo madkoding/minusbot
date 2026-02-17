@@ -2,14 +2,24 @@ import React, { useState, useEffect } from "react";
 import { Button } from "../components/ui";
 import { Icon } from "../components/icons";
 import { Modal } from "../components/modals";
-import { useTools } from "../hooks/useTools";
+import { useTools, useToolsAsAdmin } from "../hooks/useTools";
 
-export default function ToolsView({ apiPath = '/user/settings' }: { apiPath?: string }) {
-    const { allTools, disabledTools, fetchTools, toggleTool } = useTools(apiPath);
+export default function ToolsView({ mode = 'user' }: { mode?: 'user' | 'admin' }) {
+    const isAdmin = mode === 'admin';
+    const userHook = useTools();
+    const adminHook = useToolsAsAdmin();
+
+    const {
+        allTools,
+        disabledTools,
+        fetchTools,
+        toggleTool
+    } = isAdmin ? adminHook : userHook;
+
     const [activeGroup, setActiveGroup] = useState<string>("All");
     const [descModal, setDescModal] = useState<any>(null);
 
-    useEffect(() => { fetchTools(); }, [apiPath, fetchTools]);
+    useEffect(() => { fetchTools(); }, [fetchTools]);
 
     const handleToggle = async (name: string) => {
         await toggleTool(name);
@@ -27,10 +37,14 @@ export default function ToolsView({ apiPath = '/user/settings' }: { apiPath?: st
         <div className="space-y-8 md:space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
             <header>
                 <div className="flex items-center gap-3 mb-3">
-                    <h2 className="text-2xl md:text-3xl font-black tracking-tight text-zinc-100 uppercase italic">Tools</h2>
+                    <h2 className="text-2xl md:text-3xl font-black tracking-tight text-zinc-100 uppercase italic">{isAdmin ? 'Global ' : ''}Tools</h2>
                     <div className="h-px w-12 bg-zinc-800 ml-2"></div>
                 </div>
-                <p className="text-zinc-500 text-sm font-medium max-w-lg">Enable or disable the built-in tools your assistant can use.</p>
+                <p className="text-zinc-500 text-sm font-medium max-w-lg">
+                    {isAdmin
+                        ? "Configure which tools are available for all users by default."
+                        : "Enable or disable the built-in tools your assistant can use."}
+                </p>
             </header>
 
             <div className="flex gap-6 overflow-x-auto pb-2 scrollbar-none border-b border-zinc-900/50">

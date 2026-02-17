@@ -1,22 +1,30 @@
 import { apiClient } from "../lib/apiClient";
+import type { Channel } from "../types";
 
 export const channelsService = {
-    list: async (path: string) => {
-        const res = await apiClient.get(path);
+    list: async (): Promise<Channel[]> => {
+        const res = await apiClient.get('/user/channels');
         return res.data.data;
     },
-    getConfig: async (path: string, id: string, isAdmin: boolean) => {
-        const res = await apiClient.get(isAdmin ? `${path}/${id}/vault` : `${path}/${id}`);
+
+    listAsAdmin: async (): Promise<Channel[]> => {
+        const res = await apiClient.get('/admin/channels');
         return res.data.data;
     },
-    save: async (path: string, id: string, data: any, isAdmin: boolean) => {
-        if (isAdmin) {
-            return await apiClient.put(`${path}/${id}/vault`, { secrets: data.secrets });
-        } else {
-            return await apiClient.put(`${path}/${id}`, data);
-        }
+
+    toggle: async (id: string): Promise<void> => {
+        await apiClient.post(`/user/channels/${id}/toggle`);
     },
-    delete: async (path: string, id: string) => {
-        return await apiClient.delete(`${path}/${id}`);
+
+    toggleAsAdmin: async (id: string): Promise<void> => {
+        await apiClient.post(`/admin/channels/${id}/toggle`);
+    },
+
+    save: async (id: string, data: Partial<Channel>): Promise<void> => {
+        await apiClient.put(`/user/channels/${id}`, data);
+    },
+
+    saveAsAdmin: async (id: string, data: Partial<Channel>): Promise<void> => {
+        await apiClient.put(`/admin/channels/${id}`, data);
     }
 };

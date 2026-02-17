@@ -1,73 +1,28 @@
 import { create } from 'zustand';
-import { apiClient } from '../lib/apiClient';
-
-export interface AIProvider {
-    id: string;
-    name: string;
-    type: "text" | "vision" | "image" | "tts" | "stt";
-    client: string;
-    config: any;
-    is_global: boolean;
-}
-
-export interface AIClient {
-    id: string;
-    name: string;
-    types: string[];
-    options?: any[];
-}
+import type { AIProvider, AIClient } from '../types';
 
 interface ProvidersState {
-    providers: AIProvider[];
+    userProviders: AIProvider[];
+    adminProviders: AIProvider[];
     clients: AIClient[];
     isLoading: boolean;
-    hasFetched: boolean;
-    fetchProviders: () => Promise<void>;
-    saveProvider: (provider: any) => Promise<any>;
-    deleteProvider: (id: string) => Promise<void>;
-    activateProvider: (id: string | null, type: string, isGlobal?: boolean) => Promise<void>;
+    error: string | null;
+    setUserProviders: (providers: AIProvider[]) => void;
+    setAdminProviders: (providers: AIProvider[]) => void;
+    setClients: (clients: AIClient[]) => void;
+    setLoading: (loading: boolean) => void;
+    setError: (error: string | null) => void;
 }
 
-export const useProvidersStore = create<ProvidersState>((set, get) => ({
-    providers: [],
+export const useProvidersStore = create<ProvidersState>((set) => ({
+    userProviders: [],
+    adminProviders: [],
     clients: [],
     isLoading: false,
-    hasFetched: false,
-
-    fetchProviders: async () => {
-        if (get().isLoading) return;
-
-        set({ isLoading: true });
-        try {
-            const [providersResp, clientsResp] = await Promise.all([
-                apiClient.get("/user/providers"),
-                apiClient.get("/user/providers/clients")
-            ]);
-            set({
-                providers: providersResp.data,
-                clients: clientsResp.data,
-                isLoading: false,
-                hasFetched: true
-            });
-        } catch (error) {
-            console.error("Failed to fetch providers:", error);
-            set({ isLoading: false });
-        }
-    },
-
-    saveProvider: async (provider: any) => {
-        const res = await apiClient.post("/user/providers", provider);
-        await get().fetchProviders();
-        return res.data;
-    },
-
-    deleteProvider: async (id: string) => {
-        await apiClient.delete(`/user/providers/${id}`);
-        await get().fetchProviders();
-    },
-
-    activateProvider: async (id: string | null, type: string, isGlobal?: boolean) => {
-        await apiClient.post("/user/providers/activate", { id, type, is_global_setting: isGlobal });
-        await get().fetchProviders();
-    }
+    error: null,
+    setUserProviders: (userProviders) => set({ userProviders }),
+    setAdminProviders: (adminProviders) => set({ adminProviders }),
+    setClients: (clients) => set({ clients }),
+    setLoading: (isLoading) => set({ isLoading }),
+    setError: (error) => set({ error }),
 }));

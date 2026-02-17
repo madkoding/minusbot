@@ -1,71 +1,117 @@
 import { apiClient } from "../lib/apiClient";
+import type { Skill } from "../types";
 
 export const skillsService = {
-    list: async (path: string) => {
-        const res = await apiClient.get(path);
+    list: async (): Promise<Skill[]> => {
+        const res = await apiClient.get('/user/skills');
         return res.data;
     },
-    getDetail: async (path: string, id: string) => {
-        const res = await apiClient.get(`${path}/${id}`);
+
+    listAsAdmin: async (): Promise<Skill[]> => {
+        const res = await apiClient.get('/admin/skills');
         return res.data;
     },
-    getVault: async (path: string, id: string) => {
-        const res = await apiClient.get(`${path}/${id}/vault`);
+
+    getDetail: async (id: string): Promise<any> => {
+        const res = await apiClient.get(`/user/skills/${id}`);
         return res.data;
     },
-    save: async (path: string, data: any) => {
-        const res = await apiClient.post(path, data);
+
+    getDetailAsAdmin: async (id: string): Promise<any> => {
+        const res = await apiClient.get(`/admin/skills/${id}`);
         return res.data;
     },
+
+    getVault: async (id: string): Promise<any> => {
+        const res = await apiClient.get(`/user/skills/${id}/vault`);
+        return res.data;
+    },
+
+    getVaultAsAdmin: async (id: string): Promise<any> => {
+        const res = await apiClient.get(`/admin/skills/${id}/vault`);
+        return res.data;
+    },
+
+    save: async (data: any): Promise<any> => {
+        const res = await apiClient.post('/user/skills', data);
+        return res.data;
+    },
+
+    saveAsAdmin: async (data: any): Promise<any> => {
+        const res = await apiClient.post('/admin/skills', data);
+        return res.data;
+    },
+
     // User Config
-    getConfig: async (path: string, id: string) => {
-        const res = await apiClient.get(`${path}/${id}/config`);
+    getConfig: async (id: string): Promise<any> => {
+        const res = await apiClient.get(`/user/skills/${id}/config`);
         return res.data;
     },
-    saveConfig: async (path: string, id: string, config: any) => {
-        const res = await apiClient.put(`${path}/${id}/config`, config);
+
+    saveConfig: async (id: string, config: any): Promise<any> => {
+        const res = await apiClient.put(`/user/skills/${id}/config`, config);
         return res.data;
     },
+
     // User Data (Files)
-    listData: async (path: string, id: string) => {
-        const res = await apiClient.get(`${path}/${id}/data`);
+    listData: async (id: string): Promise<any> => {
+        const res = await apiClient.get(`/user/skills/${id}/data`);
         return res.data;
     },
-    getFile: async (path: string, id: string, filename: string) => {
-        const res = await apiClient.get(`${path}/${id}/data/${filename}`);
+
+    getFile: async (id: string, filename: string): Promise<any> => {
+        const res = await apiClient.get(`/user/skills/${id}/data/${filename}`);
         return res.data;
     },
-    saveFile: async (path: string, id: string, filename: string, content: string) => {
-        const res = await apiClient.put(`${path}/${id}/data/${filename}`, { content });
+
+    saveFile: async (id: string, filename: string, content: string): Promise<any> => {
+        const res = await apiClient.put(`/user/skills/${id}/data/${filename}`, { content });
         return res.data;
     },
+
     // Scripts
-    listScripts: async (path: string, id: string) => {
-        const res = await apiClient.get(`${path}/${id}/scripts`);
+    listScripts: async (id: string): Promise<any> => {
+        const res = await apiClient.get(`/user/skills/${id}/scripts`);
         return res.data;
     },
-    getScript: async (path: string, id: string, filename: string) => {
-        const res = await apiClient.get(`${path}/${id}/scripts/${filename}`);
+
+    getScript: async (id: string, filename: string): Promise<any> => {
+        const res = await apiClient.get(`/user/skills/${id}/scripts/${filename}`);
         return res.data;
     },
-    saveScript: async (path: string, id: string, filename: string, content: string) => {
-        const res = await apiClient.put(`${path}/${id}/scripts/${filename}`, { content });
+
+    saveScript: async (id: string, filename: string, content: string): Promise<any> => {
+        const res = await apiClient.put(`/user/skills/${id}/scripts/${filename}`, { content });
         return res.data;
     },
-    toggleAdmin: async (id: string) => {
+
+    toggleAsAdmin: async (id: string): Promise<any> => {
         const res = await apiClient.post(`/admin/skills/${id}/toggle`);
         return res.data;
     },
-    toggleUserGlobal: async (id: string) => {
+
+    toggle: async (id: string): Promise<any> => {
         const res = await apiClient.post('/user/settings/toggle-skill', { id });
         return res.data;
     },
-    delete: async (path: string, id: string) => {
-        const res = await apiClient.delete(`${path}/${id}`);
+
+    delete: async (id: string): Promise<any> => {
+        const res = await apiClient.delete(`/user/skills/${id}`);
         return res.data;
     },
-    updateVault: async (path: string, id: string, key: string, value: string) => {
-        const res = await apiClient.put(`${path}/${id}/vault`, { key, value });
+
+    deleteAsAdmin: async (id: string): Promise<any> => {
+        const res = await apiClient.delete(`/admin/skills/${id}`);
+        return res.data;
+    },
+
+    updateVault: async (id: string, key: string, value: string): Promise<any> => {
+        const res = await apiClient.put(`/user/skills/${id}/vault`, { key, value });
+        return res.data;
+    },
+
+    updateVaultAsAdmin: async (id: string, key: string, value: string): Promise<any> => {
+        const res = await apiClient.put(`/admin/skills/${id}/vault`, { key, value });
         return res.data;
     }
 };

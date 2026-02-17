@@ -1,8 +1,27 @@
 import { useCallback } from 'react';
 import { userService } from '../services/userService';
 import { useUserStore } from '../stores/useUserStore';
+import { useAuthStore } from '../stores/useAuthStore';
 
-export function useUsers() {
+export function useUser() {
+    const { user, setUser } = useAuthStore();
+
+    const fetchMe = useCallback(async () => {
+        try {
+            const data = await userService.getMe();
+            setUser(data);
+        } catch (err: any) {
+            console.error("Failed to fetch user data", err);
+        }
+    }, [setUser]);
+
+    return {
+        user,
+        fetchMe
+    };
+}
+
+export function useUsersAsAdmin() {
     const {
         users,
         isLoading,
@@ -15,7 +34,7 @@ export function useUsers() {
     const fetchUsers = useCallback(async () => {
         setLoading(true);
         try {
-            const data = await userService.list();
+            const data = await userService.listAsAdmin();
             setUsers(Array.isArray(data) ? data : []);
             setError(null);
         } catch (err: any) {
@@ -28,7 +47,7 @@ export function useUsers() {
     const createUser = async (data: any) => {
         setLoading(true);
         try {
-            await userService.create(data);
+            await userService.createAsAdmin(data);
             await fetchUsers();
             return true;
         } catch (err: any) {
@@ -41,7 +60,7 @@ export function useUsers() {
 
     const deleteUser = async (id: string) => {
         try {
-            await userService.delete(id);
+            await userService.deleteAsAdmin(id);
             await fetchUsers();
             return true;
         } catch (err: any) {

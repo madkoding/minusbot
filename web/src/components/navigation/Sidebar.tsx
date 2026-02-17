@@ -2,8 +2,8 @@ import React from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { Icon } from "../icons/Icon";
 import { useAuthStore } from "../../stores/useAuthStore";
-import { chatService } from "../../services/chatService";
-import { useStats } from "../../hooks/useStats";
+import { useChats } from "../../hooks/useChat";
+import { useStatsAsAdmin } from "../../hooks/useStats";
 import { updateService } from "../../services/updateService";
 import { useUIStore } from "../../stores/useUIStore";
 
@@ -24,21 +24,17 @@ export const Sidebar = () => {
     };
 
     const [mode, setMode] = React.useState<SidebarMode>(getInitialMode());
-    const [chats, setChats] = React.useState<any[]>([]);
     const { isMobileMenuOpen, setIsMobileMenuOpen } = useUIStore();
 
-    const loadChats = async () => {
-        const data = await chatService.list();
-        setChats(data);
-    };
+    const { chats, fetchChats } = useChats();
 
     // Update mode when location changes (in case of direct navigation)
     React.useEffect(() => {
         const newMode = getInitialMode();
         setMode(newMode);
-        if (newMode === 'chats') loadChats();
+        if (newMode === 'chats') fetchChats();
         setIsMobileMenuOpen(false); // Close mobile menu on navigation
-    }, [location.pathname]);
+    }, [location.pathname, fetchChats, setIsMobileMenuOpen]);
 
     const personalItems = [
         { id: '/dashboard', label: 'Dashboard', icon: 'dashboard' },
@@ -66,7 +62,7 @@ export const Sidebar = () => {
 
     const checkUpdates = async () => {
         try {
-            const data = await updateService.getStatus();
+            const data = await updateService.getStatusAsAdmin();
             setUpdateCount(data.updates.length);
         } catch { }
     };
@@ -84,7 +80,7 @@ export const Sidebar = () => {
         { id: '/system/config', label: 'System Config', icon: 'settings' },
     ];
 
-    const { adminStats: sysStats, fetchAdminStats } = useStats();
+    const { stats: sysStats, fetchStats: fetchAdminStats } = useStatsAsAdmin();
 
     React.useEffect(() => {
         if (!isRoot) return;
@@ -232,7 +228,7 @@ export const Sidebar = () => {
 
                         <div className="space-y-1">
                             <h2 className="px-3 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-700 mb-3">History</h2>
-                            {chats.map(c => (
+                            {chats.map((c: any) => (
                                 <NavLink
                                     key={c.id}
                                     to={`/chat/${c.id}`}
@@ -272,26 +268,26 @@ export const Sidebar = () => {
                         <div className="space-y-1">
                             <div className="flex justify-between items-center text-[9px] font-bold uppercase tracking-tighter">
                                 <span className="text-zinc-600">RAM</span>
-                                <span className="text-zinc-400">{formatBytes(sysStats?.memory?.used)}</span>
+                                <span className="text-zinc-400">{formatBytes((sysStats as any)?.memory?.used)}</span>
                             </div>
                             <div className="h-1 bg-zinc-800/50 rounded-full overflow-hidden">
-                                <div className="h-full bg-zinc-500 transition-all duration-500" style={{ width: `${sysStats?.memory?.percentage || 0}%` }}></div>
+                                <div className="h-full bg-zinc-500 transition-all duration-500" style={{ width: `${(sysStats as any)?.memory?.percentage || 0}%` }}></div>
                             </div>
                         </div>
 
                         <div className="space-y-1">
                             <div className="flex justify-between items-center text-[9px] font-bold uppercase tracking-tighter">
                                 <span className="text-zinc-600">CPU</span>
-                                <span className="text-zinc-400">{(sysStats?.cpu * 10).toFixed(1)}%</span>
+                                <span className="text-zinc-400">{((sysStats as any)?.cpu * 10).toFixed(1)}%</span>
                             </div>
                             <div className="h-1 bg-zinc-800/50 rounded-full overflow-hidden">
-                                <div className="h-full bg-zinc-500 transition-all duration-500" style={{ width: `${(sysStats?.cpu * 10) || 0}%` }}></div>
+                                <div className="h-full bg-zinc-500 transition-all duration-500" style={{ width: `${((sysStats as any)?.cpu * 10) || 0}%` }}></div>
                             </div>
                         </div>
 
                         <div className="flex justify-between items-center pt-1 border-t border-zinc-900/50">
                             <span className="text-[9px] font-black uppercase tracking-[0.1em] text-zinc-600">Up</span>
-                            <span className="text-[9px] font-bold text-zinc-400 tabular-nums">{formatUptime(sysStats?.uptime)}</span>
+                            <span className="text-[9px] font-bold text-zinc-400 tabular-nums">{formatUptime((sysStats as any)?.uptime)}</span>
                         </div>
                     </div>
                 </div>

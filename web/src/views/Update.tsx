@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { updateService } from "../services/updateService";
-import type { UpdateStatus, UpdateEntry } from "../services/updateService";
+import type { UpdateStatus, UpdateEntry } from "../types";
 import { Card } from "../components/cards";
 import { Icon } from "../components/icons";
 
@@ -13,7 +13,7 @@ export default function UpdateView() {
 
     const fetchStatus = async () => {
         try {
-            const data = await updateService.getStatus();
+            const data = await updateService.getStatusAsAdmin();
             setStatus(data);
         } catch (error) {
             console.error("Failed to fetch update status", error);
@@ -35,7 +35,7 @@ export default function UpdateView() {
         if (!window.confirm("Are you sure you want to perform a git pull? This will overwrite local changes if any.")) return;
         setUpdating(true);
         try {
-            const result = await updateService.performUpdate();
+            const result = await updateService.performUpdateAsAdmin();
             setLastOutput(result);
             await fetchStatus();
         } catch (error: any) {
@@ -48,7 +48,7 @@ export default function UpdateView() {
     const handleSwitch = async (channel: string) => {
         setSwitching(true);
         try {
-            await updateService.switchChannel(channel);
+            await updateService.switchChannelAsAdmin(channel);
             await fetchStatus();
         } catch (error: any) {
             alert("Switch failed: " + error.message);
@@ -243,7 +243,7 @@ export default function UpdateView() {
                                     </div>
                                 </div>
                                 <ul className="space-y-2">
-                                    {update.changes.map((change, i) => (
+                                    {update.changes.map((change: string, i: number) => (
                                         <li key={i} className="flex gap-3 text-sm text-zinc-400">
                                             <div className="w-1 h-1 rounded-full bg-zinc-700 mt-2 shrink-0"></div>
                                             {change}

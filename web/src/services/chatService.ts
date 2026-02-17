@@ -1,15 +1,18 @@
 import { apiClient } from "../lib/apiClient";
+import type { ChatMeta } from "../types";
 
 export const chatService = {
-    list: async () => {
+    list: async (): Promise<ChatMeta[]> => {
         const res = await apiClient.get('/user/chat');
         return Array.isArray(res.data) ? res.data : [];
     },
-    adminList: async () => {
+
+    listAsAdmin: async (): Promise<ChatMeta[]> => {
         const res = await apiClient.get('/admin/chat');
         return Array.isArray(res.data) ? res.data : [];
     },
-    delete: async (owner: string, id: string) => {
+
+    deleteAsAdmin: async (owner: string, id: string): Promise<any> => {
         return await apiClient.delete(`/admin/chat/${owner}/${id}`);
     }
 };

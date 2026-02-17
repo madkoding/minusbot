@@ -1,67 +1,107 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useCallback } from 'react';
 import { getChatClient } from '../lib/chatClient';
+import { useChatStore } from '../stores/useChatStore';
+import { chatService } from '../services/chatService';
+
+export function useChats() {
+    const { userChats, setUserChats, isLoading, setLoading, setError } = useChatStore();
+
+    const fetchChats = useCallback(async () => {
+        setLoading(true);
+        try {
+            const data = await chatService.list();
+            setUserChats(data);
+            setError(null);
+        } catch (err: any) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    }, [setLoading, setUserChats, setError]);
+
+    return {
+        chats: userChats,
+        isLoading,
+        fetchChats
+    };
+}
+
+export function useChatsAsAdmin() {
+    const { adminChats, setAdminChats, isLoading, setLoading, setError } = useChatStore();
+
+    const fetchChats = useCallback(async () => {
+        setLoading(true);
+        try {
+            const data = await chatService.listAsAdmin();
+            setAdminChats(data);
+            setError(null);
+        } catch (err: any) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    }, [setLoading, setAdminChats, setError]);
+
+    const deleteChat = async (owner: string, id: string) => {
+        try {
+            await chatService.deleteAsAdmin(owner, id);
+            await fetchChats();
+            return true;
+        } catch (err: any) {
+            setError(err.message);
+            return false;
+        }
+    };
+
+    return {
+        chats: adminChats,
+        isLoading,
+        fetchChats,
+        deleteChat
+    };
+}
 
 export function useChat(chatId?: string) {
-    const [messages, setMessages] = useState<any[]>([]);
-    const [isConnected, setIsConnected] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const {
+        messages,
+        isConnected,
+        error,
+        setMessages,
+        setConnected,
+        setError
+    } = useChatStore();
 
     const client = getChatClient();
 
     useEffect(() => {
-        // Clear messages when chat changes
         setMessages([]);
+        setConnected(client.isConnected());
 
-        // Set initial connection state
-        setIsConnected(client.isConnected());
-
-        // Subscribe to connection status
         const unsubConnection = client.onConnection((connected) => {
-            setIsConnected(connected);
-
-            // When connected and we have a chatId, initialize the chat
+            setConnected(connected);
             if (connected && chatId) {
                 client.switchChat(chatId);
             }
         });
 
-        // Subscribe to errors
         const unsubError = client.onError((err) => {
             setError(err);
         });
 
-        // Subscribe to messages
         const unsubMessage = client.onMessage((data) => {
             if (data.type === 'chat_ready') {
                 setMessages(data.messages || []);
             } else if (data.type === 'message') {
                 const msg = data.message;
-                // Add client-side timestamp if missing
                 if (!msg.timestamp && !msg.created_at) {
                     msg.timestamp = new Date().toISOString();
                 }
 
-                setMessages(prev => {
-                    // Deduplication logic: prevents adding the exact same message twice within a short window
-                    // This handles cases where the server might emit the event and the client receives it back via broadcast echo
-                    const last = prev[prev.length - 1];
-                    if (last && last.content === msg.content && last.role === msg.role) {
-                        const lastTime = new Date(last.timestamp || last.created_at || 0).getTime();
-                        const newTime = new Date(msg.timestamp || msg.created_at || 0).getTime();
-                        // If messages are identical and received within 500ms, treat as duplicate
-                        if (Math.abs(newTime - lastTime) < 500) {
-                            return prev;
-                        }
-                    }
-                    return [...prev, msg];
-                });
+                setMessages([...messages, msg]);
             }
         });
 
-        // Initialize chat if chatId is provided and already connected
         if (chatId && client.isConnected()) {
-            // Only switch if we haven't already loaded messages for this chat? 
-            // Actually switchChat is idempotent-ish usually, but good practice.
             client.switchChat(chatId);
         }
 

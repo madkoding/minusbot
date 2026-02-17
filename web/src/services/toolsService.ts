@@ -1,19 +1,27 @@
 import { apiClient } from "../lib/apiClient";
+import type { Tool } from "../types";
 
 export const toolsService = {
-    listAll: async () => {
+    listAllAsAdmin: async (): Promise<Tool[]> => {
         const res = await apiClient.get('/admin/tools');
         return res.data;
     },
-    getDisabled: async (path: string) => {
-        const res = await apiClient.get(path);
+
+    getDisabled: async (): Promise<string[]> => {
+        const res = await apiClient.get('/user/settings');
         return res.data.disabled_tools || [];
     },
-    toggle: async (path: string, name: string) => {
-        if (path.includes('admin')) {
-            return await apiClient.post('/admin/settings/toggle-global-tool', { name });
-        } else {
-            return await apiClient.post('/user/settings/toggle-tool', { name });
-        }
+
+    getDisabledAsAdmin: async (): Promise<string[]> => {
+        const res = await apiClient.get('/admin/settings/global');
+        return res.data.disabled_tools || [];
+    },
+
+    toggle: async (name: string): Promise<void> => {
+        await apiClient.post('/user/settings/toggle-tool', { name });
+    },
+
+    toggleAsAdmin: async (name: string): Promise<void> => {
+        await apiClient.post('/admin/settings/toggle-global-tool', { name });
     }
 };

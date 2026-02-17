@@ -2,11 +2,10 @@ import React, { useState, useEffect, useMemo } from "react";
 import { FancyModal } from "./FancyModal";
 import { Button, Input } from "../ui";
 import { Icon } from "../icons";
-import { Modal } from "../modals";
 import { useProviders } from "../../hooks/useProviders";
 import { channelsService } from "../../services/channelsService";
-import { useAuthStore } from "../../stores/useAuthStore";
 import { useSettings } from "../../hooks/useSettings";
+import { type Channel } from "../../types";
 
 type OnboardingStep =
     | "ai-provider"
@@ -19,8 +18,8 @@ type OnboardingStep =
     | "welcome";
 
 export const OnboardingModal = () => {
-    const { providers, clients, saveProvider, activateProvider, listModelsByConfig, isLoading: isProvidersLoading } = useProviders();
-    const { fetchSettings: fetchUserSettings } = useSettings("/user/settings");
+    const { providers, clients, fetchProviders, saveProvider, activateProvider, listModelsByConfig, isLoading: isProvidersLoading } = useProviders();
+    const { fetchSettings: fetchUserSettings } = useSettings();
 
     const [shouldShow, setShouldShow] = useState(false);
     const [step, setStep] = useState<OnboardingStep>("ai-provider");
@@ -37,7 +36,7 @@ export const OnboardingModal = () => {
     const [loadingModels, setLoadingModels] = useState(false);
 
     // Channel Config State
-    const [availableChannels, setAvailableChannels] = useState<any[]>([]);
+    const [availableChannels, setAvailableChannels] = useState<Channel[]>([]);
     const [selectedChannelId, setSelectedChannelId] = useState<string>("");
     const [channelConfig, setChannelConfig] = useState<Record<string, any>>({});
 
@@ -47,14 +46,16 @@ export const OnboardingModal = () => {
     // Initial check
     useEffect(() => {
         const checkStatus = async () => {
-            if (isProvidersLoading) return;
-
+            setIsLoading(true);
             try {
+                // Fetch providers first if not loaded
+                await fetchProviders();
+
                 // Check channels - must explicitly check configured status
-                const channels = await channelsService.list("/user/channels");
+                const channels = await channelsService.list();
                 setAvailableChannels(channels || []);
 
-                const hasConfiguredChannels = channels && channels.some((c: any) => c.configured);
+                const hasConfiguredChannels = Array.isArray(channels) && channels.some((c: Channel) => c.configured);
                 const hasProviders = providers.length > 0;
 
                 // Show ONLY if NO providers AND NO configured channels
@@ -64,18 +65,18 @@ export const OnboardingModal = () => {
                     setShouldShow(true);
                 }
             } catch (e) {
-                console.error("Failed to list channels", e);
-                // If we can't check channels, rely on providers availability as fallback
-                setShouldShow(providers.length === 0);
+                console.error("Failed to list channels/providers", e);
+                setShouldShow(false); // Hide on error to avoid blocking UI
             } finally {
                 setHasChecked(true);
+                setIsLoading(false);
             }
         };
 
         if (!hasChecked) {
             checkStatus();
         }
-    }, [providers, isProvidersLoading, hasChecked]);
+    }, [hasChecked, fetchProviders, providers.length]);
 
     const selectedClient = useMemo(() => clients.find(c => c.id === providerType), [clients, providerType]);
     const selectedChannel = useMemo(() => availableChannels.find(c => c.id === selectedChannelId), [availableChannels, selectedChannelId]);
@@ -160,11 +161,11 @@ export const OnboardingModal = () => {
                 }
             });
 
-            await channelsService.save("/user/channels", selectedChannelId, {
+            await channelsService.save(selectedChannelId, {
                 enabled: true,
                 settings,
                 secrets
-            }, false);
+            });
 
             setStep("welcome");
         } catch (e) {

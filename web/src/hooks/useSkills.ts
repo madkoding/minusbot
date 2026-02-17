@@ -2,14 +2,14 @@ import { useCallback } from 'react';
 import { skillsService } from '../services/skillsService';
 import { useSkillsStore } from '../stores/useSkillsStore';
 
-export function useSkills(apiPath: string) {
+export function useSkills() {
     const {
-        skills,
+        userSkills,
         selectedSkill,
         skillVault,
         isLoading,
         error,
-        setSkills,
+        setUserSkills,
         setSelectedSkill,
         setSkillVault,
         setLoading,
@@ -19,22 +19,22 @@ export function useSkills(apiPath: string) {
     const fetchSkills = useCallback(async () => {
         setLoading(true);
         try {
-            const data = await skillsService.list(apiPath);
-            setSkills(data);
+            const data = await skillsService.list();
+            setUserSkills(data);
             setError(null);
         } catch (err: any) {
             setError(err.message);
         } finally {
             setLoading(false);
         }
-    }, [apiPath, setLoading, setSkills, setError]);
+    }, [setLoading, setUserSkills, setError]);
 
     const fetchSkillDetail = useCallback(async (id: string) => {
         setLoading(true);
         try {
             const [detail, vault] = await Promise.all([
-                skillsService.getDetail(apiPath, id),
-                skillsService.getVault(apiPath, id)
+                skillsService.getDetail(id),
+                skillsService.getVault(id)
             ]);
             setSelectedSkill(detail);
             setSkillVault(vault);
@@ -45,11 +45,11 @@ export function useSkills(apiPath: string) {
         } finally {
             setLoading(false);
         }
-    }, [apiPath, setLoading, setSelectedSkill, setSkillVault, setError]);
+    }, [setLoading, setSelectedSkill, setSkillVault, setError]);
 
     const fetchConfig = async (id: string) => {
         try {
-            return await skillsService.getConfig(apiPath, id);
+            return await skillsService.getConfig(id);
         } catch {
             return {};
         }
@@ -57,7 +57,7 @@ export function useSkills(apiPath: string) {
 
     const saveConfig = async (id: string, config: any) => {
         try {
-            await skillsService.saveConfig(apiPath, id, config);
+            await skillsService.saveConfig(id, config);
             return true;
         } catch (err: any) {
             setError(err.message);
@@ -67,7 +67,7 @@ export function useSkills(apiPath: string) {
 
     const listDataFiles = async (id: string) => {
         try {
-            return await skillsService.listData(apiPath, id);
+            return await skillsService.listData(id);
         } catch {
             return [];
         }
@@ -75,7 +75,7 @@ export function useSkills(apiPath: string) {
 
     const getFileData = async (id: string, filename: string) => {
         try {
-            const res = await skillsService.getFile(apiPath, id, filename);
+            const res = await skillsService.getFile(id, filename);
             return res.content;
         } catch {
             return "";
@@ -84,7 +84,7 @@ export function useSkills(apiPath: string) {
 
     const saveFileData = async (id: string, filename: string, content: string) => {
         try {
-            await skillsService.saveFile(apiPath, id, filename, content);
+            await skillsService.saveFile(id, filename, content);
             return true;
         } catch (err: any) {
             setError(err.message);
@@ -94,7 +94,7 @@ export function useSkills(apiPath: string) {
 
     const listScripts = async (id: string) => {
         try {
-            return await skillsService.listScripts(apiPath, id);
+            return await skillsService.listScripts(id);
         } catch {
             return [];
         }
@@ -102,7 +102,7 @@ export function useSkills(apiPath: string) {
 
     const getScriptContent = async (id: string, filename: string) => {
         try {
-            const res = await skillsService.getScript(apiPath, id, filename);
+            const res = await skillsService.getScript(id, filename);
             return res.content;
         } catch {
             return "";
@@ -111,7 +111,7 @@ export function useSkills(apiPath: string) {
 
     const saveScriptContent = async (id: string, filename: string, content: string) => {
         try {
-            await skillsService.saveScript(apiPath, id, filename, content);
+            await skillsService.saveScript(id, filename, content);
             return true;
         } catch (err: any) {
             setError(err.message);
@@ -122,7 +122,7 @@ export function useSkills(apiPath: string) {
     const saveSkill = async (id: string, editData: any) => {
         setLoading(true);
         try {
-            await skillsService.save(apiPath, { id, ...editData });
+            await skillsService.save({ id, ...editData });
             await fetchSkills();
             setError(null);
             return true;
@@ -136,14 +136,12 @@ export function useSkills(apiPath: string) {
 
     const toggleSkillStatus = async (skill: any) => {
         try {
-            if (apiPath.includes('admin')) {
-                await skillsService.toggleAdmin(skill.id);
-            } else if (skill.isGlobal) {
-                await skillsService.toggleUserGlobal(skill.id);
+            if (skill.isGlobal) {
+                await skillsService.toggle(skill.id);
             } else {
                 const newStatus = !skill.enabled;
                 const updatedJson = { ...(skill.definition || skill.skillJson), enabled: newStatus };
-                await skillsService.save(apiPath, { id: skill.id, skillJson: updatedJson });
+                await skillsService.save({ id: skill.id, skillJson: updatedJson });
             }
             await fetchSkills();
         } catch (err: any) {
@@ -153,7 +151,7 @@ export function useSkills(apiPath: string) {
 
     const deleteSkill = async (id: string) => {
         try {
-            await skillsService.delete(apiPath, id);
+            await skillsService.delete(id);
             await fetchSkills();
             return true;
         } catch (err: any) {
@@ -164,7 +162,7 @@ export function useSkills(apiPath: string) {
 
     const updateSkillVault = async (skillId: string, key: string, value: string) => {
         try {
-            await skillsService.updateVault(apiPath, skillId, key, value);
+            await skillsService.updateVault(skillId, key, value);
             await fetchSkillDetail(skillId);
             return true;
         } catch (err: any) {
@@ -174,7 +172,7 @@ export function useSkills(apiPath: string) {
     };
 
     return {
-        skills,
+        skills: userSkills,
         selectedSkill,
         skillVault,
         isLoading,
@@ -194,5 +192,120 @@ export function useSkills(apiPath: string) {
         deleteSkill,
         updateSkillVault,
         setSelectedSkill
+    };
+}
+
+export function useSkillsAsAdmin() {
+    const {
+        adminSkills,
+        selectedSkill,
+        skillVault,
+        isLoading,
+        error,
+        setAdminSkills,
+        setSelectedSkill,
+        setSkillVault,
+        setLoading,
+        setError
+    } = useSkillsStore();
+
+    const fetchSkills = useCallback(async () => {
+        setLoading(true);
+        try {
+            const data = await skillsService.listAsAdmin();
+            setAdminSkills(data);
+            setError(null);
+        } catch (err: any) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    }, [setLoading, setAdminSkills, setError]);
+
+    const fetchSkillDetail = useCallback(async (id: string) => {
+        setLoading(true);
+        try {
+            const [detail, vault] = await Promise.all([
+                skillsService.getDetailAsAdmin(id),
+                skillsService.getVaultAsAdmin(id)
+            ]);
+            setSelectedSkill(detail);
+            setSkillVault(vault);
+            setError(null);
+            return detail;
+        } catch (err: any) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    }, [setLoading, setSelectedSkill, setSkillVault, setError]);
+
+    const saveSkill = async (id: string, editData: any) => {
+        setLoading(true);
+        try {
+            await skillsService.saveAsAdmin({ id, ...editData });
+            await fetchSkills();
+            setError(null);
+            return true;
+        } catch (err: any) {
+            setError(err.message);
+            return false;
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const toggleSkillStatus = async (skill: any) => {
+        try {
+            await skillsService.toggleAsAdmin(skill.id);
+            await fetchSkills();
+        } catch (err: any) {
+            setError(err.message);
+        }
+    };
+
+    const deleteSkill = async (id: string) => {
+        try {
+            await skillsService.deleteAsAdmin(id);
+            await fetchSkills();
+            return true;
+        } catch (err: any) {
+            setError(err.message);
+            return false;
+        }
+    };
+
+    const updateSkillVault = async (skillId: string, key: string, value: string) => {
+        try {
+            await skillsService.updateVaultAsAdmin(skillId, key, value);
+            await fetchSkillDetail(skillId);
+            return true;
+        } catch (err: any) {
+            setError(err.message);
+            return false;
+        }
+    };
+
+    return {
+        skills: adminSkills,
+        selectedSkill,
+        skillVault,
+        isLoading,
+        error,
+        fetchSkills,
+        fetchSkillDetail,
+        saveSkill,
+        toggleSkillStatus,
+        deleteSkill,
+        updateSkillVault,
+        setSelectedSkill,
+        fetchConfig: undefined,
+        saveConfig: undefined,
+        listDataFiles: undefined,
+        getFileData: undefined,
+        saveFileData: undefined,
+        listScripts: undefined,
+        getScriptContent: undefined,
+        saveScriptContent: undefined
     };
 }

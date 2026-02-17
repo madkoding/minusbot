@@ -1,23 +1,21 @@
 import React, { useEffect } from "react";
 import { Icon } from "../components/icons";
 import { Card } from "../components/cards";
-import { useStats } from "../hooks/useStats";
+import { Skeleton } from "../components/ui";
+import { useStatsAsAdmin } from "../hooks/useStats";
 
-export default function StatsView({ apiPath }: { apiPath?: string }) {
-    const { adminStats, fetchAdminStats, isLoading } = useStats();
+export default function StatsView() {
+    const { stats, fetchStats, isLoading } = useStatsAsAdmin();
 
     useEffect(() => {
-        fetchAdminStats();
-    }, [fetchAdminStats]);
-
-    if (!adminStats && isLoading) return <div className="text-zinc-500 font-bold uppercase tracking-widest text-center py-20">Loading...</div>;
-    if (!adminStats) return <div className="text-zinc-500 font-bold uppercase tracking-widest text-center py-20">No data.</div>;
+        fetchStats();
+    }, [fetchStats]);
 
     const items = [
-        { label: "Chats Processed", value: adminStats.chats_created, icon: "chat", color: "text-blue-500" },
-        { label: "Messages Sent", value: adminStats.messages_sent, icon: "send", color: "text-emerald-500" },
-        { label: "Total Input", value: adminStats.tokens_input, icon: "dashboard", color: "text-amber-500" },
-        { label: "Total Output", value: adminStats.tokens_output, icon: "vault", color: "text-purple-500" },
+        { label: "Chats Processed", value: stats?.chats_created, icon: "chat", color: "text-blue-500" },
+        { label: "Messages Sent", value: stats?.messages_sent, icon: "send", color: "text-emerald-500" },
+        { label: "Total Input", value: stats?.tokens_input, icon: "dashboard", color: "text-amber-500" },
+        { label: "Total Output", value: stats?.tokens_output, icon: "vault", color: "text-purple-500" },
     ];
 
     return (
@@ -37,8 +35,19 @@ export default function StatsView({ apiPath }: { apiPath?: string }) {
                             <Icon name={item.icon} size={18} />
                         </div>
                         <div className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-600 mb-1">{item.label}</div>
-                        <div className="text-2xl md:text-3xl font-black text-zinc-100 tracking-tighter tabular-nums">
-                            {item.value?.toLocaleString() ?? "0"}
+                        <div className="relative">
+                            {!stats && isLoading ? (
+                                <Skeleton className="h-9 w-24" />
+                            ) : (
+                                <div className={`text-2xl md:text-3xl font-black text-zinc-100 tracking-tighter tabular-nums transition-opacity ${isLoading ? 'opacity-50' : ''}`}>
+                                    {item.value?.toLocaleString() ?? "0"}
+                                </div>
+                            )}
+                            {isLoading && stats && (
+                                <div className="absolute -right-2 top-1/2 -translate-y-1/2">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
+                                </div>
+                            )}
                         </div>
                     </Card>
                 ))}
@@ -54,19 +63,33 @@ export default function StatsView({ apiPath }: { apiPath?: string }) {
                         <p className="text-[10px] md:text-xs text-zinc-500 mt-0.5">Token usage breakdown.</p>
                     </div>
                 </div>
-                <div className="h-3 md:h-4 bg-zinc-900 rounded-full overflow-hidden flex">
-                    <div className="bg-amber-500/80 h-full transition-all duration-1000" style={{ width: `${((adminStats.tokens_input || 0) / ((adminStats.tokens_input || 0) + (adminStats.tokens_output || 0) || 1)) * 100}%` }}></div>
-                    <div className="bg-purple-500/80 h-full transition-all duration-1000" style={{ width: `${((adminStats.tokens_output || 0) / ((adminStats.tokens_input || 0) + (adminStats.tokens_output || 0) || 1)) * 100}%` }}></div>
-                </div>
-                <div className="flex flex-col md:flex-row justify-between gap-2 mt-4">
-                    <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-amber-500"></div>
-                        <span className="text-[9px] md:text-[10px] font-bold text-zinc-600 uppercase tracking-widest">Input Tokens</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-purple-500"></div>
-                        <span className="text-[9px] md:text-[10px] font-bold text-zinc-600 uppercase tracking-widest">Output Tokens</span>
-                    </div>
+                <div className="relative">
+                    {!stats && isLoading ? (
+                        <div className="space-y-4 pt-2">
+                            <Skeleton className="h-4 w-full rounded-full" />
+                            <div className="flex justify-between">
+                                <Skeleton className="h-3 w-16" />
+                                <Skeleton className="h-3 w-16" />
+                            </div>
+                        </div>
+                    ) : (
+                        <>
+                            <div className={`h-3 md:h-4 bg-zinc-900 rounded-full overflow-hidden flex transition-opacity ${isLoading ? 'opacity-50' : ''}`}>
+                                <div className="bg-amber-500/80 h-full transition-all duration-1000" style={{ width: `${((stats?.tokens_input || 0) / ((stats?.tokens_input || 0) + (stats?.tokens_output || 0) || 1)) * 100}%` }}></div>
+                                <div className="bg-purple-500/80 h-full transition-all duration-1000" style={{ width: `${((stats?.tokens_output || 0) / ((stats?.tokens_input || 0) + (stats?.tokens_output || 0) || 1)) * 100}%` }}></div>
+                            </div>
+                            <div className={`flex flex-col md:flex-row justify-between gap-2 mt-4 transition-opacity ${isLoading ? 'opacity-50' : ''}`}>
+                                <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 rounded-full bg-amber-500"></div>
+                                    <span className="text-[9px] md:text-[10px] font-bold text-zinc-600 uppercase tracking-widest">Input Tokens</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 rounded-full bg-purple-500"></div>
+                                    <span className="text-[9px] md:text-[10px] font-bold text-zinc-600 uppercase tracking-widest">Output Tokens</span>
+                                </div>
+                            </div>
+                        </>
+                    )}
                 </div>
             </Card>
         </div>

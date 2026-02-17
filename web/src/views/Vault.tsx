@@ -1,40 +1,57 @@
 import React, { useEffect } from "react";
 import { Icon } from "../components/icons";
-import { useVault } from "../hooks/useVault";
+import { Skeleton } from "../components/ui";
+import { useVault, useVaultAsAdmin } from "../hooks/useVault";
 
-export default function VaultView({ apiPath = '/user/vault' }: { apiPath?: string }) {
+export default function VaultView({ mode = 'user' }: { mode?: 'user' | 'admin' }) {
+    const isAdmin = mode === 'admin';
+    const userHook = useVault();
+    const adminHook = useVaultAsAdmin();
+
     const {
-        vaults,
-        selectedVault,
-        keys,
-        fetchVaults,
-        fetchKeys,
-        updateVaultKey,
-        deleteVaultKey,
-        isLoading
-    } = useVault(apiPath);
+        secrets: vaults,
+        isLoading,
+        error,
+        fetchSecrets: fetchVaults,
+        getKeys: fetchKeys,
+        updateKey: updateVaultKey,
+        deleteKey: deleteVaultKey
+    } = isAdmin ? adminHook : userHook;
 
-    const isGlobal = apiPath.includes('admin');
+    // Local state for selected vault and its keys
+    const [selectedVault, setSelectedVault] = React.useState<string | null>(null);
+    const [keys, setKeys] = React.useState<Record<string, boolean>>({});
 
     useEffect(() => {
         const load = async () => {
-            const list = await fetchVaults();
-            if (list.length > 0 && !selectedVault) {
-                fetchKeys(list[0]);
-            }
+            await fetchVaults();
         };
         load();
-    }, [apiPath, fetchVaults, fetchKeys, selectedVault]);
+    }, [fetchVaults]);
+
+    const handleSelectVault = async (v: string) => {
+        setSelectedVault(v);
+        const data = await fetchKeys(v);
+        setKeys(data || {});
+    };
 
     const handleUpdateKey = async (key: string) => {
         const val = prompt(`Enter new value for ${key}:`);
         if (val === null) return;
-        await updateVaultKey(selectedVault!, key, val);
+        const success = await updateVaultKey(selectedVault!, key, val);
+        if (success) {
+            const data = await fetchKeys(selectedVault!);
+            setKeys(data || {});
+        }
     };
 
     const handleRemoveKey = async (key: string) => {
         if (!confirm(`Wipe value for ${key}?`)) return;
-        await deleteVaultKey(selectedVault!, key);
+        const success = await deleteVaultKey(selectedVault!, key);
+        if (success) {
+            const data = await fetchKeys(selectedVault!);
+            setKeys(data || {});
+        }
     };
 
     const handleRegisterItem = async () => {
@@ -42,15 +59,12 @@ export default function VaultView({ apiPath = '/user/vault' }: { apiPath?: strin
         if (k) handleUpdateKey(k);
     };
 
-    const Skeleton = ({ className = "" }: { className?: string }) => (
-        <div className={`animate-pulse bg-zinc-800/50 rounded-lg ${className}`}></div>
-    );
 
     return (
         <div className="space-y-6 md:space-y-8 flex flex-col min-h-full animate-in fade-in slide-in-from-bottom-4 duration-700">
             <header>
                 <div className="flex items-center gap-3 mb-3">
-                    <h2 className="text-2xl md:text-3xl font-black tracking-tight text-zinc-100 uppercase italic">{isGlobal ? 'Global' : 'Storage'} Vault</h2>
+                    <h2 className="text-2xl md:text-3xl font-black tracking-tight text-zinc-100 uppercase italic">{isAdmin ? 'Global' : 'Storage'} Vault</h2>
                     <div className="h-px w-12 bg-zinc-800 ml-2"></div>
                 </div>
                 <p className="text-zinc-500 text-sm font-medium max-w-lg">Securely store your API keys, secrets and sensitive configuration.</p>
@@ -63,26 +77,27 @@ export default function VaultView({ apiPath = '/user/vault' }: { apiPath?: strin
                         <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500">Storage Units</h3>
                     </div>
                     <div className="flex flex-row md:flex-col overflow-x-auto md:overflow-y-auto p-3 md:p-2 space-x-2 md:space-x-0 md:space-y-1 custom-scrollbar shrink-0">
-                        {isLoading && vaults.length === 0 ? (
-                            [1, 2, 3].map(i => (
-                                <div key={i} className="px-4 py-3">
-                                    <Skeleton className="h-4 w-full" />
-                                </div>
-                            ))
-                        ) : (
-                            vaults.map(v => (
-                                <button
-                                    key={v}
-                                    onClick={() => fetchKeys(v)}
-                                    className={`flex items-center gap-3 px-4 md:px-5 py-3 md:py-3 rounded-2xl transition-all duration-200 whitespace-nowrap group ${selectedVault === v
-                                        ? 'bg-zinc-100 text-zinc-950 font-black shadow-xl scale-[1.02] z-10'
-                                        : 'text-zinc-500 hover:text-zinc-200 hover:bg-zinc-900/50 font-bold'
-                                        }`}
-                                >
-                                    <Icon name="vault" size={14} className={selectedVault === v ? 'text-zinc-950' : 'text-zinc-700 group-hover:text-zinc-400'} />
-                                    <span className="text-xs tracking-tight">{v}</span>
-                                </button>
-                            ))
+                        {vaults.map(v => (
+                            <button
+                                key={v.id}
+                                onClick={() => handleSelectVault(v.id)}
+                                className={`flex items-center gap-3 px-4 md:px-5 py-3 md:py-3 rounded-2xl transition-all duration-200 whitespace-nowrap group ${isLoading ? 'opacity-70 grayscale' : ''} ${selectedVault === v.id
+                                    ? 'bg-zinc-100 text-zinc-950 font-black shadow-xl scale-[1.02] z-10'
+                                    : 'text-zinc-500 hover:text-zinc-200 hover:bg-zinc-900/50 font-bold'
+                                    }`}
+                            >
+                                <Icon name="vault" size={14} className={selectedVault === v.id ? 'text-zinc-950' : 'text-zinc-700 group-hover:text-zinc-400'} />
+                                <span className="text-xs tracking-tight">{v.name || v.id}</span>
+                            </button>
+                        ))}
+                        {isLoading && (
+                            <>
+                                {[1, 2].map(i => (
+                                    <div key={`skeleton-v-${i}`} className="px-4 py-3">
+                                        <Skeleton className="h-4 w-full" />
+                                    </div>
+                                ))}
+                            </>
                         )}
                     </div>
                 </aside>
@@ -118,53 +133,69 @@ export default function VaultView({ apiPath = '/user/vault' }: { apiPath?: strin
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-zinc-900/50">
-                                        {isLoading && Object.keys(keys).length === 0 ? (
-                                            [1, 2, 3, 4, 5].map(i => (
-                                                <tr key={i}>
-                                                    <td className="px-8 py-6"><Skeleton className="h-4 w-3/4" /></td>
-                                                    <td className="px-8 py-6"><Skeleton className="h-4 w-24" /></td>
-                                                    <td className="px-8 py-6 text-right flex justify-end gap-2"><Skeleton className="h-8 w-8" /><Skeleton className="h-8 w-8" /></td>
-                                                </tr>
-                                            ))
-                                        ) : (
-                                            Object.entries(keys).map(([k, hasValue]) => (
-                                                <tr key={k} className="group hover:bg-zinc-900/30 transition-all duration-200">
-                                                    <td className="px-8 py-6">
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="p-2 rounded-lg bg-zinc-900/50 border border-zinc-800/50 text-zinc-600 group-hover:text-zinc-400 group-hover:border-zinc-700 transition-colors">
-                                                                <Icon name="terminal" size={14} />
+                                        {Object.entries(keys).map(([k, hasValue]) => (
+                                            <tr key={k} className={`group hover:bg-zinc-900/30 transition-all duration-200 ${isLoading ? 'opacity-70' : ''}`}>
+                                                <td className="px-8 py-6">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="p-2 rounded-lg bg-zinc-900/50 border border-zinc-800/50 text-zinc-600 group-hover:text-zinc-400 group-hover:border-zinc-700 transition-colors">
+                                                            <Icon name="terminal" size={14} />
+                                                        </div>
+                                                        <span className="text-xs font-bold text-zinc-300 font-mono tracking-tight">{k}</span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-8 py-6">
+                                                    <div className="flex items-center gap-2.5">
+                                                        <div className={`w-2 h-2 rounded-full transition-all duration-500 ${hasValue ? 'bg-emerald-500 shadow-[0_0_12px_#10b981]' : 'bg-zinc-800 shadow-[0_0_12px_rgba(39,39,42,0.5)]'}`}></div>
+                                                        <span className={`text-[10px] font-black uppercase tracking-widest transition-colors ${hasValue ? 'text-zinc-100' : 'text-zinc-600'}`}>
+                                                            {hasValue ? 'Configured' : 'Empty'}
+                                                        </span>
+                                                    </div>
+                                                </td>
+                                                <td className="px-8 py-6 text-right">
+                                                    <div className="flex items-center justify-end gap-2 opacity-10 lg:opacity-0 lg:group-hover:opacity-100 transition-all transform lg:translate-x-2 lg:group-hover:translate-x-0">
+                                                        <button
+                                                            onClick={() => handleUpdateKey(k)}
+                                                            className="p-2.5 text-zinc-500 hover:text-zinc-100 rounded-xl hover:bg-zinc-800 transition-all border border-transparent hover:border-zinc-700/50"
+                                                            title="Set Value"
+                                                        >
+                                                            <Icon name="settings" size={16} />
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleRemoveKey(k)}
+                                                            className="p-2.5 text-zinc-500 hover:text-red-500 rounded-xl hover:bg-red-500/10 transition-all border border-transparent hover:border-red-500/20"
+                                                            title="Wipe Data"
+                                                        >
+                                                            <Icon name="trash" size={16} />
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                        {isLoading && (
+                                            <>
+                                                {[1, 2, 3].map(i => (
+                                                    <tr key={`skeleton-k-${i}`} className="animate-pulse">
+                                                        <td className="px-8 py-6">
+                                                            <div className="flex items-center gap-3">
+                                                                <Skeleton className="h-8 w-8 rounded-lg" />
+                                                                <Skeleton className="h-4 w-32" />
                                                             </div>
-                                                            <span className="text-xs font-bold text-zinc-300 font-mono tracking-tight">{k}</span>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-8 py-6">
-                                                        <div className="flex items-center gap-2.5">
-                                                            <div className={`w-2 h-2 rounded-full transition-all duration-500 ${hasValue ? 'bg-emerald-500 shadow-[0_0_12px_#10b981]' : 'bg-zinc-800 shadow-[0_0_12px_rgba(39,39,42,0.5)]'}`}></div>
-                                                            <span className={`text-[10px] font-black uppercase tracking-widest transition-colors ${hasValue ? 'text-zinc-100' : 'text-zinc-600'}`}>
-                                                                {hasValue ? 'Configured' : 'Empty'}
-                                                            </span>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-8 py-6 text-right">
-                                                        <div className="flex items-center justify-end gap-2 opacity-10 lg:opacity-0 lg:group-hover:opacity-100 transition-all transform lg:translate-x-2 lg:group-hover:translate-x-0">
-                                                            <button
-                                                                onClick={() => handleUpdateKey(k)}
-                                                                className="p-2.5 text-zinc-500 hover:text-zinc-100 rounded-xl hover:bg-zinc-800 transition-all border border-transparent hover:border-zinc-700/50"
-                                                                title="Set Value"
-                                                            >
-                                                                <Icon name="settings" size={16} />
-                                                            </button>
-                                                            <button
-                                                                onClick={() => handleRemoveKey(k)}
-                                                                className="p-2.5 text-zinc-500 hover:text-red-500 rounded-xl hover:bg-red-500/10 transition-all border border-transparent hover:border-red-500/20"
-                                                                title="Wipe Data"
-                                                            >
-                                                                <Icon name="trash" size={16} />
-                                                            </button>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            ))
+                                                        </td>
+                                                        <td className="px-8 py-6">
+                                                            <div className="flex items-center gap-2">
+                                                                <Skeleton className="h-2 w-2 rounded-full" />
+                                                                <Skeleton className="h-3 w-20" />
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-8 py-6 text-right">
+                                                            <div className="flex justify-end gap-2">
+                                                                <Skeleton className="h-8 w-8 rounded-xl" />
+                                                                <Skeleton className="h-8 w-8 rounded-xl" />
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </>
                                         )}
                                         {Object.keys(keys).length === 0 && !isLoading && (
                                             <tr>

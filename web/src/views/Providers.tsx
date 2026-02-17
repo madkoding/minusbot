@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
-import { Button, Input } from "../components/ui";
+import { Button, Input, Skeleton } from "../components/ui";
 import { Icon } from "../components/icons";
 import { Card } from "../components/cards";
 import { Modal } from "../components/modals";
-import { useProviders } from "../hooks/useProviders";
+import { useProviders, useProvidersAsAdmin } from "../hooks/useProviders";
 import { useSettings } from "../hooks/useSettings";
 import { useAuthStore } from "../stores/useAuthStore";
 
@@ -16,6 +16,9 @@ export default function ProvidersView({ mode = "personal" }: ProvidersViewProps)
     const isRoot = user?.role === "root";
     const isAdminMode = mode === "admin";
 
+    const userHook = useProviders();
+    const adminHook = useProvidersAsAdmin();
+
     const {
         providers,
         clients,
@@ -24,15 +27,17 @@ export default function ProvidersView({ mode = "personal" }: ProvidersViewProps)
         deleteProvider,
         activateProvider,
         listModels,
-        listModelsByConfig
-    } = useProviders();
+        listModelsByConfig,
+        fetchProviders
+    } = isAdminMode ? adminHook : userHook;
 
     // We fetch user settings to see personal active providers
-    const { settings: userSettings, fetchSettings: fetchUserSettings } = useSettings("/user/settings");
+    const { settings: userSettings, fetchSettings: fetchUserSettings } = useSettings();
 
     useEffect(() => {
+        fetchProviders();
         fetchUserSettings();
-    }, [fetchUserSettings]);
+    }, [fetchProviders, fetchUserSettings]);
 
     const [isAdding, setIsAdding] = useState(false);
     const [editingProvider, setEditingProvider] = useState<any>(null);
@@ -175,14 +180,6 @@ export default function ProvidersView({ mode = "personal" }: ProvidersViewProps)
         setSearchTerm("");
     };
 
-    if (isSystemLoading || !userSettings) {
-        return (
-            <div className="flex flex-col items-center justify-center py-32 space-y-4 animate-in fade-in duration-500">
-                <div className="w-12 h-12 border-2 border-zinc-800 border-t-zinc-400 rounded-full animate-spin"></div>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-600">Loading Configuration...</p>
-            </div>
-        );
-    }
 
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -411,19 +408,21 @@ export default function ProvidersView({ mode = "personal" }: ProvidersViewProps)
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {filteredProviders.map(provider => {
                         const type = types.find(t => t.id === provider.type);
-                        const isActive = userSettings?.active_providers?.[provider.type] === provider.id;
+                        const isActive = (userSettings as any)?.active_providers?.[provider.type] === provider.id;
 
                         // User can only edit their own providers, or global if they are admin/root and in admin mode
-                        const canEdit = isAdminMode ? (isRoot || user?.role === 'admin') : (!provider.is_global && (isRoot || user?.role === 'admin' || true));
-                        // Actually, in personal mode, if it's global, it's read-only.
+                        const canEdit = isAdminMode ? (isRoot || user?.role === 'admin') : (!provider.is_global);
                         const isReadOnly = !isAdminMode && provider.is_global;
 
                         return (
-                            <Card key={provider.id} className="p-6 border-white/5 bg-zinc-900/30 backdrop-blur-xl group hover:border-white/10 transition-all duration-500 flex flex-col justify-between">
+                            <Card key={provider.id} className={`p-6 border-white/5 bg-zinc-900/30 backdrop-blur-xl group hover:border-white/10 transition-all duration-500 flex flex-col justify-between ${isSystemLoading ? 'opacity-70 grayscale' : ''}`}>
                                 <div>
                                     <div className="flex items-start justify-between mb-6">
-                                        <div className="p-3 rounded-2xl bg-white/5 border border-white/5 group-hover:scale-110 transition-transform duration-500">
+                                        <div className="p-3 rounded-2xl bg-white/5 border border-white/5 group-hover:scale-110 transition-transform duration-500 relative">
                                             <Icon name={type?.icon || "cpu"} className="w-5 h-5 text-zinc-400" />
+                                            {isSystemLoading && (
+                                                <div className="absolute -top-1 -right-1 w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_#10b981]"></div>
+                                            )}
                                         </div>
                                         <div className="flex items-center gap-2">
                                             {!isReadOnly && canEdit && (
@@ -487,8 +486,32 @@ export default function ProvidersView({ mode = "personal" }: ProvidersViewProps)
                         );
                     })}
 
+                    {isSystemLoading && (
+                        <>
+                            {[1, 2, 3].map(i => (
+                                <Card key={`skeleton-${i}`} className="p-6 border-white/5 bg-zinc-900/30 backdrop-blur-xl animate-pulse">
+                                    <div className="flex items-start justify-between mb-6">
+                                        <Skeleton className="w-11 h-11 rounded-2xl" />
+                                        <div className="flex gap-2">
+                                            <Skeleton className="w-8 h-8 rounded-lg" />
+                                            <Skeleton className="w-8 h-8 rounded-lg" />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-4 mb-6">
+                                        <Skeleton className="h-6 w-3/4" />
+                                        <Skeleton className="h-4 w-1/2" />
+                                    </div>
+                                    <div className="flex items-center justify-between pt-4 border-t border-white/5">
+                                        <Skeleton className="h-3 w-20" />
+                                        <Skeleton className="h-8 w-24 rounded-lg" />
+                                    </div>
+                                </Card>
+                            ))}
+                        </>
+                    )}
 
-                    {filteredProviders.length === 0 && (
+
+                    {filteredProviders.length === 0 && !isSystemLoading && (
                         <div className="col-span-full py-20 text-center border-2 border-dashed border-white/5 rounded-3xl group hover:border-white/10 transition-colors">
                             <div className="mb-4 inline-flex p-4 rounded-full bg-white/5 border border-white/5 group-hover:scale-110 transition-transform duration-500">
                                 <Icon name="cpu" className="w-8 h-8 text-zinc-700" />

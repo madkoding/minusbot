@@ -2,10 +2,11 @@ import React, { useState, useEffect } from "react";
 import { Button, Input } from "../components/ui";
 import { Icon } from "../components/icons";
 import { Card } from "../components/cards";
-import { useUsers } from "../hooks/useUsers";
+import { Skeleton } from "../components/ui";
+import { useUsersAsAdmin } from "../hooks/useUsers";
 
 export default function UsersView() {
-    const { users, fetchUsers, createUser, deleteUser, isLoading, error } = useUsers();
+    const { users, fetchUsers, createUser, deleteUser, isLoading, error } = useUsersAsAdmin();
     const [isAdding, setIsAdding] = useState(false);
 
     useEffect(() => { load(); }, []);
@@ -74,7 +75,7 @@ export default function UsersView() {
                         </thead>
                         <tbody className="divide-y divide-zinc-800/30">
                             {users.map(u => (
-                                <tr key={u?.id || Math.random()} className="group hover:bg-zinc-800/20 transition-colors">
+                                <tr key={u?.id || Math.random()} className={`group hover:bg-zinc-800/20 transition-colors ${isLoading ? 'opacity-70' : ''}`}>
                                     <td className="py-4 px-6">
                                         <div className="font-bold text-zinc-200 text-sm">{u?.username || "Unknown"}</div>
                                         <div className="text-[10px] font-mono text-zinc-600 mt-0.5 uppercase tracking-tighter">REF: {u?.id || "N/A"}</div>
@@ -97,6 +98,25 @@ export default function UsersView() {
                                     </td>
                                 </tr>
                             ))}
+
+                            {isLoading && (
+                                <>
+                                    {[1, 2, 3].map(i => (
+                                        <tr key={`skeleton-${i}`} className="animate-pulse">
+                                            <td className="py-4 px-6">
+                                                <Skeleton className="h-4 w-24 mb-1" />
+                                                <Skeleton className="h-2 w-16" />
+                                            </td>
+                                            <td className="py-4 px-6">
+                                                <Skeleton className="h-4 w-12 rounded" />
+                                            </td>
+                                            <td className="py-4 px-6 text-right">
+                                                <Skeleton className="h-8 w-8 rounded-full ml-auto" />
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </>
+                            )}
                         </tbody>
                     </table>
                 </div>

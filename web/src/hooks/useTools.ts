@@ -2,14 +2,14 @@ import { useCallback } from 'react';
 import { toolsService } from '../services/toolsService';
 import { useToolsStore } from '../stores/useToolsStore';
 
-export function useTools(apiPath: string) {
+export function useTools() {
     const {
         allTools,
-        disabledTools,
+        userDisabledTools,
         isLoading,
         error,
         setAllTools,
-        setDisabledTools,
+        setUserDisabledTools,
         setLoading,
         setError
     } = useToolsStore();
@@ -18,22 +18,22 @@ export function useTools(apiPath: string) {
         setLoading(true);
         try {
             const [all, disabled] = await Promise.all([
-                toolsService.listAll(),
-                toolsService.getDisabled(apiPath)
+                toolsService.listAllAsAdmin(),
+                toolsService.getDisabled()
             ]);
             setAllTools(all);
-            setDisabledTools(disabled);
+            setUserDisabledTools(disabled);
             setError(null);
         } catch (err: any) {
             setError(err.message);
         } finally {
             setLoading(false);
         }
-    }, [apiPath, setLoading, setAllTools, setDisabledTools, setError]);
+    }, [setLoading, setAllTools, setUserDisabledTools, setError]);
 
     const toggleTool = async (name: string) => {
         try {
-            await toolsService.toggle(apiPath, name);
+            await toolsService.toggle(name);
             await fetchTools();
             return true;
         } catch (err: any) {
@@ -44,7 +44,57 @@ export function useTools(apiPath: string) {
 
     return {
         allTools,
-        disabledTools,
+        disabledTools: userDisabledTools,
+        isLoading,
+        error,
+        fetchTools,
+        toggleTool
+    };
+}
+
+export function useToolsAsAdmin() {
+    const {
+        allTools,
+        adminDisabledTools,
+        isLoading,
+        error,
+        setAllTools,
+        setAdminDisabledTools,
+        setLoading,
+        setError
+    } = useToolsStore();
+
+    const fetchTools = useCallback(async () => {
+        setLoading(true);
+        try {
+            const [all, disabled] = await Promise.all([
+                toolsService.listAllAsAdmin(),
+                toolsService.getDisabledAsAdmin()
+            ]);
+            setAllTools(all);
+            setAdminDisabledTools(disabled);
+            setError(null);
+        } catch (err: any) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    }, [setLoading, setAllTools, setAdminDisabledTools, setError]);
+
+    const toggleTool = async (name: string) => {
+        try {
+            await toolsService.toggleAsAdmin(name);
+            await fetchTools();
+            return true;
+        } catch (err: any) {
+            setError(err.message);
+            return false;
+        }
+    };
+
+    return {
+        allTools,
+        disabledTools: adminDisabledTools,
         isLoading,
         error,
         fetchTools,

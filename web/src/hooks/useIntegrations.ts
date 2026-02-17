@@ -2,13 +2,14 @@ import { useCallback } from 'react';
 import { integrationsService } from '../services/integrationsService';
 import { useIntegrationsStore } from '../stores/useIntegrationsStore';
 
-export function useIntegrations(apiPath: string) {
+export function useIntegrations() {
     const {
-        available,
-        configs,
+        userIntegrations,
+        selectedIntegration,
         isLoading,
         error,
-        setData,
+        setUserIntegrations,
+        setSelectedIntegration,
         setLoading,
         setError
     } = useIntegrationsStore();
@@ -16,46 +17,51 @@ export function useIntegrations(apiPath: string) {
     const fetchIntegrations = useCallback(async () => {
         setLoading(true);
         try {
-            const res = await integrationsService.list(apiPath);
-            setData(res.data);
+            const data = await integrationsService.list();
+            setUserIntegrations(data);
             setError(null);
         } catch (err: any) {
             setError(err.message);
         } finally {
             setLoading(false);
         }
-    }, [apiPath, setLoading, setData, setError]);
+    }, [setLoading, setUserIntegrations, setError]);
 
-    const saveSettings = async (id: string, data: any, isAdmin: boolean) => {
+    const fetchIntegrationConfig = async (id: string, isAdmin: boolean) => {
         setLoading(true);
         try {
-            await integrationsService.saveSettings(apiPath, id, data, isAdmin);
+            const data = isAdmin ? await integrationsService.listAsAdmin() : await integrationsService.list();
+            const integration = data.available.find((i: any) => i.id === id);
+            setSelectedIntegration(integration);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const saveSettings = async (id: string, data: any) => {
+        try {
+            await integrationsService.saveSettings(id, data);
             await fetchIntegrations();
             return true;
         } catch (err: any) {
             setError(err.message);
             return false;
-        } finally {
-            setLoading(false);
         }
     };
 
-    const saveSecrets = async (id: string, secrets: any, isAdmin: boolean, schema: any) => {
-        setLoading(true);
+    const saveSecrets = async (id: string, secrets: any, schema: any) => {
         try {
-            await integrationsService.saveSecrets(apiPath, id, secrets, isAdmin, schema);
+            await integrationsService.saveSecrets(id, secrets, schema);
             return true;
         } catch (err: any) {
             setError(err.message);
             return false;
-        } finally {
-            setLoading(false);
         }
     };
 
     const deleteIntegration = async (id: string) => {
         try {
-            await integrationsService.delete(apiPath, id);
+            await integrationsService.delete(id);
             await fetchIntegrations();
             return true;
         } catch (err: any) {
@@ -65,13 +71,97 @@ export function useIntegrations(apiPath: string) {
     };
 
     return {
-        available,
-        configs,
+        integrations: userIntegrations,
+        selectedIntegration,
         isLoading,
         error,
         fetchIntegrations,
+        fetchIntegrationConfig,
         saveSettings,
         saveSecrets,
-        deleteIntegration
+        deleteIntegration,
+        setSelectedIntegration
+    };
+}
+
+export function useIntegrationsAsAdmin() {
+    const {
+        adminIntegrations,
+        selectedIntegration,
+        isLoading,
+        error,
+        setAdminIntegrations,
+        setSelectedIntegration,
+        setLoading,
+        setError
+    } = useIntegrationsStore();
+
+    const fetchIntegrations = useCallback(async () => {
+        setLoading(true);
+        try {
+            const data = await integrationsService.listAsAdmin();
+            setAdminIntegrations(data);
+            setError(null);
+        } catch (err: any) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    }, [setLoading, setAdminIntegrations, setError]);
+
+    const fetchIntegrationConfig = async (id: string) => {
+        setLoading(true);
+        try {
+            const data = await integrationsService.listAsAdmin();
+            const integration = data.available.find((i: any) => i.id === id);
+            setSelectedIntegration(integration);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const saveSettings = async (id: string, data: any) => {
+        try {
+            await integrationsService.saveSettingsAsAdmin(id, data);
+            await fetchIntegrations();
+            return true;
+        } catch (err: any) {
+            setError(err.message);
+            return false;
+        }
+    };
+
+    const saveSecrets = async (id: string, secrets: any) => {
+        try {
+            await integrationsService.saveSecretsAsAdmin(id, secrets);
+            return true;
+        } catch (err: any) {
+            setError(err.message);
+            return false;
+        }
+    };
+
+    const deleteIntegration = async (id: string) => {
+        try {
+            await integrationsService.deleteAsAdmin(id);
+            await fetchIntegrations();
+            return true;
+        } catch (err: any) {
+            setError(err.message);
+            return false;
+        }
+    };
+
+    return {
+        integrations: adminIntegrations,
+        selectedIntegration,
+        isLoading,
+        error,
+        fetchIntegrations,
+        fetchIntegrationConfig,
+        saveSettings,
+        saveSecrets,
+        deleteIntegration,
+        setSelectedIntegration
     };
 }

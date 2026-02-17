@@ -1,27 +1,24 @@
 import { create } from 'zustand';
+import type { Secret } from '../types';
 
 interface VaultState {
-    vaults: string[];
-    selectedVault: string | null;
-    keys: Record<string, boolean>;
+    userSecrets: Secret[];
+    adminSecrets: Secret[];
     isLoading: boolean;
     error: string | null;
-    setVaults: (vaults: string[]) => void;
-    setSelectedVault: (vault: string | null) => void;
-    setKeys: (keys: Record<string, boolean>) => void;
+    setUserSecrets: (secrets: Secret[]) => void;
+    setAdminSecrets: (secrets: Secret[]) => void;
     setLoading: (loading: boolean) => void;
     setError: (error: string | null) => void;
 }
 
 export const useVaultStore = create<VaultState>((set) => ({
-    vaults: [],
-    selectedVault: null,
-    keys: {},
+    userSecrets: [],
+    adminSecrets: [],
     isLoading: false,
     error: null,
-    setVaults: (vaults) => set({ vaults }),
-    setSelectedVault: (selectedVault) => set({ selectedVault }),
-    setKeys: (keys) => set({ keys }),
+    setUserSecrets: (userSecrets) => set({ userSecrets }),
+    setAdminSecrets: (adminSecrets) => set({ adminSecrets }),
     setLoading: (isLoading) => set({ isLoading }),
     setError: (error) => set({ error }),
 }));

@@ -1,11 +1,13 @@
 import { apiClient } from "../lib/apiClient";
+import type { Stat } from "../types";
 
 export const statsService = {
-    getUserStats: async () => {
+    get: async (): Promise<any> => {
         const res = await apiClient.get('/user/stats');
         return res.data;
     },
-    getAdminStats: async () => {
+
+    getAsAdmin: async (): Promise<any> => {
         const res = await apiClient.get('/admin/stats');
         return res.data;
     }

@@ -2,41 +2,52 @@ import React, { useState, useEffect } from "react";
 import { Button, Input } from "../components/ui";
 import { Icon } from "../components/icons";
 import { Card } from "../components/cards";
-import { useIntegrations } from "../hooks/useIntegrations";
+import { Skeleton } from "../components/ui";
+import { useIntegrations, useIntegrationsAsAdmin } from "../hooks/useIntegrations";
+import type { Integration } from "../types";
 
-export default function IntegrationsView({ apiPath = '/user/integrations' }: { apiPath?: string }) {
+export default function IntegrationsView({ mode = 'user' }: { mode?: 'user' | 'admin' }) {
+    const isAdmin = mode === 'admin';
+    const userHook = useIntegrations();
+    const adminHook = useIntegrationsAsAdmin();
+
     const {
-        available,
-        configs,
+        integrations,
+        selectedIntegration,
         isLoading,
         error,
         fetchIntegrations,
+        fetchIntegrationConfig,
         saveSettings,
         saveSecrets,
-        deleteIntegration
-    } = useIntegrations(apiPath);
+        deleteIntegration,
+        setSelectedIntegration
+    } = isAdmin ? adminHook : userHook;
 
-    const [editing, setEditing] = useState<any>(null);
+    const available: Integration[] = integrations?.available || [];
+    const configs = integrations?.configs || {};
+
     const [editData, setEditData] = useState<any>({});
     const [editSecrets, setEditSecrets] = useState<any>({});
-    const isAdmin = apiPath.includes('admin');
 
-    useEffect(() => { fetchIntegrations(); }, [apiPath, fetchIntegrations]);
+    useEffect(() => {
+        fetchIntegrations();
+    }, [fetchIntegrations]);
 
     const handleEdit = (integration: any) => {
-        setEditing(integration);
+        fetchIntegrationConfig(integration.id, isAdmin);
         setEditData(configs[integration.id] || {});
         setEditSecrets({});
-        // Scroll to top
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
     const handleSave = async () => {
-        const success = await saveSettings(editing.id, editData, isAdmin);
+        if (!selectedIntegration) return;
+        const success = await saveSettings(selectedIntegration.id, editData);
         if (success) {
-            const secretSuccess = await saveSecrets(editing.id, editSecrets, isAdmin, editing);
+            const secretSuccess = await saveSecrets(selectedIntegration.id, editSecrets, selectedIntegration);
             if (secretSuccess) {
-                setEditing(null);
+                setSelectedIntegration(null);
             }
         }
     };
@@ -46,23 +57,23 @@ export default function IntegrationsView({ apiPath = '/user/integrations' }: { a
         await deleteIntegration(id);
     };
 
-    if (editing) {
+    if (selectedIntegration) {
         return (
             <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
                 <div className="max-w-3xl mx-auto">
                     <div className="mb-8 flex items-start gap-4">
                         <button
-                            onClick={() => setEditing(null)}
+                            onClick={() => setSelectedIntegration(null)}
                             className="p-2.5 bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-zinc-100 rounded-xl transition-all active:scale-95 shadow-lg"
                         >
                             <Icon name="logout" size={20} className="rotate-180" />
                         </button>
                         <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
-                                <h2 className="text-xl md:text-2xl font-black tracking-tight text-zinc-100 truncate">{editing.name}</h2>
+                                <h2 className="text-xl md:text-2xl font-black tracking-tight text-zinc-100 truncate">{selectedIntegration.name}</h2>
                                 <div className="px-2 py-0.5 rounded-full bg-zinc-900 border border-zinc-800 text-[8px] font-black uppercase tracking-widest text-zinc-500">Config</div>
                             </div>
-                            <p className="text-xs md:text-sm text-zinc-500 line-clamp-2 md:line-clamp-none">{editing.description}</p>
+                            <p className="text-xs md:text-sm text-zinc-500 line-clamp-2 md:line-clamp-none">{selectedIntegration.description}</p>
                         </div>
                     </div>
 
@@ -72,7 +83,7 @@ export default function IntegrationsView({ apiPath = '/user/integrations' }: { a
                                 <div className="space-y-4">
                                     <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">General Settings</h4>
                                     <div className="grid gap-5">
-                                        {editing.fields?.map((field: any) => (
+                                        {selectedIntegration.fields?.map((field: any) => (
                                             <div key={field.id} className="space-y-2">
                                                 <div className="flex justify-between items-center px-1">
                                                     <label className="text-xs font-bold text-zinc-400">{field.label}</label>
@@ -104,14 +115,14 @@ export default function IntegrationsView({ apiPath = '/user/integrations' }: { a
                                     </div>
                                 </div>
 
-                                {editing.vaultKeys && (
-                                    <div className="space-y-4 pt-8 border-t border-zinc-900">
+                                {selectedIntegration.vaultKeys && (
+                                    <div className="space-y-4 pt-8 border-t border-zinc-800">
                                         <div className="flex items-center gap-2">
                                             <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 underline underline-offset-4 decoration-zinc-800">Secrets & Keys</h4>
                                             <Icon name="vault" size={12} className="text-amber-500/50" />
                                         </div>
                                         <div className="grid gap-5">
-                                            {editing.vaultKeys.map((key: string) => (
+                                            {selectedIntegration.vaultKeys.map((key: string) => (
                                                 <div key={key} className="space-y-2">
                                                     <label className="text-xs font-bold text-zinc-400 ml-1 uppercase tracking-tighter flex items-center gap-2">
                                                         {key.replace(/_/g, ' ')}
@@ -131,7 +142,7 @@ export default function IntegrationsView({ apiPath = '/user/integrations' }: { a
                                 )}
 
                                 <div className="pt-6 flex flex-col sm:flex-row justify-end gap-3">
-                                    <Button variant="secondary" onClick={() => setEditing(null)} className="h-11 md:h-12 order-2 sm:order-1">Discard Changes</Button>
+                                    <Button variant="secondary" onClick={() => setSelectedIntegration(null)} className="h-11 md:h-12 order-2 sm:order-1">Discard Changes</Button>
                                     <Button onClick={handleSave} loading={isLoading} className="h-11 md:h-12 order-1 sm:order-2 shadow-xl">Save Changes</Button>
                                 </div>
                             </div>
@@ -147,10 +158,14 @@ export default function IntegrationsView({ apiPath = '/user/integrations' }: { a
             <header className="flex flex-col md:flex-row md:justify-between md:items-end gap-6">
                 <div>
                     <div className="flex items-center gap-3 mb-3">
-                        <h2 className="text-2xl md:text-3xl font-black tracking-tight text-zinc-100 uppercase italic">Integrations</h2>
+                        <h2 className="text-2xl md:text-3xl font-black tracking-tight text-zinc-100 uppercase italic">{isAdmin ? 'Global ' : ''}Integrations</h2>
                         <div className="h-px w-12 bg-zinc-800 ml-2"></div>
                     </div>
-                    <p className="text-zinc-500 text-sm font-medium max-w-lg">Connect external services and apps to extend your assistant's capabilities.</p>
+                    <p className="text-zinc-500 text-sm font-medium max-w-lg">
+                        {isAdmin
+                            ? "Configure global integrations and their default settings."
+                            : "Connect external services and apps to extend your assistant's capabilities."}
+                    </p>
                 </div>
             </header>
 
@@ -160,7 +175,7 @@ export default function IntegrationsView({ apiPath = '/user/integrations' }: { a
                     const isConfigured = !!config;
 
                     return (
-                        <Card key={integration.id} className={`group border-zinc-900 hover:border-zinc-700/50 transition-all ${isConfigured ? 'bg-zinc-900/10' : 'bg-transparent border-dashed'} p-6 md:p-8 flex flex-col h-full`}>
+                        <Card key={integration.id} className={`group border-zinc-900 hover:border-zinc-700/50 transition-all ${isConfigured ? 'bg-zinc-900/10' : 'bg-transparent border-dashed'} p-6 md:p-8 flex flex-col h-full ${isLoading ? 'opacity-70' : ''}`}>
                             <div className="flex items-start justify-between mb-6 md:mb-8">
                                 <div className={`w-12 h-12 md:w-14 md:h-14 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-105 ${isConfigured ? 'bg-zinc-100 text-zinc-950 shadow-[0_0_20px_rgba(255,255,255,0.1)]' : 'bg-zinc-900/50 text-zinc-600 border border-zinc-800/50'}`}>
                                     <Icon name={integration.icon || 'terminal'} size={24} className="md:w-7 md:h-7" />
@@ -189,6 +204,22 @@ export default function IntegrationsView({ apiPath = '/user/integrations' }: { a
                         </Card>
                     );
                 })}
+
+                {isLoading && (
+                    <>
+                        {[1, 2, 3].map((i) => (
+                            <Card key={`skeleton-${i}`} className="p-6 md:p-8 flex flex-col h-full bg-zinc-900/20 border-zinc-900 border-dashed animate-pulse">
+                                <div className="flex items-start justify-between mb-6 md:mb-8">
+                                    <Skeleton className="w-12 h-12 md:w-14 md:h-14 rounded-2xl" />
+                                </div>
+                                <Skeleton className="h-6 w-3/4 mb-4" />
+                                <Skeleton className="h-4 w-full mb-2" />
+                                <Skeleton className="h-4 w-5/6 mb-8" />
+                                <Skeleton className="h-11 md:h-12 w-full rounded-xl" />
+                            </Card>
+                        ))}
+                    </>
+                )}
             </div>
             {error && <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-500 text-xs font-bold uppercase tracking-widest text-center">{error}</div>}
         </div>
