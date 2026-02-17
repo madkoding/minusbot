@@ -24,7 +24,6 @@ import vaultAdminRoutes from "./routes/admin/vault.admin.routes";
 import settingsAdminRoutes from "./routes/admin/settings.admin.routes";
 import toolsAdminRoutes from "./routes/admin/tools.admin.routes";
 import channelsAdminRoutes from "./routes/admin/channels.admin.routes";
-import integrationsAdminRoutes from "./routes/admin/integrations.admin.routes";
 import updaterAdminRoutes from "./routes/admin/updater.admin.routes";
 
 
@@ -32,7 +31,6 @@ import userSkillsRoutes from "./routes/user/skills.routes";
 import userSettingsRoutes from "./routes/user/settings.routes";
 import userVaultRoutes from "./routes/user/vault.routes";
 import userStatsRoutes from "./routes/user/stats.routes";
-import userIntegrationsRoutes from "./routes/user/integrations.routes";
 import userChannelsRoutes from "./routes/user/channels.routes";
 import providerRoutes from "./routes/providers.routes";
 
@@ -74,7 +72,6 @@ export async function startServer() {
     user.use("/settings", userSettingsRoutes);
     user.use("/vault", userVaultRoutes);
     user.use("/stats", userStatsRoutes);
-    user.use("/integrations", userIntegrationsRoutes);
     user.use("/channels", userChannelsRoutes);
     user.use("/providers", providerRoutes);
     api.use("/user", user);
@@ -89,7 +86,6 @@ export async function startServer() {
     admin.use("/settings", settingsAdminRoutes); // includes /global and /system
     admin.use("/tools", toolsAdminRoutes);
     admin.use("/channels", channelsAdminRoutes);
-    admin.use("/integrations", integrationsAdminRoutes);
     admin.use("/update", updaterAdminRoutes);
     api.use("/admin", admin);
 

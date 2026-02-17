@@ -1,9 +1,8 @@
+import fs from "node:fs/promises";
+
 import { commandManager } from "./command-manager";
 import { Storage } from "../data/storage";
-import { getUserSettings, getUserIntegrationConfigFile } from "../data/storage";
-import { secrets } from "../secrets";
-import { UserManager } from "../data/users";
-import fs from "node:fs/promises";
+import { getUserSettings } from "../data/storage";
 
 // /clear
 commandManager.register({
@@ -68,19 +67,6 @@ commandManager.register({
             report += `❌ **No Active Provider**: Please visit **Settings > AI Providers** to register and activate one.\n`;
         }
 
-        report += `\n### 🔌 Integrations\n`;
-        try {
-            const tgConfigPath = getUserIntegrationConfigFile(user.id, 'telegram');
-            const tgConfigContent = await fs.readFile(tgConfigPath, 'utf-8');
-            const tgConfig = JSON.parse(tgConfigContent);
-            if (tgConfig.user_id && tgConfig.chat_id) {
-                report += `✅ **Telegram**: Connected (Chat: ${tgConfig.chat_id})\n`;
-            } else {
-                report += "⚠️ **Telegram**: Incomplete configuration\n";
-            }
-        } catch {
-            report += "ℹ️ **Telegram**: Not configured\n";
-        }
 
         report += `\n### 🚀 Getting Started\n`;
         report += `• Type \`/help\` to see all slash commands.\n`;

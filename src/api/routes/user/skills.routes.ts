@@ -1,12 +1,10 @@
+
 import express from "express";
 import path from "node:path";
 import fs from "node:fs/promises";
 
-import { SHARED_SKILLS_DIR } from "@/data/storage";
 import { SkillManager } from "@/data/skills";
-
 import { secrets } from "@/secrets";
-import { IntegrationManager } from "@/integrations/integration-manager";
 
 const router = express.Router();
 
@@ -28,9 +26,31 @@ router.get("/:id", async (req: any, res) => {
 });
 
 router.get("/:id/vault", async (req: any, res) => {
+    const skill = await SkillManager.getSkill(req.user.id, req.params.id);
+    if (!skill) return res.status(404).send("Skill not found");
+
     const vaultId = `skill_${req.params.id}`;
     const vault = await secrets.vault(req.user.id, vaultId);
-    res.json(vault.maskedValues());
+    const currentValues = vault.maskedValues(); // { KEY: true/false }
+
+    const result: Record<string, boolean> = {};
+    const expectedKeys = [
+        ...(skill.definition.vaultKeys || []),
+        ...(skill.definition.requiredVaultKeys || [])
+    ];
+    const uniqueKeys = [...new Set(expectedKeys)];
+
+    for (const key of uniqueKeys) {
+        result[key] = !!currentValues[key];
+    }
+
+    for (const [key, value] of Object.entries(currentValues)) {
+        if (result[key] === undefined) {
+            result[key] = !!value;
+        }
+    }
+
+    res.json(result);
 });
 
 router.put("/:id/vault", async (req: any, res) => {
@@ -38,28 +58,20 @@ router.put("/:id/vault", async (req: any, res) => {
     const vault = await secrets.userVault(req.user.id, vaultId);
     const { key, value } = req.body;
     await vault.set(key, value);
-    await IntegrationManager.reloadUser(req.user.id);
+    await SkillManager.reloadUser(req.user.id);
     res.send("Skill secret updated");
 });
 
 // --- User-specific Data and Config ---
 
 router.get("/:id/config", async (req: any, res) => {
-    const { getUserIntegrationConfigFile } = await import("@/data/storage");
-    const configFile = getUserIntegrationConfigFile(req.user.id, `skill_${req.params.id}`);
-    try {
-        const content = await fs.readFile(configFile, "utf-8");
-        res.json(JSON.parse(content));
-    } catch {
-        res.json({});
-    }
+    const config = await SkillManager.getSkillConfig(req.user.id, req.params.id);
+    res.json(config);
 });
 
 router.put("/:id/config", async (req: any, res) => {
-    const { getUserIntegrationConfigFile } = await import("@/data/storage");
-    const configFile = getUserIntegrationConfigFile(req.user.id, `skill_${req.params.id}`);
-    await fs.mkdir(path.dirname(configFile), { recursive: true });
-    await fs.writeFile(configFile, JSON.stringify(req.body, null, 4));
+    await SkillManager.saveSkillConfig(req.user.id, req.params.id, req.body);
+    await SkillManager.reloadUser(req.user.id);
     res.send("User config updated");
 });
 
@@ -84,8 +96,7 @@ router.get("/:id/scripts", async (req: any, res) => {
     const skill = await SkillManager.getSkill(req.user.id, req.params.id);
     if (!skill) return res.status(404).send("Skill not found");
 
-    const skillDir = skill.isGlobal ? path.join(SHARED_SKILLS_DIR, req.params.id) : path.join(SkillManager.getUserSkillsDir(req.user.id), req.params.id);
-    const scriptsDir = path.join(skillDir, "scripts");
+    const scriptsDir = path.join(skill.path, "scripts");
 
     try {
         const files = await fs.readdir(scriptsDir);
@@ -99,8 +110,7 @@ router.get("/:id/scripts/:filename", async (req: any, res) => {
     const skill = await SkillManager.getSkill(req.user.id, req.params.id);
     if (!skill) return res.status(404).send("Skill not found");
 
-    const skillDir = skill.isGlobal ? path.join(SHARED_SKILLS_DIR, req.params.id) : path.join(SkillManager.getUserSkillsDir(req.user.id), req.params.id);
-    const filePath = path.join(skillDir, "scripts", req.params.filename);
+    const filePath = path.join(skill.path, "scripts", req.params.filename);
 
     try {
         const content = await fs.readFile(filePath, "utf-8");
@@ -123,6 +133,8 @@ router.post("/", async (req: any, res) => {
             await fs.writeFile(path.join(scriptsDir, filename), content as string);
         }
     }
+
+    await SkillManager.reloadUser(req.user.id);
     res.send("Personal skill saved");
 });
 
@@ -130,19 +142,21 @@ router.put("/:id/scripts/:filename", async (req: any, res) => {
     const skill = await SkillManager.getSkill(req.user.id, req.params.id);
     if (!skill || skill.isGlobal) return res.status(403).send("Forbidden");
 
-    const skillDir = path.join(SkillManager.getUserSkillsDir(req.user.id), req.params.id);
-    const filePath = path.join(skillDir, "scripts", req.params.filename);
+    const filePath = path.join(skill.path, "scripts", req.params.filename);
     await fs.writeFile(filePath, req.body.content);
     res.send("Script updated");
 });
 
 router.delete("/:id", async (req: any, res) => {
     const skill = await SkillManager.getSkill(req.user.id, req.params.id);
-    if (skill?.isGlobal) {
+    if (!skill) return res.status(404).send("Skill not found");
+
+    if (skill.isGlobal) {
         return res.status(403).send("Cannot delete global skills. Use settings to disable them for yourself.");
     }
-    const skillDir = path.join(SkillManager.getUserSkillsDir(req.user.id), req.params.id);
-    await fs.rm(skillDir, { recursive: true, force: true });
+
+    await fs.rm(skill.path, { recursive: true, force: true });
+    await SkillManager.reloadUser(req.user.id);
     res.send("Personal skill deleted");
 });
 

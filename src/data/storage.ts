@@ -44,17 +44,12 @@ export function getGlobalSettingsFile(): string {
     return path.join(getSharedDir(), "global-settings.json");
 }
 
-export function getGlobalIntegrationsDir(): string {
-    return path.join(getSharedDir(), "integrations");
-}
-
 // Legacy constant exports
 export const SYSTEM_SETTINGS_FILE = getSystemSettingsFile();
 export const SHARED_SKILLS_DIR = getSharedSkillsDir();
 export const SHARED_SECRETS_DIR = getSharedSecretsDir();
 export const SHARED_STATS_FILE = getSharedStatsFile();
 export const GLOBAL_SETTINGS_FILE = getGlobalSettingsFile();
-export const GLOBAL_INTEGRATIONS_DIR = getGlobalIntegrationsDir();
 
 // --- Interfaces & Types ---
 
@@ -172,13 +167,7 @@ export function getUserSettingsFile(userId: string) {
     return path.join(getUserDir(userId), "user-settings.json");
 }
 
-export function getUserIntegrationsDir(userId: string) {
-    return path.join(getUserDir(userId), "integrations");
-}
 
-export function getUserIntegrationConfigFile(userId: string, integrationId: string) {
-    return path.join(getUserIntegrationsDir(userId), `${integrationId}.json`);
-}
 
 export function getUserSkillsDataDir(userId: string) {
     return path.join(getUserDir(userId), "skills-data");
@@ -188,9 +177,7 @@ export function getUserSkillDataDir(userId: string, skillId: string) {
     return path.join(getUserSkillsDataDir(userId), skillId);
 }
 
-export function getGlobalIntegrationConfigFile(integrationId: string) {
-    return path.join(getGlobalIntegrationsDir(), `${integrationId}.json`);
-}
+
 
 export function getUserChannelsDir(userId: string) {
     return path.join(getUserDir(userId), "channels");
@@ -364,6 +351,5 @@ export async function ensureDirs() {
     await fs.mkdir(getSharedDir(), { recursive: true });
     await fs.mkdir(getSharedSkillsDir(), { recursive: true });
     await fs.mkdir(getSharedSecretsDir(), { recursive: true });
-    await fs.mkdir(getGlobalIntegrationsDir(), { recursive: true });
     await getJWTSecret();
 }

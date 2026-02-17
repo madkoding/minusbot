@@ -36,7 +36,6 @@ export const DashboardLayout: React.FC = () => {
         if (path === '/dashboard') return 'Activity Overview';
         if (path.startsWith('/chat')) return 'Chat';
         if (path === '/skills') return 'Skills';
-        if (path === '/integrations') return 'Integrations';
         if (path === '/channels') return 'Channels';
         if (path === '/providers') return 'AI Providers';
         if (path === '/tools') return 'Settings';

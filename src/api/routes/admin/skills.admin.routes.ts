@@ -68,7 +68,7 @@ router.post("/:id/toggle", async (req, res) => {
 
         const skillDir = path.join(SHARED_SKILLS_DIR, req.params.id);
         await fs.writeFile(path.join(skillDir, "skill.json"), JSON.stringify(skill.definition, null, 4));
-
+        await SkillManager.reloadGlobal();
         res.json({ enabled: skill.definition.enabled });
     } catch {
         res.status(500).send("Failed to toggle skill");
@@ -86,12 +86,14 @@ router.post("/", async (req, res) => {
         const scriptName = skillJson.actions?.[0]?._script || "main.py";
         await fs.writeFile(path.join(scriptsDir, scriptName), scriptPy);
     }
+    await SkillManager.reloadGlobal();
     res.send("Global skill saved");
 });
 
 router.delete("/:id", async (req, res) => {
     const skillDir = path.join(SHARED_SKILLS_DIR, req.params.id);
     await fs.rm(skillDir, { recursive: true, force: true });
+    await SkillManager.reloadGlobal();
     res.send("Global skill deleted");
 });
 

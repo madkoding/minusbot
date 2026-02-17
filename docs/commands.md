@@ -87,4 +87,4 @@ Global versions of user commands for system-wide configuration.
 
 ## 📡 Channels & Integrations
 
-For configuration of specific channels (Telegram, Discord, Web) and external integrations (Google Search, etc.), please refer to the specific documentation in `docs/channels/` and `docs/integrations/`.
+For configuration of specific channels (Telegram, Discord, Web) and external integrations (Google Search, etc.), please refer to the specific documentation in `docs/channels/`.

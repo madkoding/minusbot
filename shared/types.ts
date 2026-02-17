@@ -84,21 +84,6 @@ export interface AIProvider {
     };
 }
 
-export interface Integration {
-    id: string;
-    name: string;
-    description: string;
-    icon?: string;
-    enabled: boolean;
-    type: "integration";
-    fields?: any[];
-    vaultKeys?: string[];
-}
-
-export interface IntegrationsResponse {
-    available: Integration[];
-    configs: Record<string, any>;
-}
 
 export interface Stat {
     chats_created: number;

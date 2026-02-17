@@ -20,7 +20,6 @@ import UsersView from "./views/Users.tsx";
 import VaultView from "./views/Vault.tsx";
 import SettingsView from "./views/Settings.tsx";
 import StatsView from "./views/Stats";
-import IntegrationsView from "./views/Integrations.tsx";
 import ChannelsView from "./views/Channels.tsx";
 import UpdateView from "./views/Update.tsx";
 import ProvidersView from "./views/Providers.tsx";
@@ -88,7 +87,6 @@ export default function App() {
                         <Route path="/chat/:id" element={<ChatView />} />
                         <Route path="/providers" element={<ProvidersView />} />
                         <Route path="/skills" element={<SkillsView mode="user" />} />
-                        <Route path="/integrations" element={<IntegrationsView mode="user" />} />
                         <Route path="/channels" element={<ChannelsView mode="user" />} />
                         <Route path="/tools" element={<ToolsView mode="user" />} />
                         <Route path="/secrets" element={<VaultView mode="user" />} />
@@ -100,7 +98,6 @@ export default function App() {
                         <Route path="/admin/settings" element={<SettingsView mode="admin" />} />
                         <Route path="/admin/users" element={<UsersView />} />
                         <Route path="/admin/stats" element={<StatsView />} />
-                        <Route path="/admin/integrations" element={<IntegrationsView mode="admin" />} />
                         <Route path="/admin/channels" element={<ChannelsView mode="admin" />} />
                         <Route path="/admin/providers" element={<ProvidersView mode="admin" />} />
 

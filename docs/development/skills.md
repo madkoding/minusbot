@@ -15,24 +15,59 @@ Every skill must have a `skill.json` file. Here is an example:
 
 ```json
 {
-  "name": "Weather Explorer",
+  "id": "weather",
+  "displayName": "Weather Explorer",
   "description": "Get current weather for any city",
-  "parameters": {
+  "vaultKeys": ["API_KEY"],
+  "dockerImage": "python:3.11-slim",
+  "enableNetwork": true,
+  "configSchema": {
     "type": "object",
     "properties": {
-      "city": { "type": "string" },
-      "unit": { "type": "string", "enum": ["c", "f"] }
-    },
-    "required": ["city"]
+      "default_unit": {
+        "type": "string",
+        "description": "Default temperature unit (c or f)",
+        "default": "c"
+      }
+    }
   },
-  "runtime": "python:3.10-slim",
-  "entrypoint": "python script.py"
+  "actions": [
+    {
+      "name": "get_weather",
+      "description": "Get current weather for a city",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "city": { 
+            "type": "string",
+            "description": "City name"
+          },
+          "unit": { 
+            "type": "string", 
+            "enum": ["c", "f"],
+            "description": "Temperature unit"
+          }
+        },
+        "required": ["city"]
+      },
+      "_script": "weather.py"
+    }
+  ]
 }
 ```
 
--   **parameters**: Standard JSON Schema that the AI uses to know what info it needs to provide.
--   **runtime**: The Docker image to use as a base.
--   **entrypoint**: The command to execute inside the container.
+-   **id**: Unique identifier for the skill.
+-   **displayName**: Human-readable name.
+-   **description**: What the skill does.
+-   **vaultKeys**: Secret keys stored in the vault (e.g., API keys).
+-   **configSchema**: User-configurable options with defaults.
+-   **dockerImage**: The Docker image to use as a base.
+-   **enableNetwork**: Whether the skill needs network access.
+-   **actions**: Array of actions the skill can perform, each with:
+    -   **name**: Action identifier.
+    -   **description**: What the action does.
+    -   **parameters**: JSON Schema for the action's inputs.
+    -   **_script**: The script file to execute (relative to `scripts/` folder).
 
 ## 🛠️ How it Works
 

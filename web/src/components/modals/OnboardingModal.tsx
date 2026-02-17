@@ -526,17 +526,6 @@ export const OnboardingModal = () => {
                     </div>
                     <Icon name="ArrowRight" className="ml-auto text-zinc-600 group-hover:text-zinc-400" size={16} />
                 </a>
-
-                <a href="/integrations" className="flex items-center gap-4 p-4 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 hover:bg-zinc-800/80 transition-all group">
-                    <div className="w-10 h-10 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-500 group-hover:scale-110 transition-transform">
-                        <Icon name="Grid" size={20} />
-                    </div>
-                    <div>
-                        <h4 className="font-bold text-zinc-200">Browse Integrations</h4>
-                        <p className="text-xs text-zinc-500">Connect more tools and services</p>
-                    </div>
-                    <Icon name="ArrowRight" className="ml-auto text-zinc-600 group-hover:text-zinc-400" size={16} />
-                </a>
             </div>
 
             <Button variant="primary" className="w-full h-12" onClick={() => setShouldShow(false)}>

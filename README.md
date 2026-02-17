@@ -26,8 +26,8 @@ Safety first. Minusbot provides:
 
 ### 🔐 Secure Vaults & Privacy
 Stop sharing raw API keys with LLMs.
-- **Secret Proxying**: Integrations use keys stored in encrypted vaults.
-- **Zero-Exposure**: The LLM interacts with integration handles, never seeing the raw secrets.
+- **Secret Proxying**: Skills use keys stored in encrypted vaults.
+- **Zero-Exposure**: The LLM interacts with skills handles, never seeing the raw secrets.
 - **Private Telemetry**: Usage statistics are stored locally and never sold or shared.
 
 ### 🛠️ Extensible Skill System

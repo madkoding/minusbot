@@ -39,7 +39,6 @@ export const Sidebar = () => {
     const personalItems = [
         { id: '/dashboard', label: 'Dashboard', icon: 'dashboard' },
         { id: '/skills', label: 'Skills', icon: 'shield' },
-        { id: '/integrations', label: 'Integrations', icon: 'globe' },
         { id: '/channels', label: 'Channels', icon: 'chat_alt' },
         { id: '/providers', label: 'AI Providers', icon: 'cpu' },
         { id: '/tools', label: 'Tools', icon: 'chip' },
@@ -50,7 +49,6 @@ export const Sidebar = () => {
     const adminItems = [
         { id: '/admin/stats', label: 'Global Overview', icon: 'dashboard' },
         { id: '/admin/skills', label: 'Global Skills', icon: 'shield' },
-        { id: '/admin/integrations', label: 'Global Integrations', icon: 'globe' },
         { id: '/admin/channels', label: 'Global Channels', icon: 'chat_alt' },
         { id: '/admin/providers', label: 'Global AI Providers', icon: 'cpu' },
         { id: '/admin/secrets', label: 'Global Vault', icon: 'vault' },

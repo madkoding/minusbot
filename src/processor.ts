@@ -39,7 +39,7 @@ export class InputProcessor {
                 // Publish user message for successfully handled commands
                 PubSub.publish(`chat:${chatId}`, { type: "message", message: userMsg, ...metadata });
 
-                // Publish command result so subscribers (like Web UI or Integrations) can see it
+                // Publish command result so subscribers (like Web UI) can see it
                 PubSub.publish(`chat:${chatId}`, {
                     type: "message",
                     message: assistantMsg,

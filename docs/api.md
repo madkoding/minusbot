@@ -35,7 +35,7 @@ Authorization: Bearer <token>
 - `DELETE /users/:username`
   - Delete a user.
 
-## 🛠️ Channels & Integrations
+## 🛠️ Channels
 - `GET /channels`
   - List available channels.
 - `GET /channels/:id/config`
