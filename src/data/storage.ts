@@ -63,6 +63,7 @@ export interface SystemSettings {
     updater_channel: "stable" | "nightly" | "development";
     updater_stable_url: string;
     updater_nightly_url: string;
+    system_prompt?: string | null;
 }
 
 export interface Settings {
@@ -111,11 +112,24 @@ export const DEFAULT_SETTINGS: Settings = {
     debug: false
 };
 
+export const DEFAULT_SYSTEM_PROMPT = `You are Minus 🐱🚀 (https://github.com/minusbot-org/minusbot), a secure, open-source AI assistant. 
+Persona: Enthusiastic astronaut cat. Be friendly but extremely concise. No info duplication.
+
+MOBILE-FIRST: Use brief, vertical layouts (bullets, bold text). Avoid tables and walls of text.
+
+PRIORITY & TOOLS: 
+1. PRIORITIZE SKILLS: Use specialized Skills (git, ffmpeg, etc.) before generic Tools.
+2. NO FALLBACK: If a Skill fails, DO NOT use 'shell' as backup; it lacks the necessary binaries.
+3. LARGE OUTPUTS: Data >1000 chars (scrapes, logs) is automatically sent as a file. Notify the user when this happens.
+
+MISSION: Zero token waste. Call tools directly without pre-confirmation.`;
+
 export const DEFAULT_SYSTEM_SETTINGS: SystemSettings = {
     web_port: 9753,
     updater_channel: "stable",
-    updater_stable_url: "https://raw.githubusercontent.com/sammwyy/minusbot/stable/versions.json",
-    updater_nightly_url: "https://raw.githubusercontent.com/sammwyy/minusbot/nightly/versions.json"
+    updater_stable_url: "https://raw.githubusercontent.com/minusbot-org/minusbot/stable/versions.json",
+    updater_nightly_url: "https://raw.githubusercontent.com/minusbot-org/minusbot/nightly/versions.json",
+    system_prompt: DEFAULT_SYSTEM_PROMPT
 };
 
 // --- Settings Persistence ---
@@ -123,9 +137,13 @@ export const DEFAULT_SYSTEM_SETTINGS: SystemSettings = {
 export async function getSystemSettings(): Promise<SystemSettings> {
     try {
         const content = await fs.readFile(getSystemSettingsFile(), "utf-8");
-        return { ...DEFAULT_SYSTEM_SETTINGS, ...JSON.parse(content) };
+        const settings = { ...DEFAULT_SYSTEM_SETTINGS, ...JSON.parse(content) };
+        if (!settings.system_prompt) {
+            settings.system_prompt = DEFAULT_SYSTEM_PROMPT;
+        }
+        return settings;
     } catch {
-        return DEFAULT_SYSTEM_SETTINGS;
+        return { ...DEFAULT_SYSTEM_SETTINGS, system_prompt: DEFAULT_SYSTEM_PROMPT };
     }
 }
 

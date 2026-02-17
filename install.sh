@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # --- Configuration ---
-REPO_URL="https://github.com/sammwyy/minusbot.git"
+REPO_URL="https://github.com/minusbot-org/minusbot.git"
 DEFAULT_CONTAINER_NAME="minusbot"
 
 # --- Visual Setup ---

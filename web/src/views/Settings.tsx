@@ -18,6 +18,8 @@ export default function SettingsView({ apiPath = '/user/settings' }: { apiPath?:
 
         if (isSystem) {
             data.web_port = parseInt(formData.get('web_port') as string);
+            data.system_prompt = formData.get('system_prompt');
+            if (data.system_prompt === "") data.system_prompt = null;
         } else {
             data.model_id = formData.get('model_id');
             data.ai_endpoint = formData.get('ai_endpoint');
@@ -71,6 +73,28 @@ export default function SettingsView({ apiPath = '/user/settings' }: { apiPath?:
                             {isSystem ? (
                                 <div className="grid grid-cols-1 gap-6">
                                     <Input label="Web Interface Port" name="web_port" type="number" defaultValue={settings?.web_port} />
+                                    <div className="space-y-2">
+                                        <div className="flex justify-between items-end">
+                                            <label className="text-[10px] md:text-xs font-semibold uppercase tracking-wider text-zinc-500 ml-1">Default System Prompt</label>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    const area = document.querySelector('textarea[name="system_prompt"]') as HTMLTextAreaElement;
+                                                    if (area) area.value = "";
+                                                }}
+                                                className="text-[10px] font-black uppercase tracking-widest text-zinc-600 hover:text-zinc-400 transition-colors"
+                                            >
+                                                Reset to Default
+                                            </button>
+                                        </div>
+                                        <textarea
+                                            name="system_prompt"
+                                            defaultValue={settings?.system_prompt}
+                                            placeholder="Enter custom system prompt..."
+                                            className="w-full h-64 bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-3 text-sm text-zinc-100 outline-none focus:border-zinc-500 transition-all resize-none shadow-inner custom-scrollbar"
+                                        />
+                                        <p className="text-[10px] text-zinc-600 font-medium italic">Clear this field to use the hardcoded default prompt.</p>
+                                    </div>
                                 </div>
                             ) : (
                                 <>

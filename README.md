@@ -61,7 +61,7 @@ Minusbot supports a variety of channels and external services:
 ### ⚡ Automated Installation (Recommended)
 ```bash
 # Run the global installer
-curl -sSL https://raw.githubusercontent.com/sammwyy/minusbot/main/install.sh | bash
+curl -sSL https://raw.githubusercontent.com/minusbot-org/minusbot/main/install.sh | bash
 ```
 
 ### 🛠️ Manual Setup

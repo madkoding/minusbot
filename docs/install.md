@@ -15,7 +15,7 @@ This guide will help you get **Minusbot** up and running using Docker or simply 
 The quickest way to install Minusbot is using our installation script:
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/sammwyy/minusbot/main/install.sh | bash
+curl -sSL https://raw.githubusercontent.com/minusbot-org/minusbot/main/install.sh | bash
 ```
 
 ### 🛠 Manual Installation
@@ -25,7 +25,7 @@ If you prefer to set up the environment manually:
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/sammwyy/minusbot
+git clone https://github.com/minusbot-org/minusbot
 cd minusbot
 ```
 

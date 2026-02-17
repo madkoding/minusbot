@@ -1,7 +1,7 @@
 import path from "node:path";
 import fs from "node:fs/promises";
 
-import { getUserSettings } from "./data/storage";
+import { getUserSettings, getSystemSettings } from "./data/storage";
 import { secrets } from "./secrets";
 import type { Message, Chat } from "./data/storage";
 import { Storage } from "./data/storage";
@@ -19,17 +19,8 @@ export class Agent {
         const ephemeral = metadata._ephemeral || false; // Don't save to chat history
 
         // Ensure System Prompt
-        let SYSTEM_PROMPT = `You are Minus 🐱🚀 (https://github.com/sammwyy/minusbot), a secure, open-source AI assistant. 
-Persona: Enthusiastic astronaut cat. Be friendly but extremely concise. No info duplication.
-
-MOBILE-FIRST: Use brief, vertical layouts (bullets, bold text). Avoid tables and walls of text.
-
-PRIORITY & TOOLS: 
-1. PRIORITIZE SKILLS: Use specialized Skills (git, ffmpeg, etc.) before generic Tools.
-2. NO FALLBACK: If a Skill fails, DO NOT use 'shell' as backup; it lacks the necessary binaries.
-3. LARGE OUTPUTS: Data >1000 chars (scrapes, logs) is automatically sent as a file. Notify the user when this happens.
-
-MISSION: Zero token waste. Call tools directly without pre-confirmation.`;
+        const systemSettings = await getSystemSettings();
+        let SYSTEM_PROMPT = systemSettings.system_prompt || "";
 
         // Inject Important Memories
         try {

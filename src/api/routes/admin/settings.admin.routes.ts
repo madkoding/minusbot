@@ -47,7 +47,9 @@ router.post("/toggle-global-tool", validate(ToggleToolDTO), async (req, res) => 
 
 router.put("/system", validate(SystemSettingsDTO), async (req: any, res) => {
     if (req.user.role !== "root") return res.status(403).send("Root only");
-    await fs.writeFile(SYSTEM_SETTINGS_FILE, JSON.stringify(req.body, null, 4), "utf-8");
+    const current = await getSystemSettings();
+    const updated = { ...current, ...req.body };
+    await fs.writeFile(SYSTEM_SETTINGS_FILE, JSON.stringify(updated, null, 4), "utf-8");
     res.send("System settings updated");
 });
 
