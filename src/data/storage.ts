@@ -2,21 +2,59 @@ import os from "node:os";
 import path from "node:path";
 import fs from "node:fs/promises";
 
-// Path Constants
+// Path Constants - Now as functions to support dynamic MINUSBOT_HOME
 export const APP_NAME = "minusbot";
-export const CONFIG_DIR = path.join(os.homedir(), ".config", APP_NAME);
-export const USERS_DIR = path.join(CONFIG_DIR, "users");
-export const SHARED_DIR = path.join(CONFIG_DIR, "shared");
+
+export function getConfigDir(): string {
+    return process.env.MINUSBOT_HOME || path.join(os.homedir(), ".config", APP_NAME);
+}
+
+export function getUsersDir(): string {
+    return path.join(getConfigDir(), "users");
+}
+
+export function getSharedDir(): string {
+    return path.join(getConfigDir(), "shared");
+}
+
+// Backwards compatibility - keep old exports as getters
+export const CONFIG_DIR = getConfigDir();
+export const USERS_DIR = getUsersDir();
+export const SHARED_DIR = getSharedDir();
 
 // System Settings (Root only)
-export const SYSTEM_SETTINGS_FILE = path.join(CONFIG_DIR, "system-settings.json");
+export function getSystemSettingsFile(): string {
+    return path.join(getConfigDir(), "system-settings.json");
+}
 
 // Shared Folders
-export const SHARED_SKILLS_DIR = path.join(SHARED_DIR, "skills");
-export const SHARED_SECRETS_DIR = path.join(SHARED_DIR, "secrets");
-export const SHARED_STATS_FILE = path.join(SHARED_DIR, "stats.json");
-export const GLOBAL_SETTINGS_FILE = path.join(SHARED_DIR, "global-settings.json");
-export const GLOBAL_INTEGRATIONS_DIR = path.join(SHARED_DIR, "integrations");
+export function getSharedSkillsDir(): string {
+    return path.join(getSharedDir(), "skills");
+}
+
+export function getSharedSecretsDir(): string {
+    return path.join(getSharedDir(), "secrets");
+}
+
+export function getSharedStatsFile(): string {
+    return path.join(getSharedDir(), "stats.json");
+}
+
+export function getGlobalSettingsFile(): string {
+    return path.join(getSharedDir(), "global-settings.json");
+}
+
+export function getGlobalIntegrationsDir(): string {
+    return path.join(getSharedDir(), "integrations");
+}
+
+// Legacy constant exports
+export const SYSTEM_SETTINGS_FILE = getSystemSettingsFile();
+export const SHARED_SKILLS_DIR = getSharedSkillsDir();
+export const SHARED_SECRETS_DIR = getSharedSecretsDir();
+export const SHARED_STATS_FILE = getSharedStatsFile();
+export const GLOBAL_SETTINGS_FILE = getGlobalSettingsFile();
+export const GLOBAL_INTEGRATIONS_DIR = getGlobalIntegrationsDir();
 
 // --- Interfaces & Types ---
 
@@ -84,7 +122,7 @@ export const DEFAULT_SYSTEM_SETTINGS: SystemSettings = {
 
 export async function getSystemSettings(): Promise<SystemSettings> {
     try {
-        const content = await fs.readFile(SYSTEM_SETTINGS_FILE, "utf-8");
+        const content = await fs.readFile(getSystemSettingsFile(), "utf-8");
         return { ...DEFAULT_SYSTEM_SETTINGS, ...JSON.parse(content) };
     } catch {
         return DEFAULT_SYSTEM_SETTINGS;
@@ -93,7 +131,7 @@ export async function getSystemSettings(): Promise<SystemSettings> {
 
 export async function getGlobalSettings(): Promise<Settings> {
     try {
-        const content = await fs.readFile(GLOBAL_SETTINGS_FILE, "utf-8");
+        const content = await fs.readFile(getGlobalSettingsFile(), "utf-8");
         return { ...DEFAULT_SETTINGS, ...JSON.parse(content) };
     } catch {
         return DEFAULT_SETTINGS;
@@ -101,7 +139,7 @@ export async function getGlobalSettings(): Promise<Settings> {
 }
 
 export function getUserDir(userId: string) {
-    return path.join(USERS_DIR, userId);
+    return path.join(getUsersDir(), userId);
 }
 
 export function getWorkspacesDir(userId: string) {
@@ -118,10 +156,6 @@ export function getUserIntegrationsDir(userId: string) {
 
 export function getUserIntegrationConfigFile(userId: string, integrationId: string) {
     return path.join(getUserIntegrationsDir(userId), `${integrationId}.json`);
-}
-
-export function getGlobalIntegrationsDir() {
-    return GLOBAL_INTEGRATIONS_DIR;
 }
 
 export function getGlobalIntegrationConfigFile(integrationId: string) {
@@ -268,31 +302,36 @@ export async function uploadFileToChat(chat: Chat, input: string | Buffer, filen
 
 // --- Infrastructure Helpers ---
 
-export const JWT_SECRET_FILE = path.join(CONFIG_DIR, ".jwt-secret");
+export function getJWTSecretFile(): string {
+    return path.join(getConfigDir(), ".jwt-secret");
+}
+
+export const JWT_SECRET_FILE = getJWTSecretFile();
 let cachedSecret: string | null = null;
 
 export async function getJWTSecret(): Promise<string> {
     if (cachedSecret) return cachedSecret;
 
+    const jwtFile = getJWTSecretFile();
     try {
-        const secret = await fs.readFile(JWT_SECRET_FILE, "utf-8");
+        const secret = await fs.readFile(jwtFile, "utf-8");
         cachedSecret = secret.trim();
         return cachedSecret;
     } catch {
         const { randomBytes } = await import("node:crypto");
         const newSecret = randomBytes(64).toString("hex");
-        await fs.mkdir(CONFIG_DIR, { recursive: true });
-        await fs.writeFile(JWT_SECRET_FILE, newSecret, "utf-8");
+        await fs.mkdir(getConfigDir(), { recursive: true });
+        await fs.writeFile(jwtFile, newSecret, "utf-8");
         cachedSecret = newSecret;
         return newSecret;
     }
 }
 
 export async function ensureDirs() {
-    await fs.mkdir(USERS_DIR, { recursive: true });
-    await fs.mkdir(SHARED_DIR, { recursive: true });
-    await fs.mkdir(SHARED_SKILLS_DIR, { recursive: true });
-    await fs.mkdir(SHARED_SECRETS_DIR, { recursive: true });
-    await fs.mkdir(GLOBAL_INTEGRATIONS_DIR, { recursive: true });
+    await fs.mkdir(getUsersDir(), { recursive: true });
+    await fs.mkdir(getSharedDir(), { recursive: true });
+    await fs.mkdir(getSharedSkillsDir(), { recursive: true });
+    await fs.mkdir(getSharedSecretsDir(), { recursive: true });
+    await fs.mkdir(getGlobalIntegrationsDir(), { recursive: true });
     await getJWTSecret();
 }
