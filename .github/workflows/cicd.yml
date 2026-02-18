@@ -81,11 +81,13 @@ jobs:
         id: changed
         run: |
           if [ "${{ github.event_name }}" == "push" ]; then
-            files=$(git diff --name-only ${{ github.event.before }}..${{ github.event.after }})
+            files=$(git diff --name-only ${{ github.event.before }}..${{ github.event.after }} 2>/dev/null || echo "")
           else
-            files=$(git diff --name-only ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }})
+            files=$(git diff --name-only ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }} 2>/dev/null || echo "")
           fi
-          if echo "$files" | grep -q 'skills/'; then
+          if [ -z "$files" ]; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+          elif echo "$files" | grep -q 'skills/'; then
             echo "changed=true" >> $GITHUB_OUTPUT
           else
             echo "changed=false" >> $GITHUB_OUTPUT
