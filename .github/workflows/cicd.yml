@@ -50,9 +50,14 @@ jobs:
           if [ -z "$input_skills" ]; then
             skills="${{ steps.find-skills.outputs.skills }}"
           else
-            skills=$(echo "$input_skills" | tr ',' ' ' | tr '\n' ',' | sed 's/,$//')
+            skills=$(echo "$input_skills" | tr ',' '\n' | sed 's/^ *//;s/ *$//' | grep -v '^$' | tr '\n' ',' | sed 's/,$//')
           fi
-          echo "matrix=[\"$skills\"]" >> $GITHUB_OUTPUT
+          # Convert comma-separated list to JSON array
+          if [ -n "$skills" ]; then
+            echo "matrix=$(echo $skills | sed 's/,/", "/g' | sed 's/^/[\"/;s/$/\"]/'" >> $GITHUB_OUTPUT
+          else
+            echo "matrix=[]" >> $GITHUB_OUTPUT
+          fi
 
       - name: Check if docs need verification
         id: check-docs
