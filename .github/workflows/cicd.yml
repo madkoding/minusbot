@@ -54,7 +54,17 @@ jobs:
           fi
           # Convert comma-separated list to JSON array
           if [ -n "$skills" ]; then
-            echo "matrix=$(echo $skills | sed 's/,/", "/g' | sed 's/^/[\"/;s/$/\"]/'" >> $GITHUB_OUTPUT
+            array=""
+            first=1
+            for skill in $(echo "$skills" | tr ',' ' '); do
+              if [ $first -eq 1 ]; then
+                array="\"$skill\""
+                first=0
+              else
+                array="$array, \"$skill\""
+              fi
+            done
+            echo "matrix=[$array]" >> $GITHUB_OUTPUT
           else
             echo "matrix=[]" >> $GITHUB_OUTPUT
           fi
