@@ -119,16 +119,16 @@ jobs:
 
       - name: Run tests
         working-directory: skills/youtubetv/scripts
-        run: |
-          pytest -v --tb=short --color=yes 2>&1 | tee pytest-output-youtubetv.txt || true
+        run: pytest -v --tb=short --color=yes > pytest-output-youtubetv.txt 2>&1 || true
 
       - name: Upload test report
-        if: hashFiles('**/pytest-output-*.txt') != ''
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: test-report-youtubetv-${{ github.run_id }}
           path: pytest-output-youtubetv.txt
           retention-days: 7
+          if-no-files-found: warn
 
   test-chromecast:
     name: Test chromecast
