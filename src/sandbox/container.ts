@@ -147,9 +147,7 @@ export class SandboxManager {
             return `${absHost}:${bind.mount}:${mode}`;
         });
 
-        const uid = typeof process.getuid === "function" ? process.getuid() : undefined;
-        const gid = typeof process.getgid === "function" ? process.getgid() : undefined;
-        const userStr = options.user || (uid !== undefined ? `${uid}:${gid}` : undefined);
+        const userStr = options.user;
 
         const hostConfig: any = {
             Binds: binds,

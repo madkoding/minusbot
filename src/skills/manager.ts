@@ -8,12 +8,15 @@ import { SandboxManager } from "../sandbox/container";
 import { WorkspaceManager } from "../data/workspaces";
 import { secrets } from "../secrets";
 import { Logger } from "../cli/colors";
-import type { Skill, SkillDefinition } from "./types";
+import type { Skill, SkillDefinition, SkillInstance } from "./types";
+import { v4 as uuidv4 } from "uuid";
+import { SandboxInstance } from "../sandbox/instance";
 
 export class SkillManager {
     private static globalSkills: Map<string, Skill> = new Map();
     private static userSkillsCache: Map<string, Map<string, Skill>> = new Map();
     private static initialized = false;
+    private static sessions: Map<string, SkillInstance> = new Map();
 
     // Helper to get directory path for user skills
     static getUserSkillsDir(userId: string) {
@@ -311,7 +314,8 @@ export class SkillManager {
         actionName: string,
         inputs: any,
         workspaceId: string | null | undefined,
-        chatId?: string
+        chatId?: string,
+        bg: boolean = false
     ): Promise<string> {
         const skill = await this.getSkill(userId, id);
         if (!skill || !skill.enabled) {
@@ -421,7 +425,7 @@ export class SkillManager {
             }
         }
 
-        return await SandboxManager.runContainer(
+        const result = await SandboxManager.runContainer(
             dockerImage,
             cmd,
             {
@@ -430,11 +434,92 @@ export class SkillManager {
                 entrypoint,
                 workingDir: "/workspace",
                 env,
+                user: action.user || skill.definition.user,
+                tty: action.tty || skill.definition.tty || bg, // Default to true if bg for interactivity
+                openStdin: action.tty || skill.definition.tty || bg,
                 maxMemory: 512, // 512MB limit
                 maxCpus: 1, // 1 CPU limit
-                timeout: 300000 // 5 minutes timeout
+                timeout: bg ? undefined : 300000, // 5 minutes timeout for one-shot
+                interactive: bg
             }
-        ) as string;
+        );
+
+        if (!bg) {
+            return result as string;
+        }
+
+        const instance = result as SandboxInstance;
+        const sessionId = uuidv4();
+
+        const session: SkillInstance = {
+            id: sessionId,
+            userId,
+            skillId: id,
+            actionName,
+            instance,
+            createdAt: new Date(),
+            isFinished: false
+        };
+
+        this.sessions.set(sessionId, session);
+
+        // Monitor completion for background skills
+        const monitorCompletion = async () => {
+            try {
+                await instance.wait();
+            } catch (e: any) {
+                if (e.statusCode !== 404 && !e.message.includes("404")) {
+                    Logger.error(`Skill instance ${sessionId} error: ${e.message}`);
+                }
+            } finally {
+                session.isFinished = true;
+                // Auto-cleanup after 1 hour
+                setTimeout(() => this.sessions.delete(sessionId), 3600000);
+            }
+        };
+
+        monitorCompletion().catch(err => {
+            Logger.error(`Error monitoring skill ${sessionId}: ${err.message}`);
+        });
+
+        return sessionId;
+    }
+
+    // --- Instance Management ---
+
+    static listInstances(userId: string): SkillInstance[] {
+        return Array.from(this.sessions.values()).filter(s => s.userId === userId);
+    }
+
+    static async killInstance(userId: string, id: string): Promise<string> {
+        const session = this.sessions.get(id);
+        if (!session) throw new Error("Skill instance not found.");
+        if (session.userId !== userId && userId !== "root") throw new Error("Access denied.");
+
+        await session.instance.kill().catch(() => { });
+        await session.instance.remove(true).catch(() => { });
+        this.sessions.delete(id);
+        return "Skill instance killed.";
+    }
+
+    static async readInstance(userId: string, id: string, tailBytes: number = 0): Promise<string> {
+        const session = this.sessions.get(id);
+        if (!session) throw new Error("Skill instance not found.");
+        if (session.userId !== userId && userId !== "root") throw new Error("Access denied.");
+
+        if (tailBytes > 0) {
+            return session.instance.getStdoutTail(tailBytes);
+        }
+        return session.instance.getStdout();
+    }
+
+    static async writeInstance(userId: string, id: string, input: string): Promise<string> {
+        const session = this.sessions.get(id);
+        if (!session) throw new Error("Skill instance not found.");
+        if (session.userId !== userId && userId !== "root") throw new Error("Access denied.");
+
+        await session.instance.write(input + "\n");
+        return "Input sent to skill instance.";
     }
 
     static async getToolsForUser(userId: string): Promise<any[]> {
@@ -456,13 +541,18 @@ export class SkillManager {
                         }
                     },
                     handler: async (args: any, { chat }: { chat: any }) => {
+                        // Support background execution via 'bg' parameter in args if it exists
+                        const bg = action.onlyBg === true || args.bg === true;
+                        delete args.bg;
+
                         return await this.runSkill(
                             userId,
                             skill.id,
                             action.name,
                             args,
                             "chat", // Default to chat workspace
-                            chat.meta.id
+                            chat.meta.id,
+                            bg
                         );
                     }
                 });
