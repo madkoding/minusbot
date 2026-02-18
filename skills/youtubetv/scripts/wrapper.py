@@ -12,9 +12,9 @@ try:
 except ImportError:
     import dial
 
-    DIALDevice = dial.DIALDevice
-    DIALClient = dial.DIALClient
-    discover_devices = dial.discover_devices
+    DIALDevice = dial.DIALDevice  # type: ignore
+    DIALClient = dial.DIALClient  # type: ignore
+    discover_devices = dial.discover_devices  # type: ignore
 
 from logging_utils import setup_logging
 
@@ -199,9 +199,7 @@ def save_favorites(
         json.dump(migrated, f, indent=2)
 
 
-def resolve_client(
-    device_arg: str | None, port_arg: int | None = None
-) -> YouTubeDIALClient | None:
+def resolve_client(device_arg: str | None, port_arg: int | None = None) -> YouTubeDIALClient | None:
     """Resolve a device argument to a YouTube DIAL client.
 
     Args:
@@ -329,9 +327,7 @@ def handle_list_saved() -> None:
     favs = load_favorites()
     results = []
     for name, data in favs.items():
-        results.append(
-            {"name": name, "ip": data.get("ip"), "port": data.get("port", 8008)}
-        )
+        results.append({"name": name, "ip": data.get("ip"), "port": data.get("port", 8008)})
     print(json.dumps(results, indent=2))
 
 
@@ -408,11 +404,7 @@ def handle_control(action: str, device_arg: str | None, **kwargs: Any) -> None:
             return
 
         else:
-            print(
-                json.dumps(
-                    {"status": "error", "message": f"Unknown control action: {action}"}
-                )
-            )
+            print(json.dumps({"status": "error", "message": f"Unknown control action: {action}"}))
             return
 
         print(
