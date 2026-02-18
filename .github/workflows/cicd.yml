@@ -132,7 +132,7 @@ jobs:
         working-directory: skills/youtubetv/scripts
         run: |
           pip install mypy
-          mypy wrapper.py logging_utils.py --ignore-missing-imports --no-error-summary
+          mypy --ignore-missing-imports --no-error-summary .
 
       - name: Upload test report
         uses: actions/upload-artifact@v4
