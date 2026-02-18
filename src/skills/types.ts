@@ -43,6 +43,7 @@ export interface Skill {
     enabled: boolean;
     isGlobal: boolean;
     path: string; // Absolute path to the skill directory
+    documentation?: string;
 }
 
 import type { SandboxInstance } from "@/sandbox/instance";

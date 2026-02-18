@@ -144,7 +144,7 @@ export class Logger {
     }
 
     static async tool(name: string, args: any) {
-        const tag = await this.wrap(" ⚙ SYSTEM ", COLORS.bg.magenta + COLORS.fg.white + COLORS.bright);
+        const tag = await this.wrap(" ⚙ TOOL ", COLORS.bg.magenta + COLORS.fg.white + COLORS.bright);
         const sep = await this.wrap(" » ", COLORS.fg.magenta + COLORS.bright);
         const argStr = JSON.stringify(args);
         console.log(`${tag}${sep}Using tool: ${name} ${await this.wrap(argStr, COLORS.fg.gray)}`);

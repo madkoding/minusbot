@@ -1,3 +1,4 @@
+import { Logger } from "@/cli/colors";
 import type { Chat } from "../data/storage";
 import { ToolLogger } from "../logger";
 
@@ -34,8 +35,16 @@ export class ToolManager {
         return Array.from(this.tools.values()).map(t => t.definition);
     }
 
-    getToolsForAI(chat: Chat, settings: any): ToolDefinition[] {
-        return this.getDefinitions(settings.disabled_tools || []);
+    async getToolsForAI(userId: string, chat: Chat, settings: any): Promise<ToolDefinition[]> {
+        const disabledTools = settings.disabled_tools || [];
+        const tools = this.getDefinitions(disabledTools);
+
+        const dynamicTools = await this.getDynamicTools(userId);
+        const dynamicDefinitions = dynamicTools
+            .map((t: any) => t.definition)
+            .filter((d: any) => !disabledTools.includes(d.function.name));
+
+        return [...tools, ...dynamicDefinitions];
     }
 
     async getDynamicTools(userId: string): Promise<any[]> {
@@ -48,19 +57,34 @@ export class ToolManager {
     }
 
     async execute(name: string, args: any, chat: Chat): Promise<string> {
-        const tool = this.tools.get(name);
-        if (!tool) {
+        const userId = chat.meta.owner;
+
+        // 1. Check static tools
+        const staticTool = this.tools.get(name);
+        let handler = staticTool?.handler;
+
+        // 2. If not found, check dynamic tools
+        if (!handler) {
+            const dynamicTools = await this.getDynamicTools(userId);
+            const dynamicTool = dynamicTools.find((t: any) => t.definition.function.name === name);
+            if (dynamicTool) {
+                handler = dynamicTool.handler;
+            }
+        }
+
+        if (!handler) {
             return `Unknown tool: ${name}`;
         }
 
         let result = "";
         try {
-            result = await tool.handler(args, { chat });
+            result = await handler(args, { chat });
         } catch (e: any) {
             result = `Error executing tool ${name}: ${e.message}`;
         }
 
         await ToolLogger.log(chat.meta.id, name, args, result);
+        Logger.tool(name, args);
         return result;
     }
 }

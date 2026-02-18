@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 
 import { getUserDir, USERS_DIR } from "./storage";
+import { Logger } from "@/cli/colors";
 
 export interface CronJob {
     id: string;
@@ -38,6 +39,7 @@ export class TaskManager {
     static async add(job: CronJob) {
         const jobs = await this.list(job.userId);
         jobs.push(job);
+        await Logger.task(`Added task: ${job.id} (${JSON.stringify(job)})`);
         await this.save(job.userId, jobs);
     }
 

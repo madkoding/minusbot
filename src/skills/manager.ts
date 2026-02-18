@@ -49,12 +49,18 @@ export class SkillManager {
                         const content = await fs.readFile(jsonPath, "utf-8");
                         const definition = JSON.parse(content) as SkillDefinition;
                         const enabled = definition.enabled !== false;
+
+                        // Check for optional documentation
+                        const docPath = path.join(skillPath, "skill.md");
+                        const documentation = await fs.readFile(docPath, "utf-8").catch(() => undefined);
+
                         skills.push({
                             id: folder,
                             definition,
                             enabled,
                             isGlobal,
-                            path: skillPath
+                            path: skillPath,
+                            documentation
                         });
                     } catch (e: any) {
                         Logger.warn(`Failed to load skill from ${skillPath}: ${e.message}`);
@@ -156,6 +162,12 @@ export class SkillManager {
             const values = vault.allValues();
             const missing = requiredKeys.some((k: string) => !values[k] || values[k].trim() === '');
             if (missing) enabled = false;
+        }
+
+        // Re-read documentation specifically to ensure it's fresh if needed
+        if (!skill.documentation) {
+            const docPath = path.join(skill.path, "skill.md");
+            skill.documentation = await fs.readFile(docPath, "utf-8").catch(() => undefined);
         }
 
         return { ...skill, enabled };
@@ -326,6 +338,8 @@ export class SkillManager {
         if (!action) {
             throw new Error(`Action ${actionName} not found in skill ${id}.`);
         }
+
+        await Logger.skill(`Calling skill: ${actionName} (${JSON.stringify(inputs)})`);
 
         // Ensure binaries
         await this.ensureBinaries(skill, actionName);

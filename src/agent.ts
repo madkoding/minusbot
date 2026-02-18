@@ -34,6 +34,19 @@ export class Agent {
             // Ignore if memo manager fails or not found
         }
 
+        // Inject Informational Skills guidance
+        SYSTEM_PROMPT += `\n\n# Skills & Documentation:
+When you see a skill in the list, you should use 'skill_get' to retrieve its full documentation (skill.md). 
+- Some skills are purely INFORMATIONAL (no scripts/actions). Always call 'skill_get' to read their knowledge base or API specs.
+- For functional skills, the documentation explains the correct usage flow, especially for interactive ones.
+
+# Interactive Skills & Instances:
+Skills running in the background (bg: true or onlyBg: true) return a Session ID. 
+- Use 'skill_instance_read' to see current output/TTY.
+- Use 'skill_instance_write' to send input (passwords, commands) to stdin.
+- Use 'skill_instance_kill' to terminate sessions.
+Always 'skill_get' interactive skills to understand their specific state machine or requirements.`;
+
         if (this.chat.messages.length === 0 || this.chat.messages[0]?.role !== "system") {
             const sysMsg: Message = { role: "system", content: SYSTEM_PROMPT };
             if (this.chat.messages.length > 0 && this.chat.messages[0]?.role === "system") {
@@ -73,10 +86,7 @@ export class Agent {
             userInput = undefined; // Clear after first loop iteration if we're in a tool-call loop
 
             const settings = await getUserSettings(userId);
-            const tools = toolManager.getToolsForAI(this.chat, settings);
-            const allDynamicTools = await toolManager.getDynamicTools(userId);
-            const dynamicDefinitions = allDynamicTools.map((t: any) => t.definition);
-            tools.push(...dynamicDefinitions);
+            const tools = await toolManager.getToolsForAI(userId, this.chat, settings);
 
             const activeProviderId = settings.active_providers?.text;
             if (!activeProviderId) {
@@ -145,29 +155,11 @@ export class Agent {
                 const { name } = toolCall.function;
                 const args = JSON.parse(toolCall.function.arguments);
 
-                if (name.startsWith("skill_")) {
-                    await Logger.skill(`Calling skill: ${name} (${JSON.stringify(args)})`);
-                } else if (name.startsWith("cronjob_")) {
-                    await Logger.task(`Scheduling task: ${name} (${JSON.stringify(args)})`);
-                } else {
-                    await Logger.tool(name, args);
-                }
-
                 let result = "";
                 if ((settings.disabled_tools || []).includes(name)) {
                     result = `Error: Tool ${name} is disabled.`;
                 } else {
-                    // Check dynamic tools first (channels and skills)
-                    const dynamicTool = allDynamicTools.find((t: any) => t.definition.function.name === name);
-                    if (dynamicTool) {
-                        try {
-                            result = await dynamicTool.handler(args, { chat: this.chat });
-                        } catch (e: any) {
-                            result = `Error executing dynamic tool ${name}: ${e.message}`;
-                        }
-                    } else {
-                        result = await toolManager.execute(name, args, this.chat);
-                    }
+                    result = await toolManager.execute(name, args, this.chat);
                 }
 
                 if (result.length > 1000) {

@@ -93,6 +93,34 @@ commandManager.register({
             }
         },
         {
+            name: "get",
+            description: "Get detailed information and documentation for a specific skill",
+            args: [{ name: "skill_id", description: "The skill ID", type: "string", required: true }],
+            handler: async (args, { user }) => {
+                if (!args[0]) return "Error: skill_id is required";
+                const skill = await SkillManager.getSkill(user.id, args[0]);
+                if (!skill) return `Skill '${args[0]}' not found.`;
+
+                let out = `Skill: ${skill.definition.displayName} (${skill.id})\n`;
+                out += `Description: ${skill.definition.description}\n`;
+                out += `Status: ${skill.enabled ? 'Enabled' : 'Disabled'}\n`;
+                out += `Global: ${skill.isGlobal ? 'Yes' : 'No'}\n`;
+
+                if (skill.documentation) {
+                    out += `\n--- Documentation ---\n${skill.documentation}\n`;
+                }
+
+                if (skill.definition.actions.length > 0) {
+                    out += `\n--- Actions ---\n`;
+                    for (const action of skill.definition.actions) {
+                        out += `  • ${action.name}: ${action.description}\n`;
+                    }
+                }
+
+                return out;
+            }
+        },
+        {
             name: "run",
             description: "Run a skill manually",
             args: [
