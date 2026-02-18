@@ -17,6 +17,7 @@ export class SkillManager {
     private static userSkillsCache: Map<string, Map<string, Skill>> = new Map();
     private static initialized = false;
     private static sessions: Map<string, SkillInstance> = new Map();
+    private static sessionCounter = 1;
 
     // Helper to get directory path for user skills
     static getUserSkillsDir(userId: string) {
@@ -463,7 +464,7 @@ export class SkillManager {
         }
 
         const instance = result as SandboxInstance;
-        const sessionId = uuidv4();
+        const sessionId = (this.sessionCounter++).toString();
 
         const session: SkillInstance = {
             id: sessionId,

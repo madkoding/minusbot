@@ -18,6 +18,7 @@ interface ShellSession {
 export class ShellManager {
     public static verbose: boolean = false;
     private static sessions: Map<string, ShellSession> = new Map();
+    private static sessionCounter = 1;
 
     static async create(
         userId: string,
@@ -60,7 +61,7 @@ export class ShellManager {
         }
 
         const instance = result as SandboxInstance;
-        const id = uuidv4();
+        const id = (this.sessionCounter++).toString();
 
         const session: ShellSession = {
             id,
