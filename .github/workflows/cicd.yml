@@ -52,22 +52,7 @@ jobs:
           else
             skills=$(echo "$input_skills" | tr ',' '\n' | sed 's/^ *//;s/ *$//' | grep -v '^$' | tr '\n' ',' | sed 's/,$//')
           fi
-          # Convert comma-separated list to JSON array
-          if [ -n "$skills" ]; then
-            array=""
-            first=1
-            for skill in $(echo "$skills" | tr ',' ' '); do
-              if [ $first -eq 1 ]; then
-                array="\"$skill\""
-                first=0
-              else
-                array="$array, \"$skill\""
-              fi
-            done
-            echo "matrix=[$array]" >> $GITHUB_OUTPUT
-          else
-            echo "matrix=[]" >> $GITHUB_OUTPUT
-          fi
+          echo "matrix=$skills" >> $GITHUB_OUTPUT
 
       - name: Check if docs need verification
         id: check-docs
@@ -82,7 +67,6 @@ jobs:
     name: Lint All Skills
     runs-on: ubuntu-latest
     needs: setup
-    if: needs.setup.outputs.skill_matrix != ''
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -92,32 +76,14 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Check if files changed
-        id: changed
-        run: |
-          if [ "${{ github.event_name }}" == "push" ]; then
-            files=$(git diff --name-only ${{ github.event.before }}..${{ github.event.after }} 2>/dev/null || echo "")
-          else
-            files=$(git diff --name-only ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }} 2>/dev/null || echo "")
-          fi
-          if [ -z "$files" ]; then
-            echo "changed=false" >> $GITHUB_OUTPUT
-          elif echo "$files" | grep -q 'skills/'; then
-            echo "changed=true" >> $GITHUB_OUTPUT
-          else
-            echo "changed=false" >> $GITHUB_OUTPUT
-          fi
-
       - name: Install ruff
-        if: steps.changed.outputs.changed == 'true'
         run: pip install ruff
 
       - name: Run linter checks
-        if: steps.changed.outputs.changed == 'true'
         run: |
           bash scripts/lint.sh 2>&1 | tee lint-output.txt
-          if grep -q "✅ All checks passed!" lint-output.txt; then
-            echo "linting passed"
+          if grep -q "All checks passed!" lint-output.txt; then
+            echo "✅ Linting passed"
           else
             echo "❌ Linting failed"
             exit 1
@@ -131,14 +97,10 @@ jobs:
           path: lint-output.txt
           retention-days: 7
 
-  test:
-    name: Test ${matrix.skill}
+  test-youtubetv:
+    name: Test youtubetv
     runs-on: ubuntu-latest
-    needs: [setup, lint-all]
-    strategy:
-      fail-fast: false
-      matrix:
-        skill: ${{ fromJson(needs.setup.outputs.skill_matrix) }}
+    needs: lint-all
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -148,32 +110,26 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Install dependencies for ${{ matrix.skill }}
-        working-directory: skills/${{ matrix.skill }}/scripts
+      - name: Install dependencies
+        working-directory: skills/youtubetv/scripts
         run: |
-          if [ -f requirements.txt ]; then
-            python -m pip install --upgrade pip
-            pip install -r requirements.txt
-          fi
-        continue-on-error: true
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-mock
 
-      - name: Run tests for ${{ matrix.skill }}
-        working-directory: skills/${{ matrix.skill }}/scripts
-        if: ${{ hashFiles('**/test_*.py') != '' }}
+      - name: Run tests
+        working-directory: skills/youtubetv/scripts
         run: |
-          if [ -f requirements.txt ]; then
-            pip install pytest pytest-mock
-          fi
-          if [ -f requirements.txt ]; then
-            pytest -v --tb=short --color=yes 2>&1 | tee pytest-output-${{ matrix.skill }}.txt
+          pytest -v --tb=short --color=yes 2>&1 | tee pytest-output-youtubetv.txt
+          if grep -q "passed" pytest-output-youtubetv.txt; then
+            echo "✅ Tests passed"
           else
-            echo "No requirements.txt, skipping tests"
+            echo "❌ Tests failed"
+            exit 1
           fi
-        continue-on-error: true
 
-      - name: Run type checking for ${{ matrix.skill }}
-        if: ${{ matrix.skill == 'youtubetv' }}
-        working-directory: skills/${{ matrix.skill }}/scripts
+      - name: Run type checking
+        working-directory: skills/youtubetv/scripts
         run: |
           pip install mypy
           mypy wrapper.py logging_utils.py --ignore-missing-imports --no-error-summary
@@ -181,14 +137,131 @@ jobs:
       - name: Upload test report
         uses: actions/upload-artifact@v4
         with:
-          name: test-report-${{ matrix.skill }}-${{ github.run_id }}
-          path: pytest-output-${{ matrix.skill }}.txt
+          name: test-report-youtubetv-${{ github.run_id }}
+          path: pytest-output-youtubetv.txt
+          retention-days: 7
+
+  test-chromecast:
+    name: Test chromecast
+    runs-on: ubuntu-latest
+    needs: lint-all
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        working-directory: skills/chromecast/scripts
+        run: |
+          if [ -f requirements.txt ]; then
+            python -m pip install --upgrade pip
+            pip install -r requirements.txt
+            pip install pytest pytest-mock
+          fi
+
+      - name: Run tests
+        working-directory: skills/chromecast/scripts
+        run: |
+          if [ -f requirements.txt ]; then
+            pytest -v --tb=short --color=yes 2>&1 | tee pytest-output-chromecast.txt
+          else
+            echo "No requirements.txt, skipping tests"
+          fi
+
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-report-chromecast-${{ github.run_id }}
+          path: pytest-output-chromecast.txt
+          retention-days: 7
+
+  test-ffmpeg:
+    name: Test ffmpeg
+    runs-on: ubuntu-latest
+    needs: lint-all
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        working-directory: skills/ffmpeg/scripts
+        run: |
+          if [ -f requirements.txt ]; then
+            python -m pip install --upgrade pip
+            pip install -r requirements.txt
+            pip install pytest pytest-mock
+          fi
+
+      - name: Run tests
+        working-directory: skills/ffmpeg/scripts
+        run: |
+          if [ -f requirements.txt ]; then
+            pytest -v --tb=short --color=yes 2>&1 | tee pytest-output-ffmpeg.txt
+          else
+            echo "No requirements.txt, skipping tests"
+          fi
+
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-report-ffmpeg-${{ github.run_id }}
+          path: pytest-output-ffmpeg.txt
+          retention-days: 7
+
+  test-serpapi:
+    name: Test serpapi
+    runs-on: ubuntu-latest
+    needs: lint-all
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        working-directory: skills/serpapi/scripts
+        run: |
+          if [ -f requirements.txt ]; then
+            python -m pip install --upgrade pip
+            pip install -r requirements.txt
+            pip install pytest pytest-mock
+          fi
+
+      - name: Run tests
+        working-directory: skills/serpapi/scripts
+        run: |
+          if [ -f requirements.txt ]; then
+            pytest -v --tb=short --color=yes 2>&1 | tee pytest-output-serpapi.txt
+          else
+            echo "No requirements.txt, skipping tests"
+          fi
+
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-report-serpapi-${{ github.run_id }}
+          path: pytest-output-serpapi.txt
           retention-days: 7
 
   documentation:
     name: Documentation & Coverage
     runs-on: ubuntu-latest
-    needs: test
+    needs: [test-youtubetv, test-chromecast, test-ffmpeg, test-serpapi]
     if: needs.setup.outputs.needs_docs == 'true'
     steps:
       - name: Checkout code
@@ -222,7 +295,7 @@ jobs:
   security:
     name: Security Audit
     runs-on: ubuntu-latest
-    needs: setup
+    needs: lint-all
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -251,7 +324,7 @@ jobs:
   summary:
     name: Build Summary
     runs-on: ubuntu-latest
-    needs: [test, lint-all, documentation, security]
+    needs: [test-youtubetv, test-chromecast, test-ffmpeg, test-serpapi, lint-all, documentation, security]
     if: always()
     steps:
       - name: Download artifacts
@@ -275,7 +348,7 @@ jobs:
           echo "" >> summary.md
           for skill in chromecast ffmpeg serpapi youtubetv; do
             if [ -f "artifacts/test-report-${skill}-*.txt" ]; then
-              passed=$(grep -oP '\d+(?= passed)' "artifacts/test-report-${skill}-*.txt" | head -1)
+              passed=$(grep -oP '\d+(?= passed)' "artifacts/test-report-${skill}-*.txt" 2>/dev/null | head -1)
               echo "- **${skill}**: ✅ ${passed} tests passed" >> summary.md
             fi
           done
@@ -283,7 +356,7 @@ jobs:
           
           echo "### Linting" >> summary.md
           if [ -f "artifacts/lint-report-*.txt" ]; then
-            if grep -q "✅ All checks passed!" artifacts/lint-report-*.txt; then
+            if grep -q "All checks passed!" artifacts/lint-report-*.txt 2>/dev/null; then
               echo "- All skills: ✅ Passed" >> summary.md
             else
               echo "- Some skills: ❌ Failed (check logs)" >> summary.md
@@ -292,7 +365,7 @@ jobs:
           echo "" >> summary.md
           
           echo "### Build Status" >> summary.md
-          if [ ${{ needs.test.result }} == 'success' ] && [ ${{ needs.lint-all.result }} == 'success' ]; then
+          if [ "${{ needs.test-youtubetv.result }}" == "success" ] && [ "${{ needs.lint-all.result }}" == "success" ]; then
             echo "🎉 All checks passed!" >> summary.md
             exit 0
           else
