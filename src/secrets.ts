@@ -8,10 +8,17 @@ export const VAULT_DEFAULTS: Record<string, string[]> = {
 };
 
 // Security: Get encryption key from environment or generate secure key
-function getEncryptionKey(): Buffer {
+let encryptionKeyCache: Buffer | null = null;
+
+async function getEncryptionKey(): Promise<Buffer> {
+    if (encryptionKeyCache) {
+        return encryptionKeyCache;
+    }
+
     const envKey = process.env.SECRET_ENCRYPTION_KEY;
     if (envKey && envKey.length >= 32) {
-        return Buffer.from(envKey, 'hex');
+        encryptionKeyCache = Buffer.from(envKey, 'hex');
+        return encryptionKeyCache;
     }
     
     // Generate and persist key on first run
@@ -19,19 +26,21 @@ function getEncryptionKey(): Buffer {
     const keyFile = path.join(configDir, ".encryption-key");
     
     try {
-        const existingKey = fs.readFile(keyFile, 'utf-8');
-        return Buffer.from(existingKey, 'hex');
+        const existingKey = await fs.readFile(keyFile, 'utf-8');
+        encryptionKeyCache = Buffer.from(existingKey, 'hex');
+        return encryptionKeyCache;
     } catch {
         const newKey = randomBytes(32);
-        fs.mkdir(configDir, { recursive: true });
-        fs.writeFile(keyFile, newKey.toString('hex'));
+        await fs.mkdir(configDir, { recursive: true });
+        await fs.writeFile(keyFile, newKey.toString('hex'));
         // Set restrictive permissions
-        fs.chmod(keyFile, 0o600).catch(() => {});
+        await fs.chmod(keyFile, 0o600).catch(() => {});
+        encryptionKeyCache = newKey;
         return newKey;
     }
 }
 
-const ENCRYPTION_KEY = getEncryptionKey();
+const ENCRYPTION_KEY = await getEncryptionKey();
 
 export class Vault {
     private data: Record<string, string> = {};
